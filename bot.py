@@ -31,6 +31,14 @@ cursor.execute("CREATE TABLE IF NOT EXISTS guild_prefixes (guild TEXT PRIMARY KE
 async def on_ready():
     print("Connected!")
 
+#cogs to be loaded on startup
+initial_extensions = [
+    'cogs.cmty'
+]
+
+for extension in initial_extensions:
+    bot.load_extension(extension)
+    
 #on message
 @bot.event
 async def on_message(message):
