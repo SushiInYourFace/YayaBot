@@ -2,9 +2,11 @@ import discord
 from discord.ext import commands
 import sqlite3
 
-#Open Token file
+#Open txt files
 Token = open("Discord_Token.txt").read()
-
+filterFile = open("Filtered.txt", "r")
+bannedWords = filterFile.readlines()
+bannedWords = [word.strip() for word in bannedWords]
 #Guild-Specific prefixes
 async def get_pre(bot, message):
     prefixes = ["!"]
@@ -23,7 +25,6 @@ bot = commands.Bot(command_prefix=get_pre, intents=intents)
 #SQLite
 con = sqlite3.connect("database.db")
 cursor = con.cursor()
-cursor.execute("CREATE TABLE IF NOT EXISTS guild_prefixes (guild TEXT PRIMARY KEY, prefix TEXT)")
 cursor.execute("CREATE TABLE IF NOT EXISTS guild_prefixes (guild TEXT PRIMARY KEY, prefix TEXT)")
 
 #startup
@@ -45,6 +46,8 @@ for extension in initial_extensions:
 async def on_message(message):
     if message.author == bot.user or message.author.bot:
         return
+    if any(bannedWord in message.content for bannedWord in bannedWords):
+        await message.channel.send("Watch your goddamn mouth, libtard")
     await bot.process_commands(message)
 
 #error handling
