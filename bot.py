@@ -7,7 +7,7 @@ Token = open("Discord_Token.txt").read()
 
 #Guild-Specific prefixes
 async def get_pre(bot, message):
-    prefixes = ["%"]
+    prefixes = ["!"]
     try:
          guildcommand = cursor.execute("SELECT prefix FROM guild_prefixes WHERE guild = ?", (message.guild.name,)).fetchone()
          prefixes.append(str(guildcommand[0]))
@@ -38,7 +38,7 @@ initial_extensions = [
 
 for extension in initial_extensions:
     bot.load_extension(extension)
-    
+
 #on message
 @bot.event
 async def on_message(message):
