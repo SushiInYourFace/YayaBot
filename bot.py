@@ -1,4 +1,5 @@
 import discord
+from discord import errors
 from discord.ext import commands
 import sqlite3
 
@@ -51,6 +52,7 @@ async def on_message(message):
         return
     if any(bannedWord in message.content for bannedWord in bannedWords):
         await message.channel.send("Watch your goddamn mouth, libtard")
+        await message.delete()
     await bot.process_commands(message)
 
 #on edited message
@@ -58,6 +60,10 @@ async def on_message(message):
 async def on_message_edit(before, after):
     if any(bannedWord in after.content for bannedWord in bannedWords):
         await after.channel.send("Watch your goddamn mouth, libtard")
+        try:
+            await after.delete()
+        except:
+            pass
 #error handling
 @bot.event
 async def on_command_error(ctx, error):
@@ -74,6 +80,8 @@ async def on_command_error(ctx, error):
         await ctx.send('Sorry, that is not a valid number of arguments for this command. If you need help understanding how this command works, please use the command %help (your command)')
     elif isinstance(error, commands.MissingPermissions):
         await ctx.send("Sorry, you don't have permission to use that command!")
+    elif isinstance(error, discord.errors.Forbidden):
+        await ctx.send("I don't have permission to do that.")
     else:
         await ctx.send("error")
 
