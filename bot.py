@@ -35,7 +35,8 @@ async def on_ready():
 #cogs to be loaded on startup
 initial_extensions = [
     'cogs.cmty',
-    'cogs.moderation'
+    'cogs.moderation',
+    'cogs.utilities'
 ]
 
 for extension in initial_extensions:
