@@ -9,13 +9,13 @@ bannedWords = filterFile.readlines()
 bannedWords = [word.strip() for word in bannedWords]
 #Guild-Specific prefixes
 async def get_pre(bot, message):
-    prefixes = ["!"]
+    prefix = "!"
     try:
-         guildcommand = cursor.execute("SELECT prefix FROM guild_prefixes WHERE guild = ?", (message.guild.name,)).fetchone()
-         prefixes.append(str(guildcommand[0]))
+        guildcommand = cursor.execute("SELECT prefix FROM guild_prefixes WHERE guild = ?", (message.guild.id,)).fetchone()
+        prefix = (str(guildcommand[0]))
     except TypeError:
         pass
-    return prefixes
+    return prefix
 
 #intents, initializing bot
 intents = discord.Intents.default()
@@ -25,7 +25,7 @@ bot = commands.Bot(command_prefix=get_pre, intents=intents)
 #SQLite
 con = sqlite3.connect("database.db")
 cursor = con.cursor()
-cursor.execute("CREATE TABLE IF NOT EXISTS guild_prefixes (guild TEXT PRIMARY KEY, prefix TEXT)")
+cursor.execute("CREATE TABLE IF NOT EXISTS guild_prefixes (guild INTEGER PRIMARY KEY, prefix TEXT)")
 
 #startup
 @bot.event
