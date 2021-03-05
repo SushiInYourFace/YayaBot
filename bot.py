@@ -26,6 +26,8 @@ bot = commands.Bot(command_prefix=get_pre, intents=intents)
 con = sqlite3.connect("database.db")
 cursor = con.cursor()
 cursor.execute("CREATE TABLE IF NOT EXISTS guild_prefixes (guild INTEGER PRIMARY KEY, prefix TEXT)")
+cursor.execute("CREATE TABLE IF NOT EXISTS role_ids (guild INTEGER PRIMARY KEY, gravel INTEGER, muted INTEGER)")
+con.commit()
 
 #startup
 @bot.event
@@ -51,6 +53,11 @@ async def on_message(message):
         await message.channel.send("Watch your goddamn mouth, libtard")
     await bot.process_commands(message)
 
+#on edited message
+@bot.event
+async def on_message_edit(before, after):
+    if any(bannedWord in after.content for bannedWord in bannedWords):
+        await after.channel.send("Watch your goddamn mouth, libtard")
 #error handling
 @bot.event
 async def on_command_error(ctx, error):
