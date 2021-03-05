@@ -1,7 +1,6 @@
 /.vscode
 Discord_Token.txt
 database.db
-/__pycache__/
-cogs/__pycache__/*
+**/__pycache__/
 Filtered.txt
 
