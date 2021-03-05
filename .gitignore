@@ -2,3 +2,4 @@
 Discord_Token.txt
 database.db
 /__pycache__/
+cogs/__pycache__/*
