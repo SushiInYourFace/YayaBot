@@ -2,6 +2,10 @@ import discord
 from discord.ext import commands
 import random
 import os
+import sqlite3
+
+connection = sqlite3.connect("database.db")
+cursor = connection.cursor()
 
 def setup(bot):
     bot.add_cog(Owner(bot))
@@ -30,8 +34,26 @@ class Owner(commands.Cog):
     async def load(self,ctx,*cogs):
         """Loads a cog."""
         for cog in cogs:
-            self.bot.load_extension(f"cogs.{cog}")
-            await ctx.send(f"Cog {cog} loaded.")
+            cog = f"cogs.{cog}"
+            inDb = cursor.execute("SELECT * FROM extensions WHERE extension = ?", (cog,)).fetchone()
+            inDb = (inDb is not None)
+            loadCog = (cog not in self.bot.extensions.keys())
+            if ((not loadCog) and inDb):
+                await ctx.send(f"Cog `{cog}` is already loaded.")
+                return
+            if loadCog:
+                try:
+                    self.bot.load_extension(cog)
+                except commands.ExtensionNotFound:
+                    await ctx.send(f"Cog `{cog}` could not be found.")
+                    return
+                except:
+                    await ctx.send(f"Loading cog `{cog}` failed")
+                    raise
+            if not inDb:
+                cursor.execute("INSERT INTO extensions(extension) VALUES(?)", (cog,))
+                connection.commit()
+            await ctx.send(f"Cog `{cog}` {'loaded' if loadCog else ''}{' and ' if (loadCog and not inDb) else ''}{'added to database' if not inDb else ''}.")
 
     @cog.command(aliases = ['u'])
     async def unload(self,ctx,*cogs):
@@ -40,8 +62,23 @@ class Owner(commands.Cog):
             if cog == 'owner':
                 await ctx.send("Cannot unload owner.")
                 return
-            self.bot.unload_extension(f"cogs.{cog}")
-            await ctx.send(f"Cog {cog} unloaded.")
+            cog = f"cogs.{cog}"
+            inDb = cursor.execute("SELECT count(*) FROM extensions WHERE extension = ?", (cog,)).fetchone()
+            inDb = (inDb is not None)
+            unloadCog = (cog in self.bot.extensions.keys())
+            if not (unloadCog and inDb):
+                await ctx.send(f"Cog {cog} is not loaded.")
+                return
+            if unloadCog:
+                try:
+                    self.bot.unload_extension(cog)
+                except:
+                    await ctx.send(f"Unloading cog `{cog}` failed")
+                    raise
+            if inDb:
+                cursor.execute("DELETE FROM extensions WHERE extension=?", (cog,))
+                connection.commit()
+            await ctx.send(f"Cog {cog} {'unloaded' if unloadCog else ''}{' and ' if (unloadCog and inDb) else ''}{'removed from database' if inDb else ''}.")
 
     @cog.command(aliases = ['r'])
     async def reload(self,ctx,cog=None):
