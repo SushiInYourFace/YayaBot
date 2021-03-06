@@ -1,4 +1,5 @@
 import discord
+from discord import errors
 from discord.ext import commands
 
 class Moderation(commands.Cog):
@@ -27,6 +28,42 @@ class Moderation(commands.Cog):
         def filter_check(message):
             return filtered in message.content
         await ctx.channel.purge(limit=limit, check=filter_check)
+
+    #ban
+    @commands.command(help="bans a user")
+    @commands.has_permissions(ban_members=True)
+    async def ban(self, ctx, member : discord.Member, *, arg):
+        guild = ctx.guild
+        username = member.name
+        banEmbed = discord.Embed(title="You have been banned from "+ ctx.guild.name, color=0xFF0000)
+        banEmbed.add_field(name="Ban reason:", value=arg)
+        try:
+            await member.send(embed=banEmbed)
+            unsent = False
+        except errors.HTTPException:
+            unsent = True
+        await guild.ban(member, reason=arg)
+        successEmbed = discord.Embed(title="Banned " + username, color=0xFF0000)
+        if unsent:
+            successEmbed.set_footer(text="Failed to send a message to this user")
+        await ctx.send(embed=successEmbed)
+
+    #unban
+    @commands.command(help="unbans a user")
+    @commands.has_permissions(ban_members=True)
+    async def unban(self, ctx, user : discord.User):
+        guild = ctx.guild
+        try:
+            await guild.fetch_ban(user)
+        except discord.NotFound:
+            notBannedEmbed = discord.Embed(title = "This user is not banned", color = 0xFF0000)
+            await ctx.send(embed = notBannedEmbed)
+            return
+        await guild.unban(user)
+        successEmbed = discord.Embed(title = "Unbanned " + user.name, color = 0x00FF00)
+        await ctx.send(embed=successEmbed)
+
+
 
 
 def setup(bot):
