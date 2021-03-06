@@ -1,13 +1,18 @@
 import discord
-from discord import errors
 from discord.ext import commands
 import sqlite3
+import logging
+
+# Logging config
+logging.basicConfig(format='[%(asctime)s] %(levelname)s: %(message)s', level=logging.INFO)
 
 #Open txt files
-Token = open("Discord_Token.txt").read()
-filterFile = open("Filtered.txt", "r")
-bannedWords = filterFile.readlines()
-bannedWords = [word.strip() for word in bannedWords]
+with open("Discord_Token.txt") as f:
+    Token = f.read()
+
+with open("Filtered.txt", "r") as f:
+    bannedWords = [word.strip() for word in f.readlines()]
+
 #Guild-Specific prefixes
 async def get_pre(bot, message):
     prefix = "!"
@@ -30,22 +35,37 @@ cursor.execute("CREATE TABLE IF NOT EXISTS guild_prefixes (guild INTEGER PRIMARY
 cursor.execute("CREATE TABLE IF NOT EXISTS role_ids (guild INTEGER PRIMARY KEY, gravel INTEGER, muted INTEGER)")
 cursor.execute("CREATE TABLE IF NOT EXISTS active_cases (id INTEGER PRIMARY KEY, expiration FLOAT)")
 cursor.execute("CREATE TABLE IF NOT EXISTS caselog (id INTEGER PRIMARY KEY, user INTEGER, type TEXT, reason TEXT, started FLOAT, expires FLOAT)")
+cursor.execute("CREATE TABLE IF NOT EXISTS extensions (extension TEXT PRIMARY KEY)")
 con.commit()
 
 #startup
 @bot.event
 async def on_ready():
-    print("Connected!")
+    appinfo = await bot.application_info()
+    print("")
+    logging.info(f"Bot started! Hello {str(appinfo.owner)}")
+    logging.info(f"I'm connected as {str(bot.user)} - {bot.user.id}!")
+    logging.info(f"In {len(bot.guilds)} guilds overlooking {len(list(bot.get_all_channels()))} channels and {len(list(bot.get_all_members()))} users.")
+    print("")
 
 #cogs to be loaded on startup
-initial_extensions = [
-    'cogs.cmty',
-    'cogs.moderation',
-    'cogs.utilities'
+default_extensions = [
+    ('cogs.cmty',),
+    ('cogs.moderation',),
+    ('cogs.utilities',),
+    ('cogs.owner',)
 ]
 
-for extension in initial_extensions:
-    bot.load_extension(extension)
+extensions = cursor.execute("SELECT * FROM extensions").fetchall()
+
+if not extensions:
+    cursor.executemany("INSERT INTO extensions(extension) VALUES (?)", default_extensions)
+    con.commit()
+    extensions = default_extensions
+
+for extension in extensions:
+    bot.load_extension(extension[0])
+    logging.info(f"Loaded {extension[0]}")
 
 #on message
 @bot.event
@@ -66,6 +86,7 @@ async def on_message_edit(before, after):
             await after.delete()
         except:
             pass
+        
 #error handling
 @bot.event
 async def on_command_error(ctx, error):
@@ -84,8 +105,10 @@ async def on_command_error(ctx, error):
         await ctx.send("Sorry, you don't have permission to use that command!")
     elif isinstance(error, discord.errors.Forbidden):
         await ctx.send("I don't have permission to do that.")
+    elif isinstance(error, commands.NotOwner):
+        await ctx.send("You need to be owner to do that.")
     else:
         await ctx.send("Something has gone wrong somewhere, and most likely needs to be fixed")
+        raise error
 
 bot.run(Token)
-

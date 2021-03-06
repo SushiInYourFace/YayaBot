@@ -68,11 +68,6 @@ class Utilities(commands.Cog):
         response.add_field(name="Gravel role", value=gravelRole.mention) 
         response.add_field(name="Muted role", value=mutedRole.mention)
         await ctx.send(embed=response)
-        
-        
-
-
-
 
 def setup(bot):
     bot.add_cog(Utilities(bot))
