@@ -49,15 +49,23 @@ async def on_ready():
     print("")
 
 #cogs to be loaded on startup
-initial_extensions = [
-    'cogs.cmty',
-    'cogs.moderation',
-    'cogs.utilities',
-    'cogs.owner'
+default_extensions = [
+    ('cogs.cmty',),
+    ('cogs.moderation',),
+    ('cogs.utilities',),
+    ('cogs.owner',)
 ]
 
-for extension in initial_extensions:
-    bot.load_extension(extension)
+extensions = cursor.execute("SELECT * FROM extensions").fetchall()
+
+if not extensions:
+    cursor.executemany("INSERT INTO extensions(extension) VALUES (?)", default_extensions)
+    con.commit()
+    extensions = default_extensions
+
+for extension in extensions:
+    bot.load_extension(extension[0])
+    logging.info(f"Loaded {extension[0]}")
 
 #on message
 @bot.event
@@ -97,6 +105,8 @@ async def on_command_error(ctx, error):
         await ctx.send("Sorry, you don't have permission to use that command!")
     elif isinstance(error, discord.errors.Forbidden):
         await ctx.send("I don't have permission to do that.")
+    elif isinstance(error, commands.NotOwner):
+        await ctx.send("You need to be owner to do that.")
     else:
         await ctx.send("Something has gone wrong somewhere, and most likely needs to be fixed")
         raise error
