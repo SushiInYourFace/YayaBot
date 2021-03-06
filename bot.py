@@ -75,7 +75,7 @@ async def on_command_error(ctx, error):
     if isinstance(error, ignored):
         return
     if isinstance(error, commands.MemberNotFound):
-        await ctx.send("User not found")
+        await ctx.send("Sorry, I couldn't find that user")
     elif isinstance(error, commands.MissingRequiredArgument):
         await ctx.send('Sorry, that is not a valid number of arguments for this command. If you need help understanding how this command works, please use the command help (your command)')
     elif isinstance(error, commands.MissingPermissions):
@@ -83,7 +83,7 @@ async def on_command_error(ctx, error):
     elif isinstance(error, discord.errors.Forbidden):
         await ctx.send("I don't have permission to do that.")
     else:
-        await ctx.send("error")
+        await ctx.send("Something has gone wrong somewhere, and most likely needs to be fixed")
 
 bot.run(Token)
 
