@@ -64,17 +64,6 @@ class Utilities(commands.Cog):
         cursor.execute("INSERT INTO guild_prefixes(guild,prefix) VALUES(?, ?) ON CONFLICT(guild) DO UPDATE SET prefix=excluded.prefix", (guild.id, prefix.content))
         cursor.execute("INSERT INTO role_ids(guild,gravel,muted) VALUES(?, ?, ?) ON CONFLICT(guild) DO UPDATE SET gravel=excluded.gravel, muted=excluded.muted", (guild.id, gravel, muted))
         connection.commit()
-        
-    @commands.command(name="new_help")
-    async def new_help_but_change_name_later(self,ctx,*,commandName=None):
-        if not commandName:
-            print("list of commands")
-            embed = discord.Embed(title="hi im testing", description="test")
-            embed.add_field(name="testing", value="MMMMMMMMMMMMMMMMMM", inline=True)
-            embed.add_field(name="testing", value="MMMMMMMMMMMMMMMMMM", inline=True)
-            await ctx.send(embed=embed)
-        else:
-            print("info for command")
 
 def setup(bot):
     bot.add_cog(Utilities(bot))
