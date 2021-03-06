@@ -33,6 +33,8 @@ con = sqlite3.connect("database.db")
 cursor = con.cursor()
 cursor.execute("CREATE TABLE IF NOT EXISTS guild_prefixes (guild INTEGER PRIMARY KEY, prefix TEXT)")
 cursor.execute("CREATE TABLE IF NOT EXISTS role_ids (guild INTEGER PRIMARY KEY, gravel INTEGER, muted INTEGER)")
+cursor.execute("CREATE TABLE IF NOT EXISTS active_cases (id INTEGER PRIMARY KEY, expiration FLOAT)")
+cursor.execute("CREATE TABLE IF NOT EXISTS caselog (id INTEGER PRIMARY KEY, user INTEGER, type TEXT, reason TEXT, started FLOAT, expires FLOAT)")
 cursor.execute("CREATE TABLE IF NOT EXISTS extensions (extension TEXT PRIMARY KEY)")
 con.commit()
 
@@ -88,15 +90,15 @@ async def on_command_error(ctx, error):
     if isinstance(error, ignored):
         return
     if isinstance(error, commands.MemberNotFound):
-        await ctx.send("User not found")
+        await ctx.send("Sorry, I couldn't find that user")
     elif isinstance(error, commands.MissingRequiredArgument):
-        await ctx.send('Sorry, that is not a valid number of arguments for this command. If you need help understanding how this command works, please use the command %help (your command)')
+        await ctx.send('Sorry, that is not a valid number of arguments for this command. If you need help understanding how this command works, please use the command help (your command)')
     elif isinstance(error, commands.MissingPermissions):
         await ctx.send("Sorry, you don't have permission to use that command!")
     elif isinstance(error, discord.errors.Forbidden):
         await ctx.send("I don't have permission to do that.")
     else:
-        await ctx.send("error")
+        await ctx.send("Something has gone wrong somewhere, and most likely needs to be fixed")
         raise error
 
 bot.run(Token)

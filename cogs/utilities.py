@@ -64,6 +64,10 @@ class Utilities(commands.Cog):
         cursor.execute("INSERT INTO guild_prefixes(guild,prefix) VALUES(?, ?) ON CONFLICT(guild) DO UPDATE SET prefix=excluded.prefix", (guild.id, prefix.content))
         cursor.execute("INSERT INTO role_ids(guild,gravel,muted) VALUES(?, ?, ?) ON CONFLICT(guild) DO UPDATE SET gravel=excluded.gravel, muted=excluded.muted", (guild.id, gravel, muted))
         connection.commit()
+        response = discord.Embed(title="Server set up successfully!", color=0x00FF00)
+        response.add_field(name="Gravel role", value=gravelRole.mention) 
+        response.add_field(name="Muted role", value=mutedRole.mention)
+        await ctx.send(embed=response)
 
 def setup(bot):
     bot.add_cog(Utilities(bot))
