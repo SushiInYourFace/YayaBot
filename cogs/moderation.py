@@ -1,6 +1,12 @@
 import discord
 from discord import errors
 from discord.ext import commands
+import sqlite3
+import time
+
+#sets up SQLite
+connection = sqlite3.connect("database.db")
+cursor = connection.cursor()
 
 class Moderation(commands.Cog):
     def __init__(self, bot):
@@ -35,6 +41,8 @@ class Moderation(commands.Cog):
     async def ban(self, ctx, member : discord.Member, *, arg):
         guild = ctx.guild
         username = member.name
+        userid = member.id
+        bantime = time.time()
         banEmbed = discord.Embed(title="You have been banned from "+ ctx.guild.name, color=0xFF0000)
         banEmbed.add_field(name="Ban reason:", value=arg)
         try:
@@ -47,12 +55,16 @@ class Moderation(commands.Cog):
         if unsent:
             successEmbed.set_footer(text="Failed to send a message to this user")
         await ctx.send(embed=successEmbed)
+        SqlCommands.new_case(userid, "ban", arg, bantime, -1)
+
 
     #unban
     @commands.command(help="unbans a user")
     @commands.has_permissions(ban_members=True)
     async def unban(self, ctx, user : discord.User):
         guild = ctx.guild
+        userid = user.id
+        unbanTime = time.time()
         try:
             await guild.fetch_ban(user)
         except discord.NotFound:
@@ -62,9 +74,29 @@ class Moderation(commands.Cog):
         await guild.unban(user)
         successEmbed = discord.Embed(title = "Unbanned " + user.name, color = 0x00FF00)
         await ctx.send(embed=successEmbed)
+        SqlCommands.new_case(userid, "unban", "N/A", unbanTime, -1)
 
 
 
 
 def setup(bot):
     bot.add_cog(Moderation(bot))
+
+class Sql:
+    def newest_case(self):
+        caseNumber = cursor.execute("SELECT id FROM caselog ORDER BY id DESC LIMIT 1").fetchone()
+        if caseNumber == None:
+            caseNumber = 0
+        else:
+            caseNumber = caseNumber[0]
+        caseNumber += 1
+        return(caseNumber)
+
+    def new_case(self, user, casetype, reason, started, expires):
+        caseID = self.newest_case()
+        if expires != -1:
+            cursor.execute("INSERT INTO active_cases(id, expiration) VALUES(?,?)", (caseID, expires))
+        cursor.execute("INSERT INTO caselog(id, user, type, reason, started, expires) VALUES(?,?,?,?,?,?)", (caseID, user, casetype, reason, started, expires))
+        connection.commit()
+
+SqlCommands = Sql()
