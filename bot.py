@@ -1,16 +1,21 @@
 import discord
-from discord import errors
 from discord.ext import commands
 import sqlite3
+import logging
+
+# Logging config
+logging.basicConfig(format='[%(asctime)s] %(levelname)s: %(message)s', level=logging.INFO)
 
 #Open txt files
-Token = open("Discord_Token.txt").read()
-filterFile = open("Filtered.txt", "r")
-bannedWords = filterFile.readlines()
-bannedWords = [word.strip() for word in bannedWords]
+with open("Discord_Token.txt") as f:
+    Token = f.read()
+
+with open("Filtered.txt", "r") as f:
+    bannedWords = [word.strip() for word in f.readlines()]
+
 #Guild-Specific prefixes
 async def get_pre(bot, message):
-    prefix = "!"
+    prefix = "~" #this change this back
     try:
         guildcommand = cursor.execute("SELECT prefix FROM guild_prefixes WHERE guild = ?", (message.guild.id,)).fetchone()
         prefix = (str(guildcommand[0]))
@@ -33,13 +38,19 @@ con.commit()
 #startup
 @bot.event
 async def on_ready():
-    print("Connected!")
+    appinfo = await bot.application_info()
+    print("")
+    logging.info(f"Bot started! Hello {str(appinfo.owner)}")
+    logging.info(f"I'm connected as {str(bot.user)} - {bot.user.id}!")
+    logging.info(f"In {len(bot.guilds)} guilds overlooking {len(list(bot.get_all_channels()))} channels and {len(list(bot.get_all_members()))} users.")
+    print("")
 
 #cogs to be loaded on startup
 initial_extensions = [
     'cogs.cmty',
     'cogs.moderation',
-    'cogs.utilities'
+    'cogs.utilities',
+    'cogs.owner'
 ]
 
 for extension in initial_extensions:
@@ -64,6 +75,7 @@ async def on_message_edit(before, after):
             await after.delete()
         except:
             pass
+        
 #error handling
 @bot.event
 async def on_command_error(ctx, error):
@@ -84,6 +96,6 @@ async def on_command_error(ctx, error):
         await ctx.send("I don't have permission to do that.")
     else:
         await ctx.send("error")
+        raise error
 
 bot.run(Token)
-
