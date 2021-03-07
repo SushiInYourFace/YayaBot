@@ -12,18 +12,17 @@ cursor = connection.cursor()
 
 async def filter_check(ctx):
     inDb = cursor.execute("SELECT * FROM message_filter WHERE guild = ?", (ctx.guild.id,)).fetchone()
-    if (inDb is not None):
-        return True
-    else:
+    if (inDb is None):
         cursor.execute("INSERT INTO message_filter(guild,enabled,filter) VALUES(?,?,?)",(ctx.guild.id,1,""))
         connection.commit()
         await ctx.send("Filter created and enabled.")
-        return True
+    return True
 
 class Moderation(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self._last_member = None
+        self.bot.wordWarnCooldown = {}
 
     @commands.group(help="Purge command.")
     async def purge(self,ctx):
@@ -183,9 +182,13 @@ class Moderation(commands.Cog):
             bannedWords = guildFilter[2].split(";")
             if "" in bannedWords:
                 bannedWords.remove("")
-            if any(bannedWord in message.content for bannedWord in bannedWords):
+            if any(bannedWord in message.content.lower() for bannedWord in bannedWords):
                 await message.delete()
-                await message.channel.send(f"Watch your language {message.author.mention}",delete_after=2)
+                if message.channel.id not in self.bot.wordWarnCooldown:
+                    self.bot.wordWarnCooldown[message.channel.id] = 0
+                if self.bot.wordWarnCooldown[message.channel.id] < time.time():
+                    await message.channel.send(f"Watch your language {message.author.mention}",delete_after=2)
+                self.bot.wordWarnCooldown[message.channel.id] = time.time()+2
 
     @commands.Cog.listener()
     async def on_message(self,message):

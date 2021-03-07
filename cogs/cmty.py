@@ -18,5 +18,10 @@ class Community(commands.Cog):
     async def hello(self, ctx):
         await ctx.send("Hello there")
 
+    @commands.Cog.listener()
+    async def on_message(self,message):
+        if message.type == discord.MessageType.new_member:
+            await message.add_reaction("🎉")
+
 def setup(bot):
     bot.add_cog(Community(bot))
