@@ -11,14 +11,16 @@ cursor = connection.cursor()
 
 async def tag_check(ctx):
     tags = cursor.execute("SELECT * FROM tags WHERE guild = ?", (ctx.guild.id,)).fetchone()
-    if (tags is None and ctx.author.guild_permissions.manage_messages):
+    if (tags is None and ctx.author.guild_permissions.manage_messages): # No guild tags and the user can manage messages
+        if not (ctx.command.root_parent == "tag" or ctx.command.name == "tag"): # Check is not coming from a tag command so return True
+            return True
         cursor.execute("INSERT INTO tags(guild,role,tags) VALUES(?,?,?)",(ctx.guild.id,ctx.author.top_role.id,"{}"))
         connection.commit()
         await ctx.send(f"Tags created and role set to {ctx.author.top_role.name}.")
         tags = cursor.execute("SELECT * FROM tags WHERE guild = ?", (ctx.guild.id,)).fetchone()
-    elif tags is None:
+    elif tags is None: # User cannot manage messages but there are no tags
         return False
-    if ctx.guild.get_role(int(tags[1])) <= ctx.author.top_role:
+    if ctx.guild.get_role(int(tags[1])) <= ctx.author.top_role: # Tags do exist and the user has the roles required
         return True
     return False
 
@@ -27,6 +29,7 @@ class Utilities(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self._last_member = None
+        self.bot.send_help = self.send_command_help
     
     @commands.command(help="Sets a server-specific bot prefix", aliases=["set_prefix",])
     @commands.has_permissions(administrator=True)
@@ -93,7 +96,7 @@ class Utilities(commands.Cog):
             return
         tag = ctx.message.content
         if tag.find(' ') == -1:
-            await ctx.send_help(ctx.command)
+            await self.bot.send_help(ctx)
         tag = tag[tag.find(' ')+1:]
         guildTags = cursor.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,)).fetchone()
         if ctx.guild.get_role(int(guildTags[1])) <= ctx.author.top_role:
@@ -109,6 +112,7 @@ class Utilities(commands.Cog):
         return
 
     @tag.command(name="set",aliases=["new","add"])
+    @commands.has_permissions(manage_messages=True)
     async def tag_set(self,ctx,tag,*,text):
         """Sets a tags text assosiation."""
         if tag in ['(tag name)','new','add','remove','delete','del','list','get','role']:
@@ -123,6 +127,7 @@ class Utilities(commands.Cog):
 
 
     @tag.command(name="remove",aliases=["delete","del"])
+    @commands.has_permissions(manage_messages=True)
     async def tag_remove(self,ctx,tag):
         """Removes a tag text assosiation."""
         guildTags = cursor.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,)).fetchone()
@@ -152,5 +157,103 @@ class Utilities(commands.Cog):
         connection.commit()
         await ctx.send(f"Tag role set to {role.name}.")
 
+    async def send_all_help(self,ctx,pageOut):
+        colour = discord.Colour.from_rgb(random.randint(1,255),random.randint(1,255),random.randint(1,255))
+        titleDesc = ["YayaBot Help!",f"Say `{ctx.prefix}help <command>` for more info on a command!"] 
+        page = [discord.Embed(colour=colour,title=titleDesc[0],description=titleDesc[1])]
+        cogs = sorted(list(self.bot.cogs.keys()))
+        fields = 0
+        for cog in cogs:
+            cog_command = False
+            if fields == 25:
+                page.append(discord.Embed(colour=colour,title=titleDesc[0],description=titleDesc[1]))
+                fields = 0
+            page[-1].add_field(name=f"—————————————————————————", value=f"**{cog}**", inline=False)
+            fields += 1
+            for command in self.bot.cogs[cog].get_commands():
+                try:
+                    can_run = await command.can_run(ctx)
+                except:
+                    can_run = False
+                if can_run:
+                    cog_command = True
+                    if fields == 25:
+                        page.append(discord.Embed(colour=colour,title=titleDesc[0],description=titleDesc[1]))
+                        fields = 0
+                        page[-1].add_field(name=f"—————————————————————————", value=f"**{cog}**", inline=False)
+                    if command.help:
+                        description = command.help.replace("\n"," ")
+                        if len(description) > 200:
+                            description = description[:197] + "..."
+                    else:
+                        description = "..."
+                    page[-1].add_field(name=f"{command.name}", value=f"{description}", inline=True)
+                    fields += 1
+            if not cog_command:
+                page[-1].remove_field(len(page[-1].fields)-1)
+        if pageOut + 1 > len(page):
+            pageOut = len(page) - 1
+        page[pageOut].set_footer(text=f"{pageOut+1} of {len(page)}")
+        msg = await ctx.send(embed=page[pageOut])
+        if len(page) == 1:
+            return
+        for emoji in ["⏪","◀️","▶️","⏩"]:
+            await msg.add_reaction(emoji)
+        def check(react, user):
+            return react.message == msg and (ctx.message.author == user and str(react.emoji) in ["⏪","◀️","▶️","⏩"])
+        while True:
+            try:
+                reaction,user = await self.bot.wait_for("reaction_add",timeout=30,check=check)
+            except asyncio.TimeoutError:
+                await msg.clear_reactions()
+                break
+            pageOut = {"⏪":0,"◀️":(pageOut-1) if pageOut-1 >= 0 else pageOut,"▶️":(pageOut+1) if pageOut+1 < len(page) else pageOut,"⏩":len(page)-1}[str(reaction.emoji)]
+            page[pageOut].set_footer(text=f"{pageOut+1} of {len(page)}")
+            await msg.edit(embed=page[pageOut])
+            await reaction.remove(user)
+
+    async def send_command_help(self,ctx,command=None):
+        if not command:
+            command = ctx.command
+        else:
+            command = self.bot.get_command(command)
+        if not command:
+            await ctx.send("Command could not be found.")
+            return
+        colour = discord.Colour.from_rgb(random.randint(1,255),random.randint(1,255),random.randint(1,255))
+        embed = discord.Embed(colour=colour,title=f"Help for {command.qualified_name}",description=f"Aliases: {', '.join(list(command.aliases))}")
+        embed.add_field(name="Description",value=(command.help if command.help else '...'),inline=False)
+        if isinstance(command,commands.Group):
+            embed.add_field(name="———————",value="**Subcommands**",inline=False)
+            subFields = 0
+            for subcommand in sorted(command.commands, key=lambda x: x.name):
+                if subcommand.help:
+                    description = subcommand.help.replace("\n"," ")
+                    if len(description) > 100:
+                        description = description[:97] + "..."
+                else:
+                    description = "..."
+                embed.add_field(name=subcommand.name,value=description, inline=True)
+                subFields += 1
+            while not subFields % 3 == 0:
+                embed.add_field(name=".",value=".", inline=True)
+                subFields += 1
+        await ctx.send(embed=embed)
+        
+
+    @commands.command()
+    async def help(self,ctx,*,command=None):
+        """Displays help, like what you're seeing now!"""
+        if not command:
+            command = 1
+        try:
+            pageOut = int(command)-1
+        except:
+            pageOut = None
+        if pageOut is not None:
+            await self.send_all_help(ctx,pageOut)
+            return
+        await self.send_command_help(ctx,command)
+        
 def setup(bot):
     bot.add_cog(Utilities(bot))
