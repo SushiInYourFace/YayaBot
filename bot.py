@@ -10,9 +10,6 @@ logging.basicConfig(format='[%(asctime)s] %(levelname)s: %(message)s', level=log
 with open("Discord_Token.txt") as f:
     Token = f.read()
 
-with open("Filtered.txt", "r") as f:
-    bannedWords = [word.strip() for word in f.readlines()]
-
 #Guild-Specific prefixes
 async def get_pre(bot, message):
     prefix = "!"
@@ -36,6 +33,7 @@ cursor.execute("CREATE TABLE IF NOT EXISTS role_ids (guild INTEGER PRIMARY KEY, 
 cursor.execute("CREATE TABLE IF NOT EXISTS active_cases (id INTEGER PRIMARY KEY, expiration FLOAT)")
 cursor.execute("CREATE TABLE IF NOT EXISTS caselog (id INTEGER PRIMARY KEY, user INTEGER, type TEXT, reason TEXT, started FLOAT, expires FLOAT)")
 cursor.execute("CREATE TABLE IF NOT EXISTS extensions (extension TEXT PRIMARY KEY)")
+cursor.execute("CREATE TABLE IF NOT EXISTS message_filter (guild INTEGER PRIMARY KEY, enabled INTEGER NOT NULL, filter TEXT NOT NULL)")
 con.commit()
 
 #startup
@@ -63,29 +61,13 @@ if not extensions:
     con.commit()
     extensions = default_extensions
 
+print("")
+logging.info("Loading Cogs.")
 for extension in extensions:
     bot.load_extension(extension[0])
     logging.info(f"Loaded {extension[0]}")
-
-#on message
-@bot.event
-async def on_message(message):
-    if message.author == bot.user or message.author.bot:
-        return
-    if any(bannedWord in message.content for bannedWord in bannedWords):
-        await message.channel.send("Watch your goddamn mouth, libtard")
-        await message.delete()
-    await bot.process_commands(message)
-
-#on edited message
-@bot.event
-async def on_message_edit(before, after):
-    if any(bannedWord in after.content for bannedWord in bannedWords):
-        await after.channel.send("Watch your goddamn mouth, libtard")
-        try:
-            await after.delete()
-        except:
-            pass
+logging.info("Done.")
+print("")
         
 #error handling
 @bot.event
