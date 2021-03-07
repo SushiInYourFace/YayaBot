@@ -162,6 +162,30 @@ class Moderation(commands.Cog):
         logEmbed.set_thumbnail(url=avatar)
         await ctx.send(embed = logEmbed)
 
+    @commands.command(help="Unmutes a User")
+    @commands.has_permissions(ban_members=True)
+    async def unmute(self, ctx, member : discord.Member):
+        mod = ctx.author.name
+        unmutetime = time.time()
+        muted = SqlCommands.get_role(ctx.guild.id, "muted")
+        mutedRole = ctx.guild.get_role(muted)
+        await member.remove_roles(mutedRole,)
+        successEmbed = discord.Embed(title="Unmuted " + member.name, color=0x00FF00)
+        await ctx.send(embed=successEmbed)
+        SqlCommands.new_case(member.id, ctx.guild.id, "unmute", "N/A", unmutetime, -1, mod)
+
+    @commands.command(help="Ungravels a User")
+    @commands.has_permissions(ban_members=True)
+    async def ungravel(self, ctx, member : discord.Member):
+        mod = ctx.author.name
+        ungraveltime = time.time()
+        gravel = SqlCommands.get_role(ctx.guild.id, "gravel")
+        mutedRole = ctx.guild.get_role(gravel)
+        await member.remove_roles(mutedRole,)
+        successEmbed = discord.Embed(title="Removed Gravel from " + member.name, color=0x00FF00)
+        await ctx.send(embed=successEmbed)
+        SqlCommands.new_case(member.id, ctx.guild.id, "ungravel", "N/A", ungraveltime, -1, mod)
+
     #checks if a role needs to be removed
     @tasks.loop(seconds=5.0)
     async def timedRoleCheck(self):
@@ -324,7 +348,7 @@ class timeconverters:
             hours = seconds//3600
             return str(hours) + " Hours"
         elif seconds >= 60:
-            minutes = seconds/60
+            minutes = seconds//60
             return str(minutes) + " Minutes"
         else:
             return str(seconds) + " Seconds"
