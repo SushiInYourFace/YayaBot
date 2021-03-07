@@ -3,6 +3,7 @@ from discord import errors
 from discord.ext import commands, tasks
 import sqlite3
 import time
+import datetime
 import requests
 import io
 
@@ -50,6 +51,7 @@ class Moderation(commands.Cog):
     @commands.command(help="bans a user")
     @commands.has_permissions(ban_members=True)
     async def ban(self, ctx, member : discord.Member, *, arg):
+        mod = ctx.author.name
         guild = ctx.guild
         username = member.name
         userid = member.id
@@ -66,13 +68,14 @@ class Moderation(commands.Cog):
         if unsent:
             successEmbed.set_footer(text="Failed to send a message to this user")
         await ctx.send(embed=successEmbed)
-        SqlCommands.new_case(userid, guild.id, "ban", arg, bantime, -1)
+        SqlCommands.new_case(userid, guild.id, "ban", arg, bantime, -1, mod)
 
     #unban
     @commands.command(help="unbans a user")
     @commands.has_permissions(ban_members=True)
     async def unban(self, ctx, user : discord.User):
         guild = ctx.guild
+        mod = ctx.author.name
         userid = user.id
         unbanTime = time.time()
         try:
@@ -84,13 +87,14 @@ class Moderation(commands.Cog):
         await guild.unban(user)
         successEmbed = discord.Embed(title = "Unbanned " + user.name, color = 0x00FF00)
         await ctx.send(embed=successEmbed)
-        SqlCommands.new_case(userid, guild.id, "unban", "N/A", unbanTime, -1)
+        SqlCommands.new_case(userid, guild.id, "unban", "N/A", unbanTime, -1, mod)
 
     #gravel
     @commands.command(help="Gravels a user")
     @commands.has_permissions(ban_members=True)
     async def gravel(self, ctx, member : discord.Member, lengthstring, *, reason):
         guild = ctx.guild
+        mod = ctx.author.name
         now = time.time()    
         if lengthstring[-1] == "m" or lengthstring[-1] == "h" or lengthstring[-1] == "d" or lengthstring[-1] == "s":
             timeformat = lengthstring[-1]
@@ -103,14 +107,14 @@ class Moderation(commands.Cog):
         except ValueError:
             await ctx.send("Oops! That's not a valid time format")
             return
-        totalsecs = secondsconverter(timevalue, timeformat)
+        totalsecs = TimeConversions.secondsconverter(timevalue, timeformat)
         roleid = SqlCommands.get_role(ctx.guild.id, "gravel")
         roleid = str(roleid)
         converter = commands.RoleConverter()
         role = await converter.convert(ctx,roleid)
         await member.add_roles(role)
         end = now + totalsecs
-        SqlCommands.new_case(member.id, guild.id, "gravel", reason, now, end)
+        SqlCommands.new_case(member.id, guild.id, "gravel", reason, now, end, mod)
         successEmbed = discord.Embed(title = "Gravelled  " + member.name, color = 0x808080)
         await ctx.send(embed=successEmbed)
 
@@ -118,6 +122,7 @@ class Moderation(commands.Cog):
     @commands.has_permissions(ban_members=True)
     async def mute(self, ctx, member : discord.Member, lengthstring, *, reason):
         guild = ctx.guild
+        mod = ctx.author.name
         now = time.time()    
         if lengthstring[-1] == "m" or lengthstring[-1] == "h" or lengthstring[-1] == "d" or lengthstring[-1] == "s":
             timeformat = lengthstring[-1]
@@ -130,16 +135,30 @@ class Moderation(commands.Cog):
         except ValueError:
             await ctx.send("Oops! That's not a valid time format")
             return
-        totalsecs = secondsconverter(timevalue, timeformat)
+        totalsecs = TimeConversions.secondsconverter(timevalue, timeformat)
         roleid = SqlCommands.get_role(ctx.guild.id, "muted")
         roleid = str(roleid)
         converter = commands.RoleConverter()
         role = await converter.convert(ctx,roleid)
         await member.add_roles(role)
         end = now + totalsecs
-        SqlCommands.new_case(member.id, guild.id, "mute", reason, now, end)
+        SqlCommands.new_case(member.id, guild.id, "mute", reason, now, end, mod)
         successEmbed = discord.Embed(title = "Muted " + member.name, color = 0xFFFFFF)
         await ctx.send(embed=successEmbed)
+
+    @commands.command(help="Shows a user's modlogs")
+    @commands.has_permissions(ban_members=True)
+    async def modlogs(self, ctx, member : discord.User):
+        logEmbed = discord.Embed(title = member.name + "'s Modlogs")
+        logs = cursor.execute("SELECT id, guild, user, type, reason, started, expires, moderator FROM caselog WHERE user = ? AND guild = ?", (member.id, ctx.guild.id)).fetchall()
+        for log in logs:
+            start = datetime.datetime.fromtimestamp(int(log[5])).strftime('%Y-%m-%d %H:%M:%S')
+            if int(log[6]) != -1:
+                totaltime = TimeConversions.fromseconds(int(int(log[6])) - int(log[5]))
+            else:
+                totaltime = "Permanent"
+            logEmbed.add_field(name="**Case " + str(log[0]) + "**", value="**TYPE- **" + log[3] + "\n**REASON- **" + log[4] + "\n**TIME- **" + start + "\n**LENGTH- **" + totaltime + "\n**MODERATOR- **" + log[7], inline=False)
+        await ctx.send(embed = logEmbed)
 
     #checks if a role needs to be removed
     @tasks.loop(seconds=5.0)
@@ -283,18 +302,30 @@ class Moderation(commands.Cog):
 def setup(bot):
     bot.add_cog(Moderation(bot))
 
-def secondsconverter(value, startType):
-    if startType == "s":
-        #time already in seconds
-        pass
-    elif startType == "m":
-        value *= 60
-    elif startType == "h":
-        value *= 3600
-    elif startType == "d":
-        value *= 86400
-    return value
-
+class timeconverters:
+    def secondsconverter(self, value, startType):
+        if startType == "s":
+            #time already in seconds
+            pass
+        elif startType == "m":
+            value *= 60
+        elif startType == "h":
+            value *= 3600
+        elif startType == "d":
+            value *= 86400
+        return value
+    def fromseconds(self, seconds):
+        if seconds >= 86400:
+            days = seconds//86400
+            return str(days) + " Days"
+        elif seconds >= 3600:
+            hours = seconds//3600
+            return str(hours) + " Hours"
+        elif seconds >= 60:
+            minutes = seconds/60
+            return str(minutes) + " Minutes"
+        else:
+            return str(seconds) + " Seconds"
 class Sql:
     def newest_case(self):
         caseNumber = cursor.execute("SELECT id FROM caselog ORDER BY id DESC LIMIT 1").fetchone()
@@ -305,11 +336,11 @@ class Sql:
         caseNumber += 1
         return(caseNumber)
 
-    def new_case(self, user, guild, casetype, reason, started, expires):
+    def new_case(self, user, guild, casetype, reason, started, expires, mod):
         caseID = self.newest_case()
         if expires != -1:
-            cursor.execute("INSERT INTO active_cases(id, guild, expiration) VALUES(?,?,?)", (caseID, guild, expires))
-        cursor.execute("INSERT INTO caselog(id, guild, user, type, reason, started, expires) VALUES(?,?,?,?,?,?,?)", (caseID, guild, user, casetype, reason, started, expires))
+            cursor.execute("INSERT INTO active_cases(id, expiration) VALUES(?,?)", (caseID, expires))
+        cursor.execute("INSERT INTO caselog(id, guild, user, type, reason, started, expires, moderator) VALUES(?,?,?,?,?,?,?,?)", (caseID, guild, user, casetype, reason, started, expires, mod))
         connection.commit()
 
     def get_role(self, guild, role):
@@ -320,3 +351,4 @@ class Sql:
         return roleid[0]
 
 SqlCommands = Sql()
+TimeConversions = timeconverters()
