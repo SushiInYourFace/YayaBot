@@ -34,6 +34,7 @@ cursor.execute("CREATE TABLE IF NOT EXISTS active_cases (id INTEGER PRIMARY KEY,
 cursor.execute("CREATE TABLE IF NOT EXISTS caselog (id INTEGER PRIMARY KEY, user INTEGER, type TEXT, reason TEXT, started FLOAT, expires FLOAT)")
 cursor.execute("CREATE TABLE IF NOT EXISTS extensions (extension TEXT PRIMARY KEY)")
 cursor.execute("CREATE TABLE IF NOT EXISTS message_filter (guild INTEGER PRIMARY KEY, enabled INTEGER NOT NULL, filter TEXT NOT NULL)")
+cursor.execute("CREATE TABLE IF NOT EXISTS tags (guild INTEGER PRIMARY KEY, role INTEGER, tags TEXT NOT NULL)")
 con.commit()
 
 #startup
@@ -74,7 +75,7 @@ print("")
 async def on_command_error(ctx, error):
     if hasattr(ctx.command, 'on_error'):
             return
-    ignored = (commands.CommandNotFound, )
+    ignored = (commands.CommandNotFound, commands.CheckFailure)
     error = getattr(error, 'original', error)
     #ignores ignored errors
     if isinstance(error, ignored):
@@ -89,6 +90,8 @@ async def on_command_error(ctx, error):
         await ctx.send("I don't have permission to do that.")
     elif isinstance(error, commands.NotOwner):
         await ctx.send("You need to be owner to do that.")
+    elif isinstance(error, commands.RoleNotFound):
+        await ctx.send("That role could not be found.")
     else:
         await ctx.send("Something has gone wrong somewhere, and most likely needs to be fixed")
         raise error
