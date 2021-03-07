@@ -92,6 +92,8 @@ class Utilities(commands.Cog):
         if ctx.invoked_subcommand is not None:
             return
         tag = ctx.message.content
+        if tag.find(' ') == -1:
+            await ctx.send_help(ctx.command)
         tag = tag[tag.find(' ')+1:]
         guildTags = cursor.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,)).fetchone()
         if ctx.guild.get_role(int(guildTags[1])) <= ctx.author.top_role:
@@ -101,13 +103,15 @@ class Utilities(commands.Cog):
             except KeyError:
                 pass
 
-    @tag.command(name="(your tag here)")
-    async def tag_yourtaghere(self,ctx):
+    @tag.command(name="(tag name)")
+    async def tag_tagname(self,ctx):
+        """Sends the text assosiated to your tag."""
         return
 
     @tag.command(name="set",aliases=["new","add"])
     async def tag_set(self,ctx,tag,*,text):
-        if tag in ['(your tag here)','new','add','remove','delete','del','list','get','role']:
+        """Sets a tags text assosiation."""
+        if tag in ['(tag name)','new','add','remove','delete','del','list','get','role']:
             await ctx.send("Tag cannot be named that.")
             return
         guildTags = cursor.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,)).fetchone()
@@ -120,6 +124,7 @@ class Utilities(commands.Cog):
 
     @tag.command(name="remove",aliases=["delete","del"])
     async def tag_remove(self,ctx,tag):
+        """Removes a tag text assosiation."""
         guildTags = cursor.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,)).fetchone()
         tags = json.loads(guildTags[2])
         tags.pop(tag)
@@ -129,6 +134,7 @@ class Utilities(commands.Cog):
 
     @tag.command(name="list",aliases=["get"])
     async def tag_list(self,ctx):
+        """Lists tags and their text assosiation."""
         guildTags = cursor.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,)).fetchone()
         tags = json.loads(guildTags[2])
         colour = discord.Colour.from_rgb(random.randint(1,255),random.randint(1,255),random.randint(1,255))
@@ -139,6 +145,7 @@ class Utilities(commands.Cog):
     @tag.command(name="role")
     @commands.has_permissions(manage_messages=True)
     async def tag_role(self,ctx,*,role:discord.Role=None):
+        """Sets the lowest role to be able to use tags."""
         if not role:
             role = ctx.author.top_role
         cursor.execute("UPDATE tags SET role=? WHERE guild=?",(role.id,ctx.guild.id))
