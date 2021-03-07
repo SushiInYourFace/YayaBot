@@ -12,13 +12,11 @@ cursor = connection.cursor()
 
 async def filter_check(ctx):
     inDb = cursor.execute("SELECT * FROM message_filter WHERE guild = ?", (ctx.guild.id,)).fetchone()
-    if (inDb is not None):
-        return True
-    else:
+    if (inDb is None):
         cursor.execute("INSERT INTO message_filter(guild,enabled,filter) VALUES(?,?,?)",(ctx.guild.id,1,""))
         connection.commit()
         await ctx.send("Filter created and enabled.")
-        return True
+    return True
 
 class Moderation(commands.Cog):
     def __init__(self, bot):
