@@ -220,6 +220,10 @@ class Utilities(commands.Cog):
         if not command:
             await ctx.send("Command could not be found.")
             return
+        try:
+            await command.can_run(ctx)
+        except:
+            return
         colour = discord.Colour.from_rgb(random.randint(1,255),random.randint(1,255),random.randint(1,255))
         embed = discord.Embed(colour=colour,title=f"Help for {command.qualified_name}",description=f"Aliases: {', '.join(list(command.aliases))}")
         embed.add_field(name="Description",value=(command.help if command.help else '...'),inline=False)
