@@ -8,9 +8,9 @@ class Community(commands.Cog):
         self._last_member = None
 
     #rats
-    @commands.command(help="RATS RATS RATS RATS RATS RATS RATS RATS RATS RATS RATS RATS", aliases=["rat", "RATS", "RAT"])
-    async def rats(self, ctx):
-        rat = random.choice(open("RATSRATSRATS.txt").readlines())
+    @commands.command(help="RATS RATS RATS RATS RATS RATS RATS RATS RATS RATS RATS RATS", aliases=["rats", "RATS", "RAT"])
+    async def rat(self, ctx):
+        rat = random.choice(open("rats.txt").readlines())
         await ctx.send(rat)
 
     #hello

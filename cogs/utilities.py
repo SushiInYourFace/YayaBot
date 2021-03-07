@@ -2,10 +2,26 @@ import discord
 from discord.ext import commands
 import sqlite3
 import asyncio
+import json
+import random
 
 #sets up SQLite
 connection = sqlite3.connect("database.db")
 cursor = connection.cursor()
+
+async def tag_check(ctx):
+    tags = cursor.execute("SELECT * FROM tags WHERE guild = ?", (ctx.guild.id,)).fetchone()
+    if (tags is None and ctx.author.guild_permissions.manage_messages):
+        cursor.execute("INSERT INTO tags(guild,role,tags) VALUES(?,?,?)",(ctx.guild.id,ctx.author.top_role.id,"{}"))
+        connection.commit()
+        await ctx.send(f"Tags created and role set to {ctx.author.top_role.name}.")
+        tags = cursor.execute("SELECT * FROM tags WHERE guild = ?", (ctx.guild.id,)).fetchone()
+    elif tags is None:
+        return False
+    if ctx.guild.get_role(int(tags[1])) <= ctx.author.top_role:
+        return True
+    return False
+
 
 class Utilities(commands.Cog):
     def __init__(self, bot):
@@ -68,6 +84,66 @@ class Utilities(commands.Cog):
         response.add_field(name="Gravel role", value=gravelRole.mention) 
         response.add_field(name="Muted role", value=mutedRole.mention)
         await ctx.send(embed=response)
+
+    @commands.group(aliases=["t"])
+    @commands.check(tag_check)
+    async def tag(self,ctx):
+        """Predefined messages which can be triggered by commands."""
+        if ctx.invoked_subcommand is not None:
+            return
+        tag = ctx.message.content
+        tag = tag[tag.find(' ')+1:]
+        guildTags = cursor.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,)).fetchone()
+        if ctx.guild.get_role(int(guildTags[1])) <= ctx.author.top_role:
+            tags = json.loads(guildTags[2])
+            try:
+                await ctx.send(tags[tag])
+            except KeyError:
+                pass
+
+    @tag.command(name="(your tag here)")
+    async def tag_yourtaghere(self,ctx):
+        return
+
+    @tag.command(name="set",aliases=["new","add"])
+    async def tag_set(self,ctx,tag,*,text):
+        if tag in ['(your tag here)','new','add','remove','delete','del','list','get','role']:
+            await ctx.send("Tag cannot be named that.")
+            return
+        guildTags = cursor.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,)).fetchone()
+        tags = json.loads(guildTags[2])
+        tags[tag] = text
+        cursor.execute("UPDATE tags SET tags=? WHERE guild=?",(json.dumps(tags),ctx.guild.id))
+        connection.commit()
+        await ctx.send("Tag updated.")
+
+
+    @tag.command(name="remove",aliases=["delete","del"])
+    async def tag_remove(self,ctx,tag):
+        guildTags = cursor.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,)).fetchone()
+        tags = json.loads(guildTags[2])
+        tags.pop(tag)
+        cursor.execute("UPDATE tags SET tags=? WHERE guild=?",(json.dumps(tags),ctx.guild.id))
+        connection.commit()
+        await ctx.send("Tag updated.")
+
+    @tag.command(name="list",aliases=["get"])
+    async def tag_list(self,ctx):
+        guildTags = cursor.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,)).fetchone()
+        tags = json.loads(guildTags[2])
+        colour = discord.Colour.from_rgb(random.randint(1,255),random.randint(1,255),random.randint(1,255))
+        embed = discord.Embed(colour=colour,title=f"Tags.",description=", ".join(tags.keys())+f"\n\nUsable by {ctx.guild.get_role(int(guildTags[1])).mention} and above.")
+        embed.set_footer(text=ctx.author.name, icon_url=ctx.author.avatar_url)
+        await ctx.send(embed=embed)
+
+    @tag.command(name="role")
+    @commands.has_permissions(manage_messages=True)
+    async def tag_role(self,ctx,*,role:discord.Role=None):
+        if not role:
+            role = ctx.author.top_role
+        cursor.execute("UPDATE tags SET role=? WHERE guild=?",(role.id,ctx.guild.id))
+        connection.commit()
+        await ctx.send(f"Tag role set to {role.name}.")
 
 def setup(bot):
     bot.add_cog(Utilities(bot))

@@ -7,7 +7,7 @@ import logging
 logging.basicConfig(format='[%(asctime)s] %(levelname)s: %(message)s', level=logging.INFO)
 
 #Open txt files
-with open("Discord_Token.txt") as f:
+with open("token.txt") as f:
     Token = f.read()
 
 #Guild-Specific prefixes
