@@ -225,7 +225,8 @@ class Utilities(commands.Cog):
         except:
             return
         colour = discord.Colour.from_rgb(random.randint(1,255),random.randint(1,255),random.randint(1,255))
-        embed = discord.Embed(colour=colour,title=f"Help for {command.qualified_name}",description=f"Aliases: {', '.join(list(command.aliases))}")
+        embed = discord.Embed(colour=colour,title=f"Help for {command.qualified_name}",description=(f"Aliases: {', '.join(list(command.aliases))}" if command.aliases else ""))
+        embed.add_field(name="Usage",value=f"{ctx.prefix}{command.qualified_name} {(command.signature) if command.signature else ''}")
         embed.add_field(name="Description",value=(command.help if command.help else '...'),inline=False)
         if isinstance(command,commands.Group):
             embed.add_field(name="———————",value="**Subcommands**",inline=False)
