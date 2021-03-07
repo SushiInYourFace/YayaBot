@@ -111,6 +111,8 @@ class Moderation(commands.Cog):
         await member.add_roles(role)
         end = now + totalsecs
         SqlCommands.new_case(member.id, guild.id, "gravel", reason, now, end)
+        successEmbed = discord.Embed(title = "Gravelled  " + member.name, color = 0x808080)
+        await ctx.send(embed=successEmbed)
 
     @commands.command(help="Mutes a user")
     @commands.has_permissions(ban_members=True)
@@ -136,7 +138,8 @@ class Moderation(commands.Cog):
         await member.add_roles(role)
         end = now + totalsecs
         SqlCommands.new_case(member.id, guild.id, "mute", reason, now, end)
-
+        successEmbed = discord.Embed(title = "Muted " + member.name, color = 0xFFFFFF)
+        await ctx.send(embed=successEmbed)
 
     #checks if a role needs to be removed
     @tasks.loop(seconds=5.0)
