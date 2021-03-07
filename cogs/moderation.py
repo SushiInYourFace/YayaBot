@@ -149,7 +149,8 @@ class Moderation(commands.Cog):
     @commands.command(help="Shows a user's modlogs")
     @commands.has_permissions(ban_members=True)
     async def modlogs(self, ctx, member : discord.User):
-        logEmbed = discord.Embed(title = member.name + "'s Modlogs")
+        avatar = member.avatar_url
+        logEmbed = discord.Embed(title = member.name + "'s Modlogs", color=0x000080)
         logs = cursor.execute("SELECT id, guild, user, type, reason, started, expires, moderator FROM caselog WHERE user = ? AND guild = ?", (member.id, ctx.guild.id)).fetchall()
         for log in logs:
             start = datetime.datetime.fromtimestamp(int(log[5])).strftime('%Y-%m-%d %H:%M:%S')
@@ -158,6 +159,7 @@ class Moderation(commands.Cog):
             else:
                 totaltime = "Permanent"
             logEmbed.add_field(name="**Case " + str(log[0]) + "**", value="**TYPE- **" + log[3] + "\n**REASON- **" + log[4] + "\n**TIME- **" + start + "\n**LENGTH- **" + totaltime + "\n**MODERATOR- **" + log[7], inline=False)
+        logEmbed.set_thumbnail(url=avatar)
         await ctx.send(embed = logEmbed)
 
     #checks if a role needs to be removed
