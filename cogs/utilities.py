@@ -213,10 +213,7 @@ class Utilities(commands.Cog):
             await reaction.remove(user)
 
     async def send_command_help(self,ctx,command=None):
-        if not command:
-            command = ctx.command
-        else:
-            command = self.bot.get_command(command)
+        command = self.bot.get_command(command) if command else ctx.command
         if not command:
             await ctx.send("Command could not be found.")
             return
@@ -224,9 +221,11 @@ class Utilities(commands.Cog):
             await command.can_run(ctx)
         except:
             return
+        random.seed(command.qualified_name)
         colour = discord.Colour.from_rgb(random.randint(1,255),random.randint(1,255),random.randint(1,255))
+        random.seed()
         embed = discord.Embed(colour=colour,title=f"Help for {command.qualified_name}",description=(f"Aliases: {', '.join(list(command.aliases))}" if command.aliases else ""))
-        embed.add_field(name="Usage",value=f"`{ctx.prefix}{command.qualified_name} {(command.signature) if command.signature else '<subcommand>' if isinstance(command,commands.Group) else ''}`")
+        embed.add_field(name="Usage",value=f"`{ctx.prefix}{command.qualified_name}{(" " + command.signature) if command.signature else ' <subcommand>' if isinstance(command,commands.Group) else ''}`")
         embed.add_field(name="Description",value=(command.help.replace("[p]",ctx.prefix) if command.help else '...'),inline=False)
         if isinstance(command,commands.Group):
             embed.add_field(name="———————",value="**Subcommands**",inline=False)
