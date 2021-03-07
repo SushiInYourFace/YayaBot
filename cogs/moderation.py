@@ -120,7 +120,9 @@ class Moderation(commands.Cog):
         You can specify multiple words with spaces, to add something that includes a space you must encase it in ".
         For example `[p]filter add "mario and luigi"` would filter `mario and luigi` only and not `mario`, `and` or `luigi` separately"""
         guildFilter = cursor.execute("SELECT * FROM message_filter WHERE guild = ?",(ctx.guild.id,)).fetchone()[2]
-        guildFilter = guildFilter.split(";").remove("")
+        guildFilter = guildFilter.split(";")
+        if "" in guildFilter:
+            guildFilter.remove("")
         if not guildFilter:
             guildFilter = []
         for word in words:
@@ -138,6 +140,8 @@ class Moderation(commands.Cog):
         For example `[p]filter add "mario and luigi"` would remove `mario and luigi`"""
         guildFilter = cursor.execute("SELECT * FROM message_filter WHERE guild = ?",(ctx.guild.id,)).fetchone()[2]
         guildFilter = guildFilter.split(";")
+        if "" in guildFilter:
+            guildFilter.remove("")
         notFoundWords = []
         for word in words:
             try:
