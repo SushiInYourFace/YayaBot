@@ -1,6 +1,6 @@
 import discord
 from discord import errors
-from discord.ext import commands
+from discord.ext import commands, tasks
 import sqlite3
 import time
 import requests
@@ -24,6 +24,7 @@ class Moderation(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self._last_member = None
+        self.timedRoleCheck.start()
 
     @commands.group(help="Purge command.")
     async def purge(self,ctx):
@@ -66,8 +67,7 @@ class Moderation(commands.Cog):
         if unsent:
             successEmbed.set_footer(text="Failed to send a message to this user")
         await ctx.send(embed=successEmbed)
-        SqlCommands.new_case(userid, "ban", arg, bantime, -1)
-
+        SqlCommands.new_case(userid, guild.id, "ban", arg, bantime, -1)
 
     #unban
     @commands.command(help="unbans a user")
@@ -85,7 +85,87 @@ class Moderation(commands.Cog):
         await guild.unban(user)
         successEmbed = discord.Embed(title = "Unbanned " + user.name, color = 0x00FF00)
         await ctx.send(embed=successEmbed)
-        SqlCommands.new_case(userid, "unban", "N/A", unbanTime, -1)
+        SqlCommands.new_case(userid, guild.id, "unban", "N/A", unbanTime, -1)
+
+    #gravel
+    @commands.command(help="Gravels a user")
+    @commands.has_permissions(ban_members=True)
+    async def gravel(self, ctx, member : discord.Member, lengthstring, *, reason):
+        guild = ctx.guild
+        now = time.time()    
+        if lengthstring[-1] == "m" or lengthstring[-1] == "h" or lengthstring[-1] == "d" or lengthstring[-1] == "s":
+            timeformat = lengthstring[-1]
+            timevalue = lengthstring[:-1]
+        else:
+            await ctx.send("Oops! That's not a valid time format")
+            return
+        try:
+            timevalue = int(timevalue)
+        except ValueError:
+            await ctx.send("Oops! That's not a valid time format")
+            return
+        totalsecs = secondsconverter(timevalue, timeformat)
+        roleid = SqlCommands.get_role(ctx.guild.id, "gravel")
+        roleid = str(roleid)
+        converter = commands.RoleConverter()
+        role = await converter.convert(ctx,roleid)
+        await member.add_roles(role)
+        end = now + totalsecs
+        SqlCommands.new_case(member.id, guild.id, "gravel", reason, now, end)
+
+    @commands.command(help="Mutes a user")
+    @commands.has_permissions(ban_members=True)
+    async def mute(self, ctx, member : discord.Member, lengthstring, *, reason):
+        guild = ctx.guild
+        now = time.time()    
+        if lengthstring[-1] == "m" or lengthstring[-1] == "h" or lengthstring[-1] == "d" or lengthstring[-1] == "s":
+            timeformat = lengthstring[-1]
+            timevalue = lengthstring[:-1]
+        else:
+            await ctx.send("Oops! That's not a valid time format")
+            return
+        try:
+            timevalue = int(timevalue)
+        except ValueError:
+            await ctx.send("Oops! That's not a valid time format")
+            return
+        totalsecs = secondsconverter(timevalue, timeformat)
+        roleid = SqlCommands.get_role(ctx.guild.id, "muted")
+        roleid = str(roleid)
+        converter = commands.RoleConverter()
+        role = await converter.convert(ctx,roleid)
+        await member.add_roles(role)
+        end = now + totalsecs
+        SqlCommands.new_case(member.id, guild.id, "mute", reason, now, end)
+
+
+    #checks if a role needs to be removed
+    @tasks.loop(seconds=5.0)
+    async def timedRoleCheck(self):
+        now = time.time()
+        expired = cursor.execute("SELECT id FROM active_cases WHERE expiration <= " + str(now)).fetchall()
+        for item in expired:
+            case = cursor.execute("SELECT guild, user, type FROM caselog WHERE id = ?", (item[0],)).fetchone()
+            guild = self.bot.get_guild(int(case[0]))
+            if case[2] == "gravel":
+                roleid = SqlCommands.get_role(case[0], "gravel")
+                role = guild.get_role(roleid)
+                member = guild.get_member(case[1])
+                try:
+                    await member.remove_roles(role)
+                except:
+                    pass
+            elif case[2] == "mute":
+                roleid = SqlCommands.get_role(case[0], "muted")
+                role = guild.get_role(roleid)
+                member = guild.get_member(case[1])
+                try:
+                    await member.remove_roles(role)
+                except:
+                    pass
+            cursor.execute("DELETE FROM active_cases WHERE id = ?", (item[0],))
+            connection.commit()
+                
 
     @commands.group(name="filter",aliases=["messageFilter","message_filter"])
     @commands.has_permissions(manage_guild=True)
@@ -198,6 +278,18 @@ class Moderation(commands.Cog):
 def setup(bot):
     bot.add_cog(Moderation(bot))
 
+def secondsconverter(value, startType):
+    if startType == "s":
+        #time already in seconds
+        pass
+    elif startType == "m":
+        value *= 60
+    elif startType == "h":
+        value *= 3600
+    elif startType == "d":
+        value *= 86400
+    return value
+
 class Sql:
     def newest_case(self):
         caseNumber = cursor.execute("SELECT id FROM caselog ORDER BY id DESC LIMIT 1").fetchone()
@@ -208,11 +300,18 @@ class Sql:
         caseNumber += 1
         return(caseNumber)
 
-    def new_case(self, user, casetype, reason, started, expires):
+    def new_case(self, user, guild, casetype, reason, started, expires):
         caseID = self.newest_case()
         if expires != -1:
-            cursor.execute("INSERT INTO active_cases(id, expiration) VALUES(?,?)", (caseID, expires))
-        cursor.execute("INSERT INTO caselog(id, user, type, reason, started, expires) VALUES(?,?,?,?,?,?)", (caseID, user, casetype, reason, started, expires))
+            cursor.execute("INSERT INTO active_cases(id, guild, expiration) VALUES(?,?,?)", (caseID, guild, expires))
+        cursor.execute("INSERT INTO caselog(id, guild, user, type, reason, started, expires) VALUES(?,?,?,?,?,?,?)", (caseID, guild, user, casetype, reason, started, expires))
         connection.commit()
+
+    def get_role(self, guild, role):
+        if role == "gravel":
+            roleid = cursor.execute("SELECT gravel from role_ids WHERE guild = ?", (guild,)).fetchone()
+        elif role == "muted":
+            roleid = cursor.execute("SELECT muted from role_ids WHERE guild = ?", (guild,)).fetchone()
+        return roleid[0]
 
 SqlCommands = Sql()
