@@ -50,10 +50,6 @@ class Moderation(commands.Cog):
     @commands.command(help="bans a user")
     @commands.has_permissions(ban_members=True)
     async def ban(self, ctx, member : discord.Member, *, reason):
-        mod = str(ctx.author)
-        guild = ctx.guild
-        username = str(member)
-        userid = member.id
         bantime = time.time()
         banEmbed = discord.Embed(title="You have been banned from "+ ctx.guild.name, color=0xFF0000)
         banEmbed.add_field(name="Ban reason:", value=reason)
@@ -62,38 +58,33 @@ class Moderation(commands.Cog):
             unsent = False
         except errors.HTTPException:
             unsent = True
-        await guild.ban(member, reason=reason)
-        successEmbed = discord.Embed(title="Banned " + username, color=0xFF0000)
+        await ctx.guild.ban(member, reason=reason)
+        successEmbed = discord.Embed(title="Banned " + str(member), color=0xFF0000)
         if unsent:
-            successEmbed.set_footer(text="Failed to send a message to this user")
+            successEmbed.set_footer(text="Failed to send a message to the user" + str(member))
         await ctx.send(embed=successEmbed)
-        SqlCommands.new_case(userid, guild.id, "ban", reason, bantime, -1, mod)
+        SqlCommands.new_case(member.id, ctx.guild.id, "ban", reason, bantime, -1, str(ctx.author))
 
     #unban
     @commands.command(help="unbans a user")
     @commands.has_permissions(ban_members=True)
     async def unban(self, ctx, user : discord.User):
-        guild = ctx.guild
-        mod = str(ctx.author)
-        userid = user.id
         unbanTime = time.time()
         try:
-            await guild.fetch_ban(user)
+            await ctx.guild.fetch_ban(user)
         except discord.NotFound:
             notBannedEmbed = discord.Embed(title = "This user is not banned", color = 0xFF0000)
             await ctx.send(embed = notBannedEmbed)
             return
-        await guild.unban(user)
+        await ctx.guild.unban(user)
         successEmbed = discord.Embed(title = "Unbanned " + str(user), color = 0x00FF00)
         await ctx.send(embed=successEmbed)
-        SqlCommands.new_case(userid, guild.id, "unban", "N/A", unbanTime, -1, mod)
+        SqlCommands.new_case(user.id, ctx.guild.id, "unban", "N/A", unbanTime, -1, str(ctx.author))
 
     #gravel
     @commands.command(help="Gravels a user")
     @commands.has_permissions(ban_members=True)
     async def gravel(self, ctx, member : discord.Member, graveltime, *, reason):
-        guild = ctx.guild
-        mod = str(ctx.author)
         now = time.time()    
         if graveltime[-1] == "m" or graveltime[-1] == "h" or graveltime[-1] == "d" or graveltime[-1] == "s":
             timeformat = graveltime[-1]
@@ -108,19 +99,18 @@ class Moderation(commands.Cog):
             return
         totalsecs = TimeConversions.secondsconverter(timevalue, timeformat)
         roleid = SqlCommands.get_role(ctx.guild.id, "gravel")
-        roleid = str(roleid)
         converter = commands.RoleConverter()
-        role = await converter.convert(ctx,roleid)
+        role = await converter.convert(ctx,str(roleid))
         await member.add_roles(role)
         end = now + totalsecs
-        gravelEmbed = discord.Embed(title="You have been graveled in "+ ctx.guild.name + " for " + TimeConversions.fromseconds(totalsecs), color=0xFF0000)
+        gravelEmbed = discord.Embed(title=f"You have been graveled in {ctx.guild.name} for  {TimeConversions.fromseconds(totalsecs)}", color=0xFF0000)
         gravelEmbed.add_field(name="Reason:", value=reason)
         try:
             await member.send(embed=gravelEmbed)
             unsent = False
         except errors.HTTPException:
             unsent = True
-        SqlCommands.new_case(member.id, guild.id, "gravel", reason, now, end, mod)
+        SqlCommands.new_case(member.id, ctx.guild.id, "gravel", reason, now, end, str(ctx.author))
         successEmbed = discord.Embed(title = "Gravelled  " + str(member), color = 0x808080)
         if unsent:
             successEmbed.set_footer(text="Failed to send a message to this user")
@@ -129,8 +119,6 @@ class Moderation(commands.Cog):
     @commands.command(help="Mutes a user")
     @commands.has_permissions(ban_members=True)
     async def mute(self, ctx, member : discord.Member, mutetime, *, reason):
-        guild = ctx.guild
-        mod = str(ctx.author)
         now = time.time()    
         if mutetime[-1] == "m" or mutetime[-1] == "h" or mutetime[-1] == "d" or mutetime[-1] == "s":
             timeformat = mutetime[-1]
@@ -157,7 +145,7 @@ class Moderation(commands.Cog):
             unsent = False
         except errors.HTTPException:
             unsent = True
-        SqlCommands.new_case(member.id, guild.id, "mute", reason, now, end, mod)
+        SqlCommands.new_case(member.id, ctx.guild.id, "mute", reason, now, end, str(ctx.author))
         successEmbed = discord.Embed(title = "Muted " + str(member), color = 0xFFFFFF)
         if unsent:
             successEmbed.set_footer(text="Failed to send a message to this user")
@@ -179,7 +167,6 @@ class Moderation(commands.Cog):
     @commands.command(help="Shows a user's modlogs")
     @commands.has_permissions(ban_members=True)
     async def modlogs(self, ctx, member : discord.User):
-        avatar = member.avatar_url
         logEmbed = discord.Embed(title = str(member) + "'s Modlogs", color=0x000080)
         logs = cursor.execute("SELECT id, guild, user, type, reason, started, expires, moderator FROM caselog WHERE user = ? AND guild = ?", (member.id, ctx.guild.id)).fetchall()
         for log in logs:
@@ -189,7 +176,7 @@ class Moderation(commands.Cog):
             else:
                 totaltime = "Permanent"
             logEmbed.add_field(name="__**Case " + str(log[0]) + "**__", value="**Type- **" + log[3] + "\n**Reason- **" + log[4] + "\n**Time- **" + start + "\n**Length- **" + totaltime + "\n**Moderator- **" + log[7], inline=True)
-        logEmbed.set_thumbnail(url=avatar)
+        logEmbed.set_thumbnail(url=member.avatar_url)
         await ctx.send(embed = logEmbed)
 
     @commands.command(help="Unmutes a User")
@@ -289,7 +276,6 @@ class Moderation(commands.Cog):
         connection.commit()
         await ctx.send("Added to filter.")
    
-
     @messageFilter.command(name="remove",aliases=["del","delete"])
     async def messageFilter_remove(self,ctx,*words):
         """Removes specified words/phrases from filter.
@@ -406,7 +392,6 @@ class Sql:
         elif role == "muted":
             roleid = cursor.execute("SELECT muted from role_ids WHERE guild = ?", (guild,)).fetchone()
         return roleid[0]
-
 
 SqlCommands = Sql()
 TimeConversions = timeconverters()
