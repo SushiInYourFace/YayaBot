@@ -53,7 +53,7 @@ default_extensions = [
     ('cogs.moderation',),
     ('cogs.utilities',),
     ('cogs.owner',),
-    ('cogs.automod')
+    ('cogs.automod',),
 ]
 
 extensions = cursor.execute("SELECT * FROM extensions").fetchall()
