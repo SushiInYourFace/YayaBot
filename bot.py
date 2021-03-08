@@ -52,7 +52,8 @@ default_extensions = [
     ('cogs.cmty',),
     ('cogs.moderation',),
     ('cogs.utilities',),
-    ('cogs.owner',)
+    ('cogs.owner',),
+    ('cogs.automod')
 ]
 
 extensions = cursor.execute("SELECT * FROM extensions").fetchall()
