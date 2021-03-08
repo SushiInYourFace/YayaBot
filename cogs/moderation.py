@@ -13,7 +13,7 @@ cursor = connection.cursor()
 
 async def filter_check(ctx):
     inDb = cursor.execute("SELECT * FROM message_filter WHERE guild = ?", (ctx.guild.id,)).fetchone()
-    if (inDb is None):
+    if (inDb is None): # Guild filter doesn't exist
         cursor.execute("INSERT INTO message_filter(guild,enabled,filter) VALUES(?,?,?)",(ctx.guild.id,1,""))
         connection.commit()
         await ctx.send("Filter created and enabled.")
@@ -27,20 +27,19 @@ class Moderation(commands.Cog):
         self.bot.wordWarnCooldown = {}
 
     @commands.group(help="Purge command.")
+    @commands.has_permissions(manage_messages=True)
     async def purge(self,ctx):
         if ctx.invoked_subcommand is None:
-            await ctx.send_help(ctx.command)
+            await self.bot.send_help(ctx)
 
     #purge command
     @purge.command(help="Purges a specified amount of messages from the chat",name="number",aliases=["n"])
-    @commands.has_permissions(manage_messages=True)
     async def purge_number(self, ctx, arg:int):
         arg += 1 # adding one to ignore the command invoking message
         await ctx.channel.purge(limit=arg)
     
     #purge match command, only purges messages that contain a certain string
     @purge.command(help="Purges messages containing a certain string", name="match", aliases=["m"])
-    @commands.has_permissions(manage_messages=True)
     async def purge_match(self, ctx, limit:int, *, filtered):
         limit += 1
         def filter_check(message):
@@ -217,8 +216,9 @@ class Moderation(commands.Cog):
     @commands.has_permissions(manage_guild=True)
     @commands.check(filter_check)
     async def messageFilter(self,ctx):
+        """Modifies the server message word filter."""
         if ctx.invoked_subcommand is None:
-            await ctx.send_help(ctx.command)
+            await self.bot.send_help(ctx)
 
     @messageFilter.command(name="set")
     async def messageFilter_set(self,ctx,*,mFilter=None):

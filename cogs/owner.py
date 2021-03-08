@@ -20,6 +20,7 @@ class Owner(commands.Cog):
     @commands.command()
     @commands.is_owner()
     async def shutdown(self,ctx):
+        """Shuts the bot down!"""
         await ctx.send("👋 Goodbye")
         await self.bot.close()
 
@@ -28,7 +29,7 @@ class Owner(commands.Cog):
     async def cog(self,ctx):
         """Commands to add, reload and remove cogs."""
         if ctx.invoked_subcommand is None:
-            await ctx.send_help(ctx.command)
+            await self.bot.send_help(ctx)
 
     @cog.command(aliases = ['l'])
     async def load(self,ctx,*cogs):
@@ -107,5 +108,6 @@ class Owner(commands.Cog):
     @commands.command(name="reload")
     @commands.is_owner()
     async def reload_alias(self,ctx,cog=None):
+        """Reloads specified cog or previously reloaded cog."""
         command = self.bot.get_command("cog reload")
         await ctx.invoke(command,cog)
