@@ -52,7 +52,7 @@ class Moderation(commands.Cog):
     async def ban(self, ctx, member : discord.Member, *, reason):
         mod = str(ctx.author)
         guild = ctx.guild
-        username = member.name
+        username = str(member)
         userid = member.id
         bantime = time.time()
         banEmbed = discord.Embed(title="You have been banned from "+ ctx.guild.name, color=0xFF0000)
@@ -84,7 +84,7 @@ class Moderation(commands.Cog):
             await ctx.send(embed = notBannedEmbed)
             return
         await guild.unban(user)
-        successEmbed = discord.Embed(title = "Unbanned " + user.name, color = 0x00FF00)
+        successEmbed = discord.Embed(title = "Unbanned " + str(user), color = 0x00FF00)
         await ctx.send(embed=successEmbed)
         SqlCommands.new_case(userid, guild.id, "unban", "N/A", unbanTime, -1, mod)
 
@@ -113,8 +113,17 @@ class Moderation(commands.Cog):
         role = await converter.convert(ctx,roleid)
         await member.add_roles(role)
         end = now + totalsecs
+        gravelEmbed = discord.Embed(title="You have been graveled in "+ ctx.guild.name + " for " + TimeConversions.fromseconds(totalsecs), color=0xFF0000)
+        gravelEmbed.add_field(name="Reason:", value=reason)
+        try:
+            await member.send(embed=gravelEmbed)
+            unsent = False
+        except errors.HTTPException:
+            unsent = True
         SqlCommands.new_case(member.id, guild.id, "gravel", reason, now, end, mod)
-        successEmbed = discord.Embed(title = "Gravelled  " + member.name, color = 0x808080)
+        successEmbed = discord.Embed(title = "Gravelled  " + str(member), color = 0x808080)
+        if unsent:
+            successEmbed.set_footer(text="Failed to send a message to this user")
         await ctx.send(embed=successEmbed)
 
     @commands.command(help="Mutes a user")
@@ -141,15 +150,37 @@ class Moderation(commands.Cog):
         role = await converter.convert(ctx,roleid)
         await member.add_roles(role)
         end = now + totalsecs
+        muteEmbed = discord.Embed(title="You have been muted in "+ ctx.guild.name + " for " + TimeConversions.fromseconds(totalsecs), color=0xFF0000)
+        muteEmbed.add_field(name="Reason:", value=reason)
+        try:
+            await member.send(embed=muteEmbed)
+            unsent = False
+        except errors.HTTPException:
+            unsent = True
         SqlCommands.new_case(member.id, guild.id, "mute", reason, now, end, mod)
-        successEmbed = discord.Embed(title = "Muted " + member.name, color = 0xFFFFFF)
+        successEmbed = discord.Embed(title = "Muted " + str(member), color = 0xFFFFFF)
+        if unsent:
+            successEmbed.set_footer(text="Failed to send a message to this user")
         await ctx.send(embed=successEmbed)
+
+    @commands.command(help="warns a user")
+    @commands.has_permissions(ban_members=True)
+    async def warn(self, ctx, member : discord.Member, reason):
+        warnEmbed = discord.Embed(title="You have been warned in "+ ctx.guild.name, color=0xFF0000)
+        warnEmbed.add_field(name="Reason:", value=reason)
+        try:
+            await member.send(embed=warnEmbed)
+            successEmbed = discord.Embed(title="Successfully warned "+ str(member), color = 0x00FF00)
+            await ctx.send(embed=successEmbed)
+        except errors.HTTPException:
+            failEmbed = discord.Embed(title="Could not warn user "+ str(member), color = 0x00FF00)
+            await ctx.send(embed=failEmbed)
 
     @commands.command(help="Shows a user's modlogs")
     @commands.has_permissions(ban_members=True)
     async def modlogs(self, ctx, member : discord.User):
         avatar = member.avatar_url
-        logEmbed = discord.Embed(title = member.name + "'s Modlogs", color=0x000080)
+        logEmbed = discord.Embed(title = str(member) + "'s Modlogs", color=0x000080)
         logs = cursor.execute("SELECT id, guild, user, type, reason, started, expires, moderator FROM caselog WHERE user = ? AND guild = ?", (member.id, ctx.guild.id)).fetchall()
         for log in logs:
             start = datetime.datetime.fromtimestamp(int(log[5])).strftime('%Y-%m-%d %H:%M:%S')
@@ -169,7 +200,7 @@ class Moderation(commands.Cog):
         muted = SqlCommands.get_role(ctx.guild.id, "muted")
         mutedRole = ctx.guild.get_role(muted)
         await member.remove_roles(mutedRole,)
-        successEmbed = discord.Embed(title="Unmuted " + member.name, color=0x00FF00)
+        successEmbed = discord.Embed(title="Unmuted " + str(member), color=0x00FF00)
         await ctx.send(embed=successEmbed)
         SqlCommands.new_case(member.id, ctx.guild.id, "unmute", "N/A", unmutetime, -1, mod)
 
@@ -181,7 +212,7 @@ class Moderation(commands.Cog):
         gravel = SqlCommands.get_role(ctx.guild.id, "gravel")
         mutedRole = ctx.guild.get_role(gravel)
         await member.remove_roles(mutedRole,)
-        successEmbed = discord.Embed(title="Removed Gravel from " + member.name, color=0x00FF00)
+        successEmbed = discord.Embed(title="Removed Gravel from " + str(member), color=0x00FF00)
         await ctx.send(embed=successEmbed)
         SqlCommands.new_case(member.id, ctx.guild.id, "ungravel", "N/A", ungraveltime, -1, mod)
 
@@ -375,6 +406,7 @@ class Sql:
         elif role == "muted":
             roleid = cursor.execute("SELECT muted from role_ids WHERE guild = ?", (guild,)).fetchone()
         return roleid[0]
+
 
 SqlCommands = Sql()
 TimeConversions = timeconverters()
