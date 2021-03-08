@@ -4,6 +4,7 @@ import sqlite3
 import asyncio
 import json
 import random
+import requests
 
 #sets up SQLite
 connection = sqlite3.connect("database.db")
@@ -102,7 +103,12 @@ class Utilities(commands.Cog):
         if ctx.guild.get_role(int(guildTags[1])) <= ctx.author.top_role:
             tags = json.loads(guildTags[2])
             try:
-                await ctx.send(tags[tag])
+                if tags[tag]["text"] and tags[tag]["embed"]:
+                    await ctx.send(tags[tag]["text"],embed=discord.Embed.from_dict(json.loads(tags[tag]["embed"])))
+                elif tags[tag]["text"]:
+                    await ctx.send(tags[tag]["text"])
+                elif tags[tag]["embed"]:
+                    await ctx.send(embed=discord.Embed.from_dict(json.loads(tags[tag]["embed"])))
             except KeyError:
                 pass
 
@@ -111,20 +117,67 @@ class Utilities(commands.Cog):
         """Sends the text assosiated to your tag."""
         return
 
-    @tag.command(name="set",aliases=["new","add"])
+    @tag.group(name="set",aliases=["new","add"])
     @commands.has_permissions(manage_messages=True)
-    async def tag_set(self,ctx,tag,*,text):
+    async def tag_set(self,ctx):
         """Sets a tags text assosiation."""
-        if tag in ['(tag name)','new','add','remove','delete','del','list','get','role']:
-            await ctx.send("Tag cannot be named that.")
-            return
+        if ctx.invoked_subcommand is None:
+            await self.bot.send_help(ctx)
+
+    @tag_set.command(name="text",aliases=["t"])
+    @commands.has_permissions(manage_messages=True)
+    async def tag_set_text(self,ctx,tag,*,text):
+        """Sets a tags text assosiation."""
         guildTags = cursor.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,)).fetchone()
         tags = json.loads(guildTags[2])
-        tags[tag] = text
+        tags[tag] = {"text": text,"embed": None}
         cursor.execute("UPDATE tags SET tags=? WHERE guild=?",(json.dumps(tags),ctx.guild.id))
         connection.commit()
         await ctx.send("Tag updated.")
 
+    @tag_set.command(name="simpleEmbed",aliases=["se","simpleembed","simple_embed"])
+    async def tag_set_simpleEmbed(self,ctx,tag,title,*,description=None):
+        """Creates a simple embed with only a title and description.
+        Title must be in "s and has a character limit of 256.."""
+        guildTags = cursor.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,)).fetchone()
+        tags = json.loads(guildTags[2])
+        tags[tag] = {"text": None,"embed": {"title":title,"description":description if description else ""}}
+        cursor.execute("UPDATE tags SET tags=? WHERE guild=?",(json.dumps(tags),ctx.guild.id))
+        connection.commit()
+        await ctx.send("Tag updated.")
+
+    @tag_set.command(name="embed",aliases=["e"])
+    async def tag_set_embed(self,ctx,tag,*,embed=None):
+        """Creates an embed tag from the dictionary given,
+        create an embed at https://leovoel.github.io/embed-visualizer/ and copy the JSON over.
+        It must a be a single line with no newlines, this can be done easily by pasting it into a browser address bar and copying it again.
+        If it is larger than 2000 characters you may send it as a text file.
+        Note: timestamp will be ignored."""
+        if (embed is None and ctx.message.attachments):
+            response = requests.get(ctx.message.attachments[0].url)
+            response.raise_for_status()
+            embed = response.json()
+        elif (not ctx.message.attachments and embed is None):
+            await ctx.send("You must send the embed JSON as text or attach a file containing the embed JSON if it is too large.")
+        else:
+            embed.replace("\n","")
+            embed = json.loads(embed)
+        guildTags = cursor.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,)).fetchone()
+        tags = json.loads(guildTags[2])
+        if 'content' in embed.keys():
+            text = embed["content"]
+        else:
+            text = None
+        if 'embed' in embed.keys():
+            if "timestamp" in embed["embed"].keys():
+                embed["embed"].pop("timestamp")
+            embed = json.dumps(embed["embed"])
+        else:
+            embed = None
+        tags[tag] = {"text": text,"embed": embed}
+        cursor.execute("UPDATE tags SET tags=? WHERE guild=?",(json.dumps(tags),ctx.guild.id))
+        connection.commit()
+        await ctx.send("Tag updated.")
 
     @tag.command(name="remove",aliases=["delete","del"])
     @commands.has_permissions(manage_messages=True)
@@ -225,7 +278,7 @@ class Utilities(commands.Cog):
         colour = discord.Colour.from_rgb(random.randint(1,255),random.randint(1,255),random.randint(1,255))
         random.seed()
         embed = discord.Embed(colour=colour,title=f"Help for {command.qualified_name}",description=(f"Aliases: {', '.join(list(command.aliases))}" if command.aliases else ""))
-        embed.add_field(name="Usage",value=f"`{ctx.prefix}{command.qualified_name}{(" " + command.signature) if command.signature else ' <subcommand>' if isinstance(command,commands.Group) else ''}`")
+        embed.add_field(name="Usage",value=f"`{ctx.prefix}{command.qualified_name}{(' ' + command.signature) if command.signature else ' <subcommand>' if isinstance(command,commands.Group) else ''}`")
         embed.add_field(name="Description",value=(command.help.replace("[p]",ctx.prefix) if command.help else '...'),inline=False)
         if isinstance(command,commands.Group):
             embed.add_field(name="———————",value="**Subcommands**",inline=False)
