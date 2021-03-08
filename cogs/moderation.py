@@ -49,25 +49,25 @@ class Moderation(commands.Cog):
     #ban
     @commands.command(help="bans a user")
     @commands.has_permissions(ban_members=True)
-    async def ban(self, ctx, member : discord.Member, *, arg):
+    async def ban(self, ctx, member : discord.Member, *, reason):
         mod = str(ctx.author)
         guild = ctx.guild
         username = member.name
         userid = member.id
         bantime = time.time()
         banEmbed = discord.Embed(title="You have been banned from "+ ctx.guild.name, color=0xFF0000)
-        banEmbed.add_field(name="Ban reason:", value=arg)
+        banEmbed.add_field(name="Ban reason:", value=reason)
         try:
             await member.send(embed=banEmbed)
             unsent = False
         except errors.HTTPException:
             unsent = True
-        await guild.ban(member, reason=arg)
+        await guild.ban(member, reason=reason)
         successEmbed = discord.Embed(title="Banned " + username, color=0xFF0000)
         if unsent:
             successEmbed.set_footer(text="Failed to send a message to this user")
         await ctx.send(embed=successEmbed)
-        SqlCommands.new_case(userid, guild.id, "ban", arg, bantime, -1, mod)
+        SqlCommands.new_case(userid, guild.id, "ban", reason, bantime, -1, mod)
 
     #unban
     @commands.command(help="unbans a user")
@@ -91,13 +91,13 @@ class Moderation(commands.Cog):
     #gravel
     @commands.command(help="Gravels a user")
     @commands.has_permissions(ban_members=True)
-    async def gravel(self, ctx, member : discord.Member, lengthstring, *, reason):
+    async def gravel(self, ctx, member : discord.Member, graveltime, *, reason):
         guild = ctx.guild
         mod = str(ctx.author)
         now = time.time()    
-        if lengthstring[-1] == "m" or lengthstring[-1] == "h" or lengthstring[-1] == "d" or lengthstring[-1] == "s":
-            timeformat = lengthstring[-1]
-            timevalue = lengthstring[:-1]
+        if graveltime[-1] == "m" or graveltime[-1] == "h" or graveltime[-1] == "d" or graveltime[-1] == "s":
+            timeformat = graveltime[-1]
+            timevalue = graveltime[:-1]
         else:
             await ctx.send("Oops! That's not a valid time format")
             return
@@ -119,13 +119,13 @@ class Moderation(commands.Cog):
 
     @commands.command(help="Mutes a user")
     @commands.has_permissions(ban_members=True)
-    async def mute(self, ctx, member : discord.Member, lengthstring, *, reason):
+    async def mute(self, ctx, member : discord.Member, mutetime, *, reason):
         guild = ctx.guild
         mod = str(ctx.author)
         now = time.time()    
-        if lengthstring[-1] == "m" or lengthstring[-1] == "h" or lengthstring[-1] == "d" or lengthstring[-1] == "s":
-            timeformat = lengthstring[-1]
-            timevalue = lengthstring[:-1]
+        if mutetime[-1] == "m" or mutetime[-1] == "h" or mutetime[-1] == "d" or mutetime[-1] == "s":
+            timeformat = mutetime[-1]
+            timevalue = mutetime[:-1]
         else:
             await ctx.send("Oops! That's not a valid time format")
             return
@@ -327,7 +327,7 @@ class Moderation(commands.Cog):
 
 def setup(bot):
     bot.add_cog(Moderation(bot))
-
+ 
 class timeconverters:
     def secondsconverter(self, value, startType):
         if startType == "s":
