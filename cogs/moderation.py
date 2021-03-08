@@ -51,7 +51,7 @@ class Moderation(commands.Cog):
     @commands.command(help="bans a user")
     @commands.has_permissions(ban_members=True)
     async def ban(self, ctx, member : discord.Member, *, arg):
-        mod = ctx.author.name
+        mod = str(ctx.author)
         guild = ctx.guild
         username = member.name
         userid = member.id
@@ -75,7 +75,7 @@ class Moderation(commands.Cog):
     @commands.has_permissions(ban_members=True)
     async def unban(self, ctx, user : discord.User):
         guild = ctx.guild
-        mod = ctx.author.name
+        mod = str(ctx.author)
         userid = user.id
         unbanTime = time.time()
         try:
@@ -94,7 +94,7 @@ class Moderation(commands.Cog):
     @commands.has_permissions(ban_members=True)
     async def gravel(self, ctx, member : discord.Member, lengthstring, *, reason):
         guild = ctx.guild
-        mod = ctx.author.name
+        mod = str(ctx.author)
         now = time.time()    
         if lengthstring[-1] == "m" or lengthstring[-1] == "h" or lengthstring[-1] == "d" or lengthstring[-1] == "s":
             timeformat = lengthstring[-1]
@@ -122,7 +122,7 @@ class Moderation(commands.Cog):
     @commands.has_permissions(ban_members=True)
     async def mute(self, ctx, member : discord.Member, lengthstring, *, reason):
         guild = ctx.guild
-        mod = ctx.author.name
+        mod = str(ctx.author)
         now = time.time()    
         if lengthstring[-1] == "m" or lengthstring[-1] == "h" or lengthstring[-1] == "d" or lengthstring[-1] == "s":
             timeformat = lengthstring[-1]
@@ -158,14 +158,14 @@ class Moderation(commands.Cog):
                 totaltime = TimeConversions.fromseconds(int(int(log[6])) - int(log[5]))
             else:
                 totaltime = "Permanent"
-            logEmbed.add_field(name="**Case " + str(log[0]) + "**", value="**TYPE- **" + log[3] + "\n**REASON- **" + log[4] + "\n**TIME- **" + start + "\n**LENGTH- **" + totaltime + "\n**MODERATOR- **" + log[7], inline=False)
+            logEmbed.add_field(name="__**Case " + str(log[0]) + "**__", value="**Type- **" + log[3] + "\n**Reason- **" + log[4] + "\n**Time- **" + start + "\n**Length- **" + totaltime + "\n**Moderator- **" + log[7], inline=True)
         logEmbed.set_thumbnail(url=avatar)
         await ctx.send(embed = logEmbed)
 
     @commands.command(help="Unmutes a User")
     @commands.has_permissions(ban_members=True)
     async def unmute(self, ctx, member : discord.Member):
-        mod = ctx.author.name
+        mod = str(ctx.author)
         unmutetime = time.time()
         muted = SqlCommands.get_role(ctx.guild.id, "muted")
         mutedRole = ctx.guild.get_role(muted)
@@ -177,7 +177,7 @@ class Moderation(commands.Cog):
     @commands.command(help="Ungravels a User")
     @commands.has_permissions(ban_members=True)
     async def ungravel(self, ctx, member : discord.Member):
-        mod = ctx.author.name
+        mod = str(ctx.author)
         ungraveltime = time.time()
         gravel = SqlCommands.get_role(ctx.guild.id, "gravel")
         mutedRole = ctx.guild.get_role(gravel)
