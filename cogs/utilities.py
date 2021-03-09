@@ -120,11 +120,11 @@ class Utilities(commands.Cog):
             tags = json.loads(guildTags[2])
             try:
                 if tags[tag]["text"] and tags[tag]["embed"]:
-                    await ctx.send(tags[tag]["text"],embed=discord.Embed.from_dict(json.loads(tags[tag]["embed"])))
+                    await ctx.send(tags[tag]["text"],embed=discord.Embed.from_dict(tags[tag]["embed"]))
                 elif tags[tag]["text"]:
                     await ctx.send(tags[tag]["text"])
                 elif tags[tag]["embed"]:
-                    await ctx.send(embed=discord.Embed.from_dict(json.loads(tags[tag]["embed"])))
+                    await ctx.send(embed=discord.Embed.from_dict(tags[tag]["embed"]))
             except KeyError:
                 pass
 
@@ -187,7 +187,7 @@ class Utilities(commands.Cog):
         if 'embed' in embed.keys():
             if "timestamp" in embed["embed"].keys():
                 embed["embed"].pop("timestamp")
-            embed = json.dumps(embed["embed"])
+            embed = embed["embed"]
         else:
             embed = None
         tags[tag] = {"text": text,"embed": embed}
