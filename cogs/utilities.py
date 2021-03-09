@@ -75,6 +75,20 @@ class Utilities(commands.Cog):
         if not mutedRole:
             await ctx.send("That does not appear to be a valid role ID. Cancelling")
             return
+        await ctx.send("Now, please send the ID (not a mention) of your modlog channel")
+        try:
+            modlogs = await self.bot.wait_for('message', timeout=60.0, check=check)
+        except asyncio.TimeoutError:
+            await ctx.send("No response recieved. Cancelling")
+            return
+        modlogs = modlogs.content
+        try:
+            logchannel = guild.get_channel(int(modlogs))
+        except ValueError:
+            logchannel = False
+        if not logchannel:
+            await ctx.send("That does not appear to be a valid channel ID. Cancelling")
+            return
         await ctx.send("Last, please tell me what prefix you would like to use for commands")
         try:
             prefix = await self.bot.wait_for('message', timeout=60.0, check=check)
@@ -83,10 +97,12 @@ class Utilities(commands.Cog):
             return
         cursor.execute("INSERT INTO guild_prefixes(guild,prefix) VALUES(?, ?) ON CONFLICT(guild) DO UPDATE SET prefix=excluded.prefix", (guild.id, prefix.content))
         cursor.execute("INSERT INTO role_ids(guild,gravel,muted) VALUES(?, ?, ?) ON CONFLICT(guild) DO UPDATE SET gravel=excluded.gravel, muted=excluded.muted", (guild.id, gravel, muted))
+        cursor.execute("INSERT INTO modlog_channels(guild,channel) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET channel = excluded.channel", (guild.id, modlogs))
         connection.commit()
         response = discord.Embed(title="Server set up successfully!", color=0x00FF00)
         response.add_field(name="Gravel role", value=gravelRole.mention) 
         response.add_field(name="Muted role", value=mutedRole.mention)
+        response.add_field(name="Modlog channel", value=logchannel.mention)
         await ctx.send(embed=response)
 
     @commands.group(aliases=["t"])

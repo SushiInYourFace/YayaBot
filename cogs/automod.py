@@ -137,6 +137,17 @@ class AutoMod(commands.Cog):
     async def on_message_edit(self,before, after):
         await self.check_message(after)
 
+    @commands.Cog.listener()
+    async def on_message_delete(self, message):
+        logID = cursor.execute("SELECT channel from modlog_channels WHERE guild = ?",(message.guild.id,)).fetchone()
+        if logID:
+            channel = message.guild.get_channel(logID[0])
+            deleteEmbed = discord.Embed(title=message.content, color=0xFF0000)
+            deleteEmbed.set_author(name=message.author.name, icon_url=message.author.avatar_url)
+            now = datetime.datetime.now()
+            date = now.strftime("%Y-%m-%d, %H:%M:%S")
+            deleteEmbed.set_footer(text=f"deleted at {date}")
+            await channel.send(embed=deleteEmbed)
 def setup(bot):
     bot.add_cog(AutoMod(bot))
     
