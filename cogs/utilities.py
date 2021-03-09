@@ -75,20 +75,23 @@ class Utilities(commands.Cog):
         if not mutedRole:
             await ctx.send("That does not appear to be a valid role ID. Cancelling")
             return
-        await ctx.send("Now, please send the ID (not a mention) of your modlog channel")
+        await ctx.send("Now, please send the ID (not a mention) of your modlog channel, or type \"None\" if you do not want a modlog channel")
         try:
             modlogs = await self.bot.wait_for('message', timeout=60.0, check=check)
         except asyncio.TimeoutError:
             await ctx.send("No response recieved. Cancelling")
             return
         modlogs = modlogs.content
-        try:
-            logchannel = guild.get_channel(int(modlogs))
-        except ValueError:
-            logchannel = False
-        if not logchannel:
-            await ctx.send("That does not appear to be a valid channel ID. Cancelling")
-            return
+        if modlogs != "None" and modlogs != "none":
+            try:
+                logchannel = guild.get_channel(int(modlogs))
+            except ValueError:
+                logchannel = False
+            if not logchannel:
+                await ctx.send("That does not appear to be a valid channel ID. Cancelling")
+                return
+        else:
+            modlogs = 0
         await ctx.send("Last, please tell me what prefix you would like to use for commands")
         try:
             prefix = await self.bot.wait_for('message', timeout=60.0, check=check)

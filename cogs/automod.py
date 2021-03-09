@@ -140,14 +140,30 @@ class AutoMod(commands.Cog):
     @commands.Cog.listener()
     async def on_message_delete(self, message):
         logID = cursor.execute("SELECT channel from modlog_channels WHERE guild = ?",(message.guild.id,)).fetchone()
-        if logID:
+        if logID and logID !=0 and not message.author.bot:
             channel = message.guild.get_channel(logID[0])
-            deleteEmbed = discord.Embed(title=message.content, color=0xFF0000)
-            deleteEmbed.set_author(name=message.author.name, icon_url=message.author.avatar_url)
+            deleteEmbed = discord.Embed(color=0xFF0000)
+            deleteEmbed.set_author(name=str(message.author), icon_url=message.author.avatar_url)
             now = datetime.datetime.now()
+            deleteEmbed.add_field(name=f"Message deleted from **{message.channel.name}**", value=message.content)
             date = now.strftime("%Y-%m-%d, %H:%M:%S")
             deleteEmbed.set_footer(text=f"deleted at {date}")
             await channel.send(embed=deleteEmbed)
+
+    @commands.Cog.listener()
+    async def on_message_edit(self, before, after):
+        logID = cursor.execute("SELECT channel from modlog_channels WHERE guild = ?",(after.guild.id,)).fetchone()
+        if logID and logID !=0 and not after.author.bot:
+            channel = after.guild.get_channel(logID[0])
+            editEmbed = discord.Embed(title=f"Message edited in {after.channel.name}", color=0xFFFF00)
+            editEmbed.set_author(name=str(after.author), icon_url=after.author.avatar_url)
+            now = datetime.datetime.now()
+            editEmbed.add_field(name="Before", value=before.content)
+            editEmbed.add_field(name="After", value=after.content)
+            date = now.strftime("%Y-%m-%d, %H:%M:%S")
+            editEmbed.set_footer(text=f"edited at {date}")
+            await channel.send(embed=editEmbed)
+
 def setup(bot):
     bot.add_cog(AutoMod(bot))
     
