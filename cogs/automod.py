@@ -112,7 +112,9 @@ class AutoMod(commands.Cog):
         await ctx.send(f"Filter now {'enabled' if enabled == 1 else 'disabled'}.")
 
     async def check_message(self,message):
-        if message.author == message.guild.me or message.author.bot:
+        if message.author == message.author.bot:
+            return
+        if isinstance(message.channel, discord.channel.DMChannel):
             return
         if message.author.guild_permissions.manage_messages:
             return
@@ -136,6 +138,19 @@ class AutoMod(commands.Cog):
     @commands.Cog.listener()
     async def on_message_edit(self,before, after):
         await self.check_message(after)
+        if isinstance(after.channel, discord.channel.DMChannel):
+            return
+        logID = cursor.execute("SELECT channel from modlog_channels WHERE guild = ?",(after.guild.id,)).fetchone()
+        if logID and logID !=0 and not after.author.bot:
+            channel = after.guild.get_channel(logID[0])
+            editEmbed = discord.Embed(title=f"Message edited in {after.channel.name}", color=0xFFFF00)
+            editEmbed.set_author(name=str(after.author), icon_url=after.author.avatar_url)
+            now = datetime.datetime.now()
+            editEmbed.add_field(name="Before", value=before.content)
+            editEmbed.add_field(name="After", value=after.content)
+            date = now.strftime("%Y-%m-%d, %H:%M:%S")
+            editEmbed.set_footer(text=f"edited at {date}")
+            await channel.send(embed=editEmbed)
 
     @commands.Cog.listener()
     async def on_message_delete(self, message):
@@ -149,20 +164,6 @@ class AutoMod(commands.Cog):
             date = now.strftime("%Y-%m-%d, %H:%M:%S")
             deleteEmbed.set_footer(text=f"deleted at {date}")
             await channel.send(embed=deleteEmbed)
-
-    @commands.Cog.listener()
-    async def on_message_edit(self, before, after):
-        logID = cursor.execute("SELECT channel from modlog_channels WHERE guild = ?",(after.guild.id,)).fetchone()
-        if logID and logID !=0 and not after.author.bot:
-            channel = after.guild.get_channel(logID[0])
-            editEmbed = discord.Embed(title=f"Message edited in {after.channel.name}", color=0xFFFF00)
-            editEmbed.set_author(name=str(after.author), icon_url=after.author.avatar_url)
-            now = datetime.datetime.now()
-            editEmbed.add_field(name="Before", value=before.content)
-            editEmbed.add_field(name="After", value=after.content)
-            date = now.strftime("%Y-%m-%d, %H:%M:%S")
-            editEmbed.set_footer(text=f"edited at {date}")
-            await channel.send(embed=editEmbed)
 
 def setup(bot):
     bot.add_cog(AutoMod(bot))

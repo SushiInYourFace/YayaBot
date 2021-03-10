@@ -152,6 +152,7 @@ class Moderation(commands.Cog):
             await member.send(embed=warnEmbed)
             successEmbed = discord.Embed(title="Successfully warned "+ str(member), color = 0x00FF00)
             await ctx.send(embed=successEmbed)
+            SqlCommands.new_case(member.id, ctx.guild.id, "warn", reason, time.time(), -1, str(ctx.author))
         except errors.HTTPException:
             failEmbed = discord.Embed(title="Could not warn user "+ str(member), color = 0x00FF00)
             await ctx.send(embed=failEmbed)
@@ -166,10 +167,26 @@ class Moderation(commands.Cog):
             if int(log[6]) != -1:
                 totaltime = TimeConversions.fromseconds(int(int(log[6])) - int(log[5]))
             else:
-                totaltime = "Permanent"
+                totaltime = "N/A"
             logEmbed.add_field(name="__**Case " + str(log[0]) + "**__", value="**Type- **" + log[3] + "\n**Reason- **" + log[4] + "\n**Time- **" + start + "\n**Length- **" + totaltime + "\n**Moderator- **" + log[7], inline=True)
         logEmbed.set_thumbnail(url=member.avatar_url)
         await ctx.send(embed = logEmbed)
+
+    @commands.command(help="Shows information on a case")
+    @commands.has_permissions(ban_members=True)
+    async def case(self, ctx, case:int):
+        caseinfo = cursor.execute("SELECT id, guild, user, type, reason, started, expires, moderator FROM caselog WHERE id = ?", (case,)).fetchone()
+        start = datetime.datetime.fromtimestamp(int(caseinfo[5])).strftime('%Y-%m-%d %H:%M:%S')
+        if int(caseinfo[6]) != -1:
+            totaltime = TimeConversions.fromseconds(int(int(caseinfo[6])) - int(caseinfo[5]))
+        else:
+            totaltime = "N/A"
+        logEmbed = discord.Embed(title="Case " + str(case), color=0x000080)
+        member = ctx.guild.get_member(caseinfo[2])
+        logEmbed.add_field(name=member, value="**Type- **" + caseinfo[3] + "\n**Reason- **" + caseinfo[4] + "\n**Time- **" + start + "\n**Length- **" + totaltime + "\n**Moderator- **" + caseinfo[7], inline=True)
+        logEmbed.set_thumbnail(url=member.avatar_url)
+        await ctx.send(embed = logEmbed)
+
 
     @commands.command(help="Unmutes a User")
     @commands.has_permissions(ban_members=True)
