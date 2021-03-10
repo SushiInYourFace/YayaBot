@@ -1,6 +1,7 @@
 import discord
 from discord import errors
 from discord.ext import commands, tasks
+import cogs.moderation as modcog
 import sqlite3
 import time
 import difflib
@@ -188,6 +189,26 @@ class AutoMod(commands.Cog):
             date = now.strftime("%Y-%m-%d, %H:%M:%S")
             deleteEmbed.set_footer(text=f"deleted at {date}")
             await channel.send(embed=deleteEmbed)
+
+    @commands.Cog.listener()
+    async def on_member_join(self, member):
+        cases = cursor.execute("SELECT id, type FROM caselog WHERE guild = ? AND user = ? AND expires >= ?", (member.guild.id, member.id, time.time(),)).fetchall()
+        if cases is not None:
+            #iterate through cases in case the user is both muted and graveled
+            for case in cases:
+                if case[1] == "mute":
+                    casetype = "muted"
+                elif case[1] == "gravel":
+                    casetype = "gravel"
+                else:
+                    #sanity check
+                    return
+                role = modcog.SqlCommands.get_role(member.guild.id, casetype)
+                try:
+                    role = member.guild.get_role(role)
+                    await member.add_roles(role)
+                except:
+                    pass
 
 def setup(bot):
     bot.add_cog(AutoMod(bot))
