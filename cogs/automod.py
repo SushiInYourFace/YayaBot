@@ -3,6 +3,7 @@ from discord import errors
 from discord.ext import commands, tasks
 import sqlite3
 import time
+import difflib
 import datetime
 import requests
 import io
@@ -146,8 +147,31 @@ class AutoMod(commands.Cog):
             editEmbed = discord.Embed(title=f"Message edited in {after.channel.name}", color=0xFFFF00)
             editEmbed.set_author(name=str(after.author), icon_url=after.author.avatar_url)
             now = datetime.datetime.now()
-            editEmbed.add_field(name="Before", value=before.content)
-            editEmbed.add_field(name="After", value=after.content)
+            #difference
+            d = difflib.Differ()
+            result = list(d.compare(before.content.split(), after.content.split()))
+            start = []
+            end = []
+            for i in range(len(result)):
+                if result[i].startswith("- "):
+                    start.append("~~" + result[i].strip("- ")+ "~~")
+                elif result[i].startswith("+ "):
+                    end.append("*" + result[i].strip("+ ") + "*")
+                elif result[i].startswith("? "):
+                    pass
+                else:
+                    start.append(result[i].strip(" "))
+                    end.append(result[i].strip(" "))
+            #formats strikethroughs pretty
+            for i in range(len(start)):
+                try:
+                    if start[i].endswith("~~") and start[i+1].startswith("~~"):
+                        start[i] = start[i][:-2]
+                        start[i+1] = start[i+1][2:]
+                except IndexError:
+                    pass
+            editEmbed.add_field(name="Before", value=" ".join(start))
+            editEmbed.add_field(name="After", value=" ".join(end))
             date = now.strftime("%Y-%m-%d, %H:%M:%S")
             editEmbed.set_footer(text=f"edited at {date}")
             await channel.send(embed=editEmbed)
