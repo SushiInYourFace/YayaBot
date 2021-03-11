@@ -11,7 +11,7 @@ def setup(bot):
     bot.add_cog(Owner(bot))
 
 class Owner(commands.Cog):
-    """owner cog!"""
+    """Cog for owners to do stuff!"""
 
     def __init__(self, bot):
         self.bot = bot

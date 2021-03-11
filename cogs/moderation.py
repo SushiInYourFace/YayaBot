@@ -12,6 +12,8 @@ connection = sqlite3.connect("database.db")
 cursor = connection.cursor()
 
 class Moderation(commands.Cog):
+    """Cog for moderators to help them moderate!"""
+
     def __init__(self, bot):
         self.bot = bot
         self._last_member = None
@@ -295,8 +297,6 @@ class Sql:
 
 SqlCommands = Sql()
 TimeConversions = timeconverters()
-
-
 
 def setup(bot):
     bot.add_cog(Moderation(bot))

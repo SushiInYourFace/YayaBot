@@ -27,6 +27,8 @@ async def tag_check(ctx):
 
 
 class Utilities(commands.Cog):
+    """Adds utilities for users!"""
+
     def __init__(self, bot):
         self.bot = bot
         self._last_member = None
@@ -240,7 +242,8 @@ class Utilities(commands.Cog):
             if fields == 25:
                 page.append(discord.Embed(colour=colour,title=titleDesc[0],description=titleDesc[1]))
                 fields = 0
-            page[-1].add_field(name=f"—————————————————————————", value=f"**{cog}**", inline=False)
+            cogDesc = '\n> '+self.bot.cogs[cog].description if self.bot.cogs[cog].description else '> ...'
+            page[-1].add_field(name=f"> **{cog}**", value=cogDesc, inline=False)
             fields += 1
             for command in self.bot.cogs[cog].get_commands():
                 try:
@@ -252,9 +255,9 @@ class Utilities(commands.Cog):
                     if fields == 25:
                         page.append(discord.Embed(colour=colour,title=titleDesc[0],description=titleDesc[1]))
                         fields = 0
-                        page[-1].add_field(name=f"—————————————————————————", value=f"**{cog}**", inline=False)
+                        page[-1].add_field(name=f"> **{cog}**", value=cogDesc, inline=False)
                     if command.help:
-                        description = command.help.replace("\n"," ")
+                        description = (command.help[:command.help.find("\n")+1] if '\n' in command.help else command.help)
                         if len(description) > 200:
                             description = description[:197] + "..."
                     else:
@@ -284,25 +287,36 @@ class Utilities(commands.Cog):
             await msg.edit(embed=page[pageOut])
             await reaction.remove(user)
 
-    async def send_command_help(self,ctx,command=None):
-        command = self.bot.get_command(command) if command else ctx.command
+    async def send_command_help(self,ctx,cmd=None):
+        command = self.bot.get_command(cmd) if cmd else ctx.command
         if not command:
-            await ctx.send("Command could not be found.")
-            return
-        try:
-            await command.can_run(ctx)
-        except:
-            return
+            command = self.bot.get_cog(cmd[0].upper()+cmd[1:])
+            if not command:
+                await ctx.send("Command/Cog could not be found.")
+                return
+            command.aliases = None
+            command.help = command.description
+            command.commands = command.get_commands()
+        else:
+            try:
+                await command.can_run(ctx)
+            except:
+                return
         random.seed(command.qualified_name)
         colour = discord.Colour.from_rgb(random.randint(1,255),random.randint(1,255),random.randint(1,255))
         random.seed()
-        embed = discord.Embed(colour=colour,title=f"Help for {command.qualified_name}",description=(f"Aliases: {', '.join(list(command.aliases))}" if command.aliases else ""))
-        embed.add_field(name="Usage",value=f"`{ctx.prefix}{command.qualified_name}{(' ' + command.signature.replace('_',' ')    ) if command.signature else ' <subcommand>' if isinstance(command,commands.Group) else ''}`")
+        embed = discord.Embed(colour=colour,title=f"Help for {command.qualified_name}" + " cog" if isinstance(command,commands.Cog) else ' command',description=(f"Aliases: {', '.join(list(command.aliases))}" if command.aliases else ""))
+        if not isinstance(command,commands.Cog):
+            embed.add_field(name="Usage",value=f"`{ctx.prefix}{command.qualified_name}{(' ' + command.signature.replace('_',' ')    ) if command.signature else ' <subcommand>' if isinstance(command,commands.Group) else ''}`")
         embed.add_field(name="Description",value=(command.help.replace("[p]",ctx.prefix) if command.help else '...'),inline=False)
-        if isinstance(command,commands.Group):
-            embed.add_field(name="———————",value="**Subcommands**",inline=False)
+        if isinstance(command,commands.Group) or isinstance(command,commands.Cog):
+            embed.add_field(name="———————",value="**Subcommands**" if  isinstance(command,commands.Group) else "**Commands**",inline=False)
             subFields = 0
             for subcommand in sorted(command.commands, key=lambda x: x.name):
+                try:
+                    await subcommand.can_run(ctx)
+                except:
+                    continue
                 if subcommand.help:
                     description = subcommand.help.replace("\n"," ")
                     if len(description) > 100:
@@ -319,7 +333,8 @@ class Utilities(commands.Cog):
 
     @commands.command()
     async def help(self,ctx,*,command=None):
-        """Displays help, like what you're seeing now!"""
+        """Displays help, like what you're seeing now!
+        You didn't need to do this..."""
         if not command:
             command = 1
         try:

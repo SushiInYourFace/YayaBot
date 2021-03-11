@@ -22,6 +22,8 @@ async def filter_check(ctx):
     return True
 
 class AutoMod(commands.Cog):
+    """Moderates chat and users automatically!"""
+    
     def __init__(self, bot):
         self.bot = bot
         self._last_member = None
