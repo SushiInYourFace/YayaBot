@@ -123,6 +123,8 @@ class AutoMod(commands.Cog):
         if message.author.guild_permissions.manage_messages:
             return
         guildFilter = cursor.execute("SELECT * FROM message_filter WHERE guild = ?",(message.guild.id,)).fetchone()
+        if not guildFilter:
+            return
         if guildFilter[1] == 1:
             bannedWords = guildFilter[2].split(";")
             if "" in bannedWords:

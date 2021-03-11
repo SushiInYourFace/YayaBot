@@ -305,12 +305,12 @@ class Utilities(commands.Cog):
         random.seed(command.qualified_name)
         colour = discord.Colour.from_rgb(random.randint(1,255),random.randint(1,255),random.randint(1,255))
         random.seed()
-        embed = discord.Embed(colour=colour,title=f"Help for {command.qualified_name}" + " cog" if isinstance(command,commands.Cog) else ' command',description=(f"Aliases: {', '.join(list(command.aliases))}" if command.aliases else ""))
+        embed = discord.Embed(colour=colour,title=f"Help for {command.qualified_name}" + (" cog" if isinstance(command,commands.Cog) else ' command'),description=(f"Aliases: {', '.join(list(command.aliases))}" if command.aliases else ""))
         if not isinstance(command,commands.Cog):
             embed.add_field(name="Usage",value=f"`{ctx.prefix}{command.qualified_name}{(' ' + command.signature.replace('_',' ')    ) if command.signature else ' <subcommand>' if isinstance(command,commands.Group) else ''}`")
         embed.add_field(name="Description",value=(command.help.replace("[p]",ctx.prefix) if command.help else '...'),inline=False)
         if isinstance(command,commands.Group) or isinstance(command,commands.Cog):
-            embed.add_field(name="———————",value="**Subcommands**" if  isinstance(command,commands.Group) else "**Commands**",inline=False)
+            embed.add_field(name="———————",value="**Subcommands**" if isinstance(command,commands.Group) else "**Commands**",inline=False)
             subFields = 0
             for subcommand in sorted(command.commands, key=lambda x: x.name):
                 try:
@@ -318,7 +318,7 @@ class Utilities(commands.Cog):
                 except:
                     continue
                 if subcommand.help:
-                    description = subcommand.help.replace("\n"," ")
+                    description = (subcommand.help[:subcommand.help.find("\n")+1] if '\n' in subcommand.help else subcommand.help)
                     if len(description) > 100:
                         description = description[:97] + "..."
                 else:
