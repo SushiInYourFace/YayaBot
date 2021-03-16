@@ -77,7 +77,21 @@ class Utilities(commands.Cog):
         if not mutedRole:
             await ctx.send("That does not appear to be a valid role ID. Cancelling")
             return
-        await ctx.send("Now, please send the ID (not a mention) of your modlog channel, or type \"None\" if you do not want a modlog channel")
+        await ctx.send("Ok, now please tell me what the ID is for your moderator role (people with this role will be able to use mod-only commands)")
+        try:
+            moderator = await self.bot.wait_for('message', timeout=60.0, check=check)
+        except asyncio.TimeoutError:
+            await ctx.send("No response recieved. Cancelling")
+            return
+        moderator = moderator.content
+        try:
+            modrole = guild.get_role(int(moderator))
+        except ValueError:
+            modrole = False
+        if not modrole:
+            await ctx.send("That does not appear to be a valid role ID. Cancelling")
+            return
+        await ctx.send("Almost there! Please send the ID (not a mention) of your modlog channel, or type \"None\" if you do not want a modlog channel")
         try:
             modlogs = await self.bot.wait_for('message', timeout=60.0, check=check)
         except asyncio.TimeoutError:
@@ -101,12 +115,13 @@ class Utilities(commands.Cog):
             await ctx.send("No response recieved. Cancelling")
             return
         cursor.execute("INSERT INTO guild_prefixes(guild,prefix) VALUES(?, ?) ON CONFLICT(guild) DO UPDATE SET prefix=excluded.prefix", (guild.id, prefix.content))
-        cursor.execute("INSERT INTO role_ids(guild,gravel,muted) VALUES(?, ?, ?) ON CONFLICT(guild) DO UPDATE SET gravel=excluded.gravel, muted=excluded.muted", (guild.id, gravel, muted))
-        cursor.execute("INSERT INTO modlog_channels(guild,channel) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET channel = excluded.channel", (guild.id, modlogs))
+        cursor.execute("INSERT INTO role_ids(guild,gravel,muted,moderator, modlogs) VALUES(?, ?, ?, ?, ?) ON CONFLICT(guild) DO UPDATE SET gravel=excluded.gravel, muted=excluded.muted, moderator=excluded.moderator, modlogs=excluded.modlogs", (guild.id, gravel, muted, moderator, modlogs))
+
         connection.commit()
         response = discord.Embed(title="Server set up successfully!", color=0x00FF00)
         response.add_field(name="Gravel role", value=gravelRole.mention) 
         response.add_field(name="Muted role", value=mutedRole.mention)
+        response.add_field(name="Moderator role", value=modrole.mention)
         response.add_field(name="Modlog channel", value=logchannel.mention)
         await ctx.send(embed=response)
 

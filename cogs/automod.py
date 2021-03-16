@@ -146,7 +146,7 @@ class AutoMod(commands.Cog):
         await self.check_message(after)
         if isinstance(after.channel, discord.channel.DMChannel):
             return
-        logID = cursor.execute("SELECT channel from modlog_channels WHERE guild = ?",(after.guild.id,)).fetchone()
+        logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(after.guild.id,)).fetchone()
         if logID and logID !=0 and not after.author.bot:
             channel = after.guild.get_channel(logID[0])
             editEmbed = discord.Embed(title=f"Message edited in {after.channel.name}", color=0xFFFF00)
@@ -183,7 +183,7 @@ class AutoMod(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message_delete(self, message):
-        logID = cursor.execute("SELECT channel from modlog_channels WHERE guild = ?",(message.guild.id,)).fetchone()
+        logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(message.guild.id,)).fetchone()
         if logID and logID !=0 and not message.author.bot:
             channel = message.guild.get_channel(logID[0])
             deleteEmbed = discord.Embed(color=0xFF0000)
@@ -216,5 +216,3 @@ class AutoMod(commands.Cog):
 
 def setup(bot):
     bot.add_cog(AutoMod(bot))
-    
-    

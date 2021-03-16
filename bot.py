@@ -29,13 +29,12 @@ bot = commands.Bot(command_prefix=get_pre, intents=intents, help_command=None)
 con = sqlite3.connect("database.db")
 cursor = con.cursor()
 cursor.execute("CREATE TABLE IF NOT EXISTS guild_prefixes (guild INTEGER PRIMARY KEY, prefix TEXT)")
-cursor.execute("CREATE TABLE IF NOT EXISTS role_ids (guild INTEGER PRIMARY KEY, gravel INTEGER, muted INTEGER)")
+cursor.execute("CREATE TABLE IF NOT EXISTS role_ids (guild INTEGER PRIMARY KEY, gravel INTEGER, muted INTEGER, moderator INTEGER, modlogs INTEGER)")
 cursor.execute("CREATE TABLE IF NOT EXISTS active_cases (id INTEGER PRIMARY KEY, expiration FLOAT)")
 cursor.execute("CREATE TABLE IF NOT EXISTS caselog (id INTEGER PRIMARY KEY, guild INTEGER, user INTEGER, type TEXT, reason TEXT, started FLOAT, expires FLOAT, moderator TEXT)")
 cursor.execute("CREATE TABLE IF NOT EXISTS extensions (extension TEXT PRIMARY KEY)")
 cursor.execute("CREATE TABLE IF NOT EXISTS message_filter (guild INTEGER PRIMARY KEY, enabled INTEGER NOT NULL, filter TEXT NOT NULL)")
 cursor.execute("CREATE TABLE IF NOT EXISTS tags (guild INTEGER PRIMARY KEY, role INTEGER, tags TEXT NOT NULL)")
-cursor.execute("CREATE TABLE IF NOT EXISTS modlog_channels (guild INTEGER PRIMARY KEY, channel INTEGER)")
 con.commit()
 
 #startup
@@ -97,5 +96,18 @@ async def on_command_error(ctx, error):
     else:
         await ctx.send("Something has gone wrong somewhere, and most likely needs to be fixed")
         raise error
+
+#check for mod-only commands
+def has_modrole(ctx):
+    modrole = cursor.execute("SELECT moderator FROM role_ids WHERE guild = ?", (ctx.guild.id,)).fetchone()
+    member_roles = []
+    for role in ctx.member.roles:
+        member_roles.append(role.id)
+    if modrole is None:
+        return False
+    elif (modrole in member_roles):
+        return True
+    else:
+        return False
 
 bot.run(Token)

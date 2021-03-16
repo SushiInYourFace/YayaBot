@@ -6,6 +6,7 @@ import time
 import datetime
 import requests
 import io
+import functions
 
 #sets up SQLite
 connection = sqlite3.connect("database.db")
@@ -21,7 +22,7 @@ class Moderation(commands.Cog):
         self.bot.wordWarnCooldown = {}
 
     @commands.group(help="Purge command.")
-    @commands.has_permissions(manage_messages=True)
+    @commands.check(functions.has_modrole)
     async def purge(self,ctx):
         if ctx.invoked_subcommand is None:
             await self.bot.send_help(ctx)
@@ -42,7 +43,7 @@ class Moderation(commands.Cog):
 
     #ban
     @commands.command(help="bans a user")
-    @commands.has_permissions(ban_members=True)
+    @commands.check(functions.has_modrole)
     async def ban(self, ctx, member : discord.Member, *, reason):
         bantime = time.time()
         banEmbed = discord.Embed(title="You have been banned from "+ ctx.guild.name, color=0xFF0000)
@@ -61,7 +62,7 @@ class Moderation(commands.Cog):
 
     #unban
     @commands.command(help="unbans a user")
-    @commands.has_permissions(ban_members=True)
+    @commands.check(functions.has_modrole)
     async def unban(self, ctx, user : discord.User):
         unbanTime = time.time()
         try:
@@ -77,7 +78,7 @@ class Moderation(commands.Cog):
 
     #gravel
     @commands.command(help="Gravels a user")
-    @commands.has_permissions(ban_members=True)
+    @commands.check(functions.has_modrole)
     async def gravel(self, ctx, member : discord.Member, graveltime, *, reason):
         now = time.time()    
         if graveltime[-1] == "m" or graveltime[-1] == "h" or graveltime[-1] == "d" or graveltime[-1] == "s":
@@ -111,7 +112,7 @@ class Moderation(commands.Cog):
         await ctx.send(embed=successEmbed)
 
     @commands.command(help="Mutes a user")
-    @commands.has_permissions(ban_members=True)
+    @commands.check(functions.has_modrole)
     async def mute(self, ctx, member : discord.Member, mutetime, *, reason):
         now = time.time()    
         if mutetime[-1] == "m" or mutetime[-1] == "h" or mutetime[-1] == "d" or mutetime[-1] == "s":
@@ -146,7 +147,7 @@ class Moderation(commands.Cog):
         await ctx.send(embed=successEmbed)
 
     @commands.command(help="warns a user")
-    @commands.has_permissions(ban_members=True)
+    @commands.check(functions.has_modrole)
     async def warn(self, ctx, member : discord.Member, reason):
         warnEmbed = discord.Embed(title="You have been warned in "+ ctx.guild.name, color=0xFF0000)
         warnEmbed.add_field(name="Reason:", value=reason)
@@ -160,7 +161,7 @@ class Moderation(commands.Cog):
             await ctx.send(embed=failEmbed)
 
     @commands.command(help="Shows a user's modlogs")
-    @commands.has_permissions(ban_members=True)
+    @commands.check(functions.has_modrole)
     async def modlogs(self, ctx, member : discord.User):
         logEmbed = discord.Embed(title = str(member) + "'s Modlogs", color=0x000080)
         logs = cursor.execute("SELECT id, guild, user, type, reason, started, expires, moderator FROM caselog WHERE user = ? AND guild = ?", (member.id, ctx.guild.id)).fetchall()
@@ -175,7 +176,7 @@ class Moderation(commands.Cog):
         await ctx.send(embed = logEmbed)
 
     @commands.command(help="Shows information on a case")
-    @commands.has_permissions(ban_members=True)
+    @commands.check(functions.has_modrole)
     async def case(self, ctx, case:int):
         caseinfo = cursor.execute("SELECT id, guild, user, type, reason, started, expires, moderator FROM caselog WHERE id = ?", (case,)).fetchone()
         start = datetime.datetime.fromtimestamp(int(caseinfo[5])).strftime('%Y-%m-%d %H:%M:%S')
@@ -191,7 +192,7 @@ class Moderation(commands.Cog):
 
 
     @commands.command(help="Unmutes a User")
-    @commands.has_permissions(ban_members=True)
+    @commands.check(functions.has_modrole)
     async def unmute(self, ctx, member : discord.Member):
         mod = str(ctx.author)
         unmutetime = time.time()
@@ -203,7 +204,7 @@ class Moderation(commands.Cog):
         SqlCommands.new_case(member.id, ctx.guild.id, "unmute", "N/A", unmutetime, -1, mod)
 
     @commands.command(help="Ungravels a User")
-    @commands.has_permissions(ban_members=True)
+    @commands.check(functions.has_modrole)
     async def ungravel(self, ctx, member : discord.Member):
         mod = str(ctx.author)
         ungraveltime = time.time()
