@@ -11,4 +11,4 @@ if you want to run it:
 - run the bot!!
 `python bot.py`
 
-("python" may be "py" or "python3") (sudo/admin may be required)
+("python" may be "py" or "python3") (sudo/admin may be required for downloading requirements or use `--user` to install for your user)
