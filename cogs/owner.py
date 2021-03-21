@@ -111,3 +111,20 @@ class Owner(commands.Cog):
         """Reloads specified cog or previously reloaded cog."""
         command = self.bot.get_command("cog reload")
         await ctx.invoke(command,cog)
+
+    @commands.Cog.listener()
+    async def on_message(self,message):
+        if message.author.bot:
+            return
+        if isinstance(message.channel,discord.DMChannel):
+            mention = self.bot.user.mention
+        else:
+            mention = message.guild.me.mention
+        if message.content == mention:
+            prefix = "!"
+            try:
+                guildcommand = cursor.execute("SELECT prefix FROM guild_prefixes WHERE guild = ?", (message.guild.id,)).fetchone()
+                prefix = (str(guildcommand[0]))
+            except TypeError:
+                pass
+            await message.channel.send(f"My prefix here is `{prefix}`",delete_after=4)

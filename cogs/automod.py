@@ -1,7 +1,7 @@
 import discord
 from discord import errors
 from discord.ext import commands, tasks
-import cogs.moderation as modcog
+import functions
 import sqlite3
 import time
 import difflib
@@ -16,7 +16,7 @@ cursor = connection.cursor()
 async def filter_check(ctx):
     inDb = cursor.execute("SELECT * FROM message_filter WHERE guild = ?", (ctx.guild.id,)).fetchone()
     if (inDb is None): # Guild filter doesn't exist
-        cursor.execute("INSERT INTO message_filter(guild,enabled,filter) VALUES(?,?,?)",(ctx.guild.id,1,""))
+        cursor.execute("INSERT INTO message_filter(guild,enabled,filterWildCard,filterExact) VALUES(?,?,?,?)",(ctx.guild.id,1,"",""))
         connection.commit()
         await ctx.send("Filter created and enabled.")
     return True
@@ -37,23 +37,39 @@ class AutoMod(commands.Cog):
         if ctx.invoked_subcommand is None:
             await self.bot.send_help(ctx)
 
-    @messageFilter.command(name="set")
-    async def messageFilter_set(self,ctx,*,mFilter=None):
+    @messageFilter.group(name="set")
+    async def messageFilter_set(self,ctx):
         """Sets the server message filter to the specified string or contents of a supplied text file if the desired filter is longer than 2000 characters.
         Each word/phrase to be filtered should be separated by ;
         For exmaple to filter both mark and john you'd put `mark;john`
         Put nothing for filter to be reset to nothing."""
-        if (mFilter is None and ctx.message.attachments):
+        if ctx.invoked_subcommand is None:
+            self.bot.send_help(ctx)
+
+    async def new_filter_format(self,ctx,new_filter):
+        if (new_filter is None and ctx.message.attachments):
             response = requests.get(ctx.message.attachments[0].url)
             response.raise_for_status()
-            mFilter = response.text
-        elif (not ctx.message.attachments and mFilter is None):
-            mFilter = ""
-        if mFilter.endswith(";"):
-            mFilter = mFilter[:-1]
-        if mFilter.startswith(";"):
-            mFilter = mFilter[1:]
-        cursor.execute("UPDATE message_filter SET filter=? WHERE guild=?",(mFilter,ctx.guild.id))
+            new_filter = response.text
+        elif (not ctx.message.attachments and new_filter is None):
+            new_filter = ""
+        if new_filter.endswith(";"):
+            new_filter = new_filter[:-1]
+        if new_filter.startswith(";"):
+            new_filter = new_filter[1:]
+        return new_filter
+
+    @messageFilter_set.command(name="wild",aliases=["wildcard"])
+    async def messageFilter_set_wild(self,ctx,*,new_filter=None):
+        new_filter = await self.new_filter_format(ctx,new_filter)
+        cursor.execute("UPDATE message_filter SET filterWildCard=? WHERE guild=?",(new_filter,ctx.guild.id))
+        connection.commit()
+        await ctx.send("Filter set.")
+
+    @messageFilter_set.command(name="exact")
+    async def messageFilter_set_exact(self,ctx,*,new_filter=None):
+        new_filter = await self.new_filter_format(ctx,new_filter)
+        cursor.execute("UPDATE message_filter SET filterExact=? WHERE guild=?",(new_filter,ctx.guild.id))
         connection.commit()
         await ctx.send("Filter set.")
 
@@ -62,16 +78,27 @@ class AutoMod(commands.Cog):
         """Adds specified words/phrases to filter.
         You can specify multiple words with spaces, to add something that includes a space you must encase it in ".
         For example `[p]filter add "mario and luigi"` would filter `mario and luigi` only and not `mario`, `and` or `luigi` separately"""
-        guildFilter = cursor.execute("SELECT * FROM message_filter WHERE guild = ?",(ctx.guild.id,)).fetchone()[2]
-        guildFilter = guildFilter.split(";")
-        if "" in guildFilter:
-            guildFilter.remove("")
-        if not guildFilter:
-            guildFilter = []
+        guildFilter = cursor.execute("SELECT * FROM message_filter WHERE guild = ?",(ctx.guild.id,)).fetchone()
+        wildFilter = guildFilter[2].split(";")
+        exactFilter = guildFilter[3].split(";")
+        if not exactFilter:
+            exactFilter = []
+        if not wildFilter:
+            wildFilter = []
+        if "" in exactFilter:
+            exactFilter.remove("")
+        if "" in wildFilter:
+            wildFilter.remove("")
         for word in words:
-            guildFilter.append(word)
-        guildFilter = ";".join(guildFilter)
-        cursor.execute("UPDATE message_filter SET filter=? WHERE guild=?",(guildFilter,ctx.guild.id))
+            if len(word) == 1:
+                continue
+            if word.startswith("*"):
+                wildFilter.append(word[1:])
+            else:
+                guildFilter.append(word)
+        wildFilter = ";".join(wildFilter)
+        exactFilter = ";".join(exactFilter)
+        cursor.execute("UPDATE message_filter SET filterWildCard=?, filterExact=? WHERE guild=?",(wildFilter,exactFilter,ctx.guild.id))
         connection.commit()
         await ctx.send("Added to filter.")
 
@@ -97,9 +124,11 @@ class AutoMod(commands.Cog):
         
     @messageFilter.command(name="get",aliases=["list"])
     async def messageFilter_get(self,ctx):
-        """Sends the filter as a message or as a text file if it's over 2000 characters"""
+        """Sends the filter.
+        Usually sent as a message but is sent as a text file if it's over 2000 characters"""
         guildFilter = cursor.execute("SELECT * FROM message_filter WHERE guild = ?",(ctx.guild.id,)).fetchone()
-        if len(str(guildFilter[2])) <= 1977:
+        text = f'Wildcard:\n{str(guildFilter[2])}\nExact:\n{str(guildFilter[3])}'
+        if len(text) <= 1977:
             await ctx.send(f"Filter {'enabled' if guildFilter[1] == 1 else 'disabled'} ```{guildFilter[2] if guildFilter[2] else ' '}```")
         else:
             fp = io.StringIO(guildFilter[2])
@@ -207,12 +236,12 @@ class AutoMod(commands.Cog):
                 else:
                     #sanity check
                     return
-                role = modcog.SqlCommands.get_role(member.guild.id, casetype)
+                role = functions.Sql.get_role(member.guild.id, casetype)
                 try:
                     role = member.guild.get_role(role)
                     await member.add_roles(role)
                 except:
                     pass
-
+                
 def setup(bot):
     bot.add_cog(AutoMod(bot))

@@ -7,10 +7,20 @@ import datetime
 import requests
 import io
 import functions
+import json
 
 #sets up SQLite
 connection = sqlite3.connect("database.db")
 cursor = connection.cursor()
+
+async def perms_check(ctx):
+    inDb = cursor.execute("SELECT * FROM permissions WHERE guild = ?", (ctx.guild.id,)).fetchone()
+    if (inDb is None): # Guild perms doesn't exist
+        cursor.execute("INSERT INTO permissions(guild,channels,roles) VALUES(?,?,?)",(ctx.guild.id,"[]","[]"))
+        connection.commit()
+        await ctx.send("Permissions created with no role and no channels.")
+    return True
+
 
 class Moderation(commands.Cog):
     """Cog for moderators to help them moderate!"""
@@ -241,8 +251,85 @@ class Moderation(commands.Cog):
                     pass
             cursor.execute("DELETE FROM active_cases WHERE id = ?", (item[0],))
             connection.commit()
- 
+         
+    @commands.group(aliases=["perms"])
+    @commands.check(perms_check)
+    @commands.has_permissions(manage_guild=True)
+    async def permissions(self,ctx):
+        if ctx.invoked_subcommand is None:
+            await self.bot.send_help(ctx)
 
+    @permissions.group(name="channel")
+    async def permissions_channel(self,ctx):
+        if ctx.invoked_subcommand is None:
+            await self.bot.send_help(ctx)
+
+    @permissions_channel.command(name="add",aliases=["new"])
+    async def permissions_channel_add(self,ctx,*channels:discord.TextChannel):
+        perms = cursor.execute("SELECT * FROM permissions WHERE guild = ?", (ctx.guild.id,)).fetchone()
+        guildChannels = json.loads(perms[1])
+        for channel in channels:
+            if str(channel.id) not in guildChannels:
+                guildChannels.append(str(channel.id))
+        cursor.execute("UPDATE permissions SET channels=? WHERE guild=?",(json.dumps(guildChannels),ctx.guild.id))
+        connection.commit()
+        await ctx.send("Added channels to permissions!")
+
+    @permissions_channel.command(name="remove",aliases=["delete","del"])
+    async def permissions_channel_remove(self,ctx,*channels:discord.TextChannel):
+        perms = cursor.execute("SELECT * FROM permissions WHERE guild = ?", (ctx.guild.id,)).fetchone()
+        guildChannels = json.loads(perms[1])
+        for channel in channels:
+            if str(channel.id) in guildChannels:
+                guildChannels.remove(str(channel.id))
+        cursor.execute("UPDATE permissions SET channels=? WHERE guild=?",(json.dumps(guildChannels),ctx.guild.id))
+        connection.commit()
+        await ctx.send("Removed channels from permissions!")
+
+    @permissions.group(name="role")
+    async def permissions_role(self,ctx):
+        if ctx.invoked_subcommand is None:
+            await self.bot.send_help(ctx)
+
+    @permissions_role.command(name="add",aliases=["new"])
+    async def permissions_role_add(self,ctx,*roles:discord.Role):
+        perms = cursor.execute("SELECT * FROM permissions WHERE guild = ?", (ctx.guild.id,)).fetchone()
+        guildRoles = json.loads(perms[1])
+        for role in roles:
+            if str(role.id) not in roles:
+                guildRoles.append(str(role.id))
+        cursor.execute("UPDATE permissions SET roles=? WHERE guild=?",(json.dumps(guildRoles),ctx.guild.id))
+        connection.commit()
+        await ctx.send("Added role to permissions!")
+
+    @permissions_role.command(name="remove",aliases=["delete","del"])
+    async def permissions_role_remove(self,ctx,*channels:discord.TextChannel):
+        perms = cursor.execute("SELECT * FROM permissions WHERE guild = ?", (ctx.guild.id,)).fetchone()
+        guildRoles = json.loads(perms[1])
+        for role in roles:
+            if str(role.id) in guildRoles:
+                guildRoles.append(str(role.id))
+        cursor.execute("UPDATE permissions SET channels=? WHERE guild=?",(json.dumps(guildRoles),ctx.guild.id))
+        connection.commit()
+        await ctx.send("Removed role from permissions!")
+
+    async def bot_check(self,ctx):
+        if isinstance(ctx.channel,discord.DMChannel):
+            return True
+        if ctx.author.guild_permissions.manage_messages:
+            return True
+        perms = cursor.execute("SELECT * FROM permissions WHERE guild = ?", (ctx.guild.id,)).fetchone()
+        if (perms is None): # Guild perms doesn't exist
+            return True
+        if perms[1] is not None:
+            channels = json.loads(perms[1])
+            if str(ctx.channel.id) not in channels:
+                return False
+        if perms[2] is not None:
+            roles = json.loads(perms[2])
+            if not [str(role.id) for role in ctx.author.roles if str(role.id) in roles]:
+                return False
+        return True
 
 SqlCommands = functions.Sql()
 TimeConversions = functions.timeconverters()
