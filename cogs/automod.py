@@ -154,7 +154,9 @@ class AutoMod(commands.Cog):
             now = datetime.datetime.now()
             #difference
             d = difflib.Differ()
-            result = list(d.compare(before.content.split(), after.content.split()))
+            beforecontent = discord.utils.escape_markdown(before.content)
+            aftercontent = discord.utils.escape_markdown(after.content)
+            result = list(d.compare(beforecontent.split(), aftercontent.split()))
             start = []
             end = []
             for i in range(len(result)):

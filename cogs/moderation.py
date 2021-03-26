@@ -151,11 +151,11 @@ class Moderation(commands.Cog):
     async def warn(self, ctx, member : discord.Member, reason):
         warnEmbed = discord.Embed(title="You have been warned in "+ ctx.guild.name, color=0xFF0000)
         warnEmbed.add_field(name="Reason:", value=reason)
+        SqlCommands.new_case(member.id, ctx.guild.id, "warn", reason, time.time(), -1, str(ctx.author))
         try:
             await member.send(embed=warnEmbed)
             successEmbed = discord.Embed(title="Successfully warned "+ str(member), color = 0x00FF00)
             await ctx.send(embed=successEmbed)
-            SqlCommands.new_case(member.id, ctx.guild.id, "warn", reason, time.time(), -1, str(ctx.author))
         except errors.HTTPException:
             failEmbed = discord.Embed(title="Could not warn user "+ str(member), color = 0x00FF00)
             await ctx.send(embed=failEmbed)

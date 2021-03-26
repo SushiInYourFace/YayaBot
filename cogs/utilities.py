@@ -33,18 +33,22 @@ class Utilities(commands.Cog):
         self.bot = bot
         self._last_member = None
         self.bot.send_help = self.send_command_help
-    
-    @commands.command(help="Sets a server-specific bot prefix", aliases=["set_prefix",])
-    @commands.has_permissions(administrator=True)
-    async def change_prefix(self, ctx, arg):
-        cursor.execute("INSERT INTO guild_prefixes(guild,prefix) VALUES(?, ?) ON CONFLICT(guild) DO UPDATE SET prefix=excluded.prefix", (ctx.guild.id, arg))
-        connection.commit()
-        await ctx.send("Your new server-specific prefex is " + arg)
 
-    #setup, ideally will only be used the first time the bot joins
-    @commands.command(help="Sets up all the bot's features")
+    @commands.group(name="setup", help="setup some (or all) features of the bot", aliases=["su",])
     @commands.has_permissions(administrator=True)
-    async def setup(self, ctx):
+    async def setup(self,ctx):
+        if ctx.invoked_subcommand is None:
+            await ctx.invoke(self.bot.get_command('setup all'),)
+    
+    @setup.command(help="Sets a server-specific bot prefix", name="prefix", aliases=["set_prefix",])
+    async def setup_prefix(self, ctx, prefix):
+        cursor.execute("INSERT INTO guild_prefixes(guild,prefix) VALUES(?, ?) ON CONFLICT(guild) DO UPDATE SET prefix=excluded.prefix", (ctx.guild.id, prefix))
+        connection.commit()
+        await ctx.send("Your new server-specific prefex is " + prefix)
+
+    #all, chonky function
+    @setup.command(help="Sets up all the bot's features", name="all")
+    async def setup_all(self, ctx):
         guild = ctx.guild
         await ctx.send("Beginning server set-up")
         await ctx.send("First, please give the ID (it will be a number) of your gravel role")
@@ -124,6 +128,65 @@ class Utilities(commands.Cog):
         response.add_field(name="Moderator role", value=modrole.mention)
         response.add_field(name="Modlog channel", value=logchannel.mention)
         await ctx.send(embed=response)
+
+    @setup.command(name="modlogs", help="Specifies the channel to be used for modlogs", aliases=["logchannel", "modlog", "logs",])
+    async def setup_modlogs(self, ctx, channelID):
+        #maybe change this to be able to take channel names or mentions at some point? 
+        if channelID != "None" and channelID != "none":
+            try:
+                logchannel = ctx.guild.get_channel(int(channelID))
+                await logchannel.send("Set up modlogs in this channel!")
+                cursor.execute("INSERT INTO role_ids(guild, modlogs) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET modlogs=excluded.modlogs", (ctx.guild.id, channelID))
+            except:
+                await ctx.send("Something went wrong. Please make sure you specify a valid channel ID, and that I have permissions to send messages to it")
+                return
+        else:
+            cursor.execute("INSERT INTO role_ids(guild,modlogs) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET modlogs=excluded.modlogs", (ctx.guild.id, 0))
+            await ctx.send("Turned off modlogs")
+        connection.commit()
+
+    @setup.command(name="gravel", help="Specifies the role given to someone who is graveled", aliases=["gravelrole",])
+    async def setup_gravel(self, ctx, roleID):
+        try: 
+            if (role := ctx.guild.get_role(int(roleID))) is not None:
+                cursor.execute("INSERT INTO role_ids(guild, gravel) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET gravel=excluded.gravel", (ctx.guild.id, roleID))
+                connection.commit()
+                embed = discord.Embed(title=f"Gravel role set to {role.mention}")
+                await ctx.send(embed=embed)
+                #TODO: Change this to actually mention the role
+            else:
+                await ctx.send("Something went wrong. Please make sure you specify a valid role ID")
+        except ValueError:
+            await ctx.send("Something went wrong. Please make sure you specify a valid role ID")
+        
+    @setup.command(name="mute", help="Specifies the role given to someone who is muted", aliases=["muterole", "muted", "mutedrole"])
+    async def setup_mute(self, ctx, roleID):
+        try: 
+            if (role := ctx.guild.get_role(int(roleID))) is not None:
+                cursor.execute("INSERT INTO role_ids(guild, muted) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET muted=excluded.muted", (ctx.guild.id, roleID))
+                connection.commit()
+                embed = discord.Embed(title=f"muted role set to {role.mention}")
+                await ctx.send(embed=embed)
+                #TODO: Change this to actually mention the role
+            else:
+                await ctx.send("Something went wrong. Please make sure you specify a valid role ID")
+        except ValueError:
+            await ctx.send("Something went wrong. Please make sure you specify a valid role ID")
+
+    @setup.command(name="moderator", help="Sets the role used to determine whether a user can use moderation commands", aliases=["mod", "modrole"])
+    async def setup_moderator(self, ctx, roleID):
+        try: 
+            if (role := ctx.guild.get_role(int(roleID))) is not None:
+                cursor.execute("INSERT INTO role_ids(guild, moderator) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET moderator=excluded.moderator", (ctx.guild.id, roleID))
+                connection.commit()
+                embed = discord.Embed(title=f"Moderator role set to {role.mention}")
+                await ctx.send(embed=embed)
+                #TODO: Change this to actually mention the role
+            else:
+                await ctx.send("Something went wrong. Please make sure you specify a valid role ID")
+        except ValueError:
+            await ctx.send("Something went wrong. Please make sure you specify a valid role ID")
+
 
     @commands.group(aliases=["t"])
     @commands.check(tag_check)
