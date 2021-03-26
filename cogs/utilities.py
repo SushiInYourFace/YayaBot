@@ -295,7 +295,7 @@ class Utilities(commands.Cog):
         guildTags = cursor.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,)).fetchone()
         tags = json.loads(guildTags[2])
         colour = discord.Colour.from_rgb(random.randint(1,255),random.randint(1,255),random.randint(1,255))
-        embed = discord.Embed(colour=colour,title=f"Tags.",description=", ".join(tags.keys())+f"\n\nUsable by {ctx.guild.get_role(int(guildTags[1])).mention} and above.")
+        embed = discord.Embed(colour=colour,title="Tags.",description=", ".join(tags.keys())+f"\n\nUsable by {ctx.guild.get_role(int(guildTags[1])).mention} and above.")
         embed.set_footer(text=ctx.author.name, icon_url=ctx.author.avatar_url)
         await ctx.send(embed=embed)
 
@@ -309,57 +309,55 @@ class Utilities(commands.Cog):
         connection.commit()
         await ctx.send(f"Tag role set to {role.name}.")
 
+    async def create_help_field(self,ctx,embed,command):
+        try:
+            can_run = await command.can_run(ctx)
+        except commands.CheckFailure:
+            can_run = False
+        if can_run:
+            if command.help:
+                description = (command.help[:command.help.find("\n")+1] if '\n' in command.help else command.help)
+                if len(description) > 200:
+                    description = description[:197] + "..."
+            else:
+                description = "..."
+            embed.add_field(name=f"{command.name}", value=f"{description}", inline=True)
+        return embed
+
     async def send_all_help(self,ctx,pageOut):
         colour = discord.Colour.from_rgb(random.randint(1,255),random.randint(1,255),random.randint(1,255))
         titleDesc = ["YayaBot Help!",f"Say `{ctx.prefix}help <command>` for more info on a command!"] 
         page = [discord.Embed(colour=colour,title=titleDesc[0],description=titleDesc[1])]
         cogs = sorted(list(self.bot.cogs.keys()))
-        fields = 0
-        for cog in cogs:
-            cog_command = False
-            if fields == 25:
-                page.append(discord.Embed(colour=colour,title=titleDesc[0],description=titleDesc[1]))
-                fields = 0
+        for cog in cogs: # For each cog
+            if len(page[-1].fields) >= 24: # If no space for commands or no space at all
+                page.append(discord.Embed(colour=colour,title=titleDesc[0],description=titleDesc[1])) # New page
             cogDesc = '\n> '+self.bot.cogs[cog].description if self.bot.cogs[cog].description else '> ...'
-            page[-1].add_field(name=f"> **{cog}**", value=cogDesc, inline=False)
-            fields += 1
+            page[-1].add_field(name=f"> **{cog}**", value=cogDesc, inline=False) # Add cog field
             for command in self.bot.cogs[cog].get_commands():
-                try:
-                    can_run = await command.can_run(ctx)
-                except:
-                    can_run = False
-                if can_run:
-                    cog_command = True
-                    if fields == 25:
-                        page.append(discord.Embed(colour=colour,title=titleDesc[0],description=titleDesc[1]))
-                        fields = 0
-                        page[-1].add_field(name=f"> **{cog}**", value=cogDesc, inline=False)
-                    if command.help:
-                        description = (command.help[:command.help.find("\n")+1] if '\n' in command.help else command.help)
-                        if len(description) > 200:
-                            description = description[:197] + "..."
-                    else:
-                        description = "..."
-                    page[-1].add_field(name=f"{command.name}", value=f"{description}", inline=True)
-                    fields += 1
-            if not cog_command:
-                page[-1].remove_field(len(page[-1].fields)-1)
+                page[-1] = await self.create_help_field(ctx,page[-1],command)
+                if command != self.bot.cogs[cog].get_commands()[-1] and len(page[-1].fields) == 25: # If not the last command and new page is required
+                    page.append(discord.Embed(colour=colour,title=titleDesc[0],description=titleDesc[1])) # New page
+                    page[-1].add_field(name=f"> **{cog}**", value=cogDesc, inline=False) # Add cog field
         if pageOut + 1 > len(page):
             pageOut = len(page) - 1
-        page[pageOut].set_footer(text=f"{pageOut+1} of {len(page)}")
+        page[pageOut].set_footer(text=f"Page {pageOut+1} of {len(page)}") # Add footer now (didn't know how many pages previously)
         msg = await ctx.send(embed=page[pageOut])
-        if len(page) == 1:
+        if len(page) == 1: # If only one page no turning is required
             return
-        for emoji in ["⏪","◀️","▶️","⏩"]:
+        for emoji in ["⏪","◀️","▶️","⏩","❎"]: # Page turning
             await msg.add_reaction(emoji)
         def check(react, user):
-            return react.message == msg and (ctx.message.author == user and str(react.emoji) in ["⏪","◀️","▶️","⏩"])
+            return react.message == msg and (ctx.message.author == user and str(react.emoji) in ["⏪","◀️","▶️","⏩","❎"])
         while True:
             try:
                 reaction,user = await self.bot.wait_for("reaction_add",timeout=30,check=check)
             except asyncio.TimeoutError:
                 await msg.clear_reactions()
                 break
+            if str(reaction.emoji) == "❎":
+                await ctx.channel.delete_messages([ctx.message,msg])
+                return
             pageOut = {"⏪":0,"◀️":(pageOut-1) if pageOut-1 >= 0 else pageOut,"▶️":(pageOut+1) if pageOut+1 < len(page) else pageOut,"⏩":len(page)-1}[str(reaction.emoji)]
             page[pageOut].set_footer(text=f"{pageOut+1} of {len(page)}")
             await msg.edit(embed=page[pageOut])
@@ -389,30 +387,17 @@ class Utilities(commands.Cog):
         embed.add_field(name="Description",value=(command.help.replace("[p]",ctx.prefix) if command.help else '...'),inline=False)
         if isinstance(command,commands.Group) or isinstance(command,commands.Cog):
             embed.add_field(name="———————",value="**Subcommands**" if isinstance(command,commands.Group) else "**Commands**",inline=False)
-            subFields = 0
             for subcommand in sorted(command.commands, key=lambda x: x.name):
-                try:
-                    await subcommand.can_run(ctx)
-                except:
-                    continue
-                if subcommand.help:
-                    description = (subcommand.help[:subcommand.help.find("\n")+1] if '\n' in subcommand.help else subcommand.help)
-                    if len(description) > 100:
-                        description = description[:97] + "..."
-                else:
-                    description = "..."
-                embed.add_field(name=subcommand.name,value=description, inline=True)
-                subFields += 1
-            while not subFields % 3 == 0:
+                embed = await self.create_help_field(ctx,embed,subcommand)
+            while not len(embed.fields) % 3 == 0:
                 embed.add_field(name=".",value=".", inline=True)
-                subFields += 1
         await ctx.send(embed=embed)
         
 
     @commands.command()
     async def help(self,ctx,*,command=None):
         """Displays help, like what you're seeing now!
-        You didn't need to do this..."""
+        You didn't need to do this, you clearly already know how to use this command..."""
         if not command:
             command = 1
         try:
