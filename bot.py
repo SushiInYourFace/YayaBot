@@ -68,8 +68,11 @@ if not extensions:
 print("")
 logging.info("Loading Cogs.")
 for extension in extensions:
-    bot.load_extension(extension[0])
-    logging.info(f"Loaded {extension[0]}")
+    try:
+        bot.load_extension(extension[0])
+        logging.info(f"Loaded {extension[0]}")
+    except commands.ExtensionNotFound:
+        logging.info(f"Could not find cog {extension[0]}")
 logging.info("Done.")
 print("")
         
