@@ -82,7 +82,7 @@ class Moderation(commands.Cog):
             unsent = False
         except errors.HTTPException:
             unsent = True
-        await ctx.guild.ban(member, reason=reason)
+        await ctx.guild.kick(member, reason=reason)
         successEmbed = discord.Embed(title="Kicked " + str(member), color=0xFF0000)
         if unsent:
             successEmbed.set_footer(text="Failed to send a message to the user" + str(member))
