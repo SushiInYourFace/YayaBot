@@ -70,6 +70,24 @@ class Moderation(commands.Cog):
         await ctx.send(embed=successEmbed)
         SqlCommands.new_case(member.id, ctx.guild.id, "ban", reason, bantime, -1, str(ctx.author))
 
+    @commands.command(help="kicks a user")
+    @commands.check(functions.has_modrole)
+    async def kick(self, ctx, member : discord.Member, *, reason):
+        kicktime = time.time()
+        kickEmbed = discord.Embed(title="You have been kicked from "+ ctx.guild.name, color=0xFF0000)
+        kickEmbed.add_field(name="Kick reason:", value=reason)
+        try:
+            await member.send(embed=kickEmbed)
+            unsent = False
+        except errors.HTTPException:
+            unsent = True
+        await ctx.guild.ban(member, reason=reason)
+        successEmbed = discord.Embed(title="Kicked " + str(member), color=0xFF0000)
+        if unsent:
+            successEmbed.set_footer(text="Failed to send a message to the user" + str(member))
+        await ctx.send(embed=successEmbed)
+        SqlCommands.new_case(member.id, ctx.guild.id, "kick", reason, kicktime, -1, str(ctx.author))
+
     #unban
     @commands.command(help="unbans a user")
     @commands.check(functions.has_modrole)
