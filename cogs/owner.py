@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+from discord_slash import cog_ext, SlashContext
 import random
 import os
 import sqlite3
@@ -81,9 +82,7 @@ class Owner(commands.Cog):
                 connection.commit()
             await ctx.send(f"Cog {cog} {'unloaded' if unloadCog else ''}{' and ' if (unloadCog and inDb) else ''}{'removed from database' if inDb else ''}.")
 
-    @cog.command(aliases = ['r'])
-    async def reload(self,ctx,cog=None):
-        """Reload cog."""
+    async def reload_command(self,ctx,cog=None):
         if cog == None:
             if self.bot.previousReload == None:
                 return
@@ -92,6 +91,15 @@ class Owner(commands.Cog):
         self.bot.reload_extension(f"cogs.{cog}")
         await ctx.send(f"Cog {cog} reloaded.")
         self.bot.previousReload = cog
+
+    @cog.command(aliases = ['r'])
+    async def reload(self,ctx,cog=None):
+        """Reload cog."""
+        await self.reload_command(ctx,cog)
+
+    @cog_ext.cog_slash(name="reload")
+    async def _reload(self, ctx: SlashContext, cog=None):
+        await self.reload_command(ctx,cog)
 
     @cog.command(name="list",aliases=["ls"])
     async def cogs_list(self,ctx):
