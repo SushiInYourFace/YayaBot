@@ -1,6 +1,7 @@
 import discord
 from discord import errors
 from discord.ext import commands, tasks
+from discord_slash import cog_ext, SlashContext
 import sqlite3
 import time
 import datetime
@@ -188,9 +189,7 @@ class Moderation(commands.Cog):
             failEmbed = discord.Embed(title="Could not warn user "+ str(member), color = 0x00FF00)
             await ctx.send(embed=failEmbed)
 
-    @commands.command(help="Shows a user's modlogs")
-    @commands.check(functions.has_modrole)
-    async def modlogs(self, ctx, member : discord.User):
+    async def modlog_command(self, ctx, member):
         logEmbed = discord.Embed(title = str(member) + "'s Modlogs", color=0x000080)
         logs = cursor.execute("SELECT id, guild, user, type, reason, started, expires, moderator FROM caselog WHERE user = ? AND guild = ?", (member.id, ctx.guild.id)).fetchall()
         for log in logs:
@@ -202,6 +201,16 @@ class Moderation(commands.Cog):
             logEmbed.add_field(name="__**Case " + str(log[0]) + "**__", value="**Type- **" + log[3] + "\n**Reason- **" + log[4] + "\n**Time- **" + start + "\n**Length- **" + totaltime + "\n**Moderator- **" + log[7], inline=True)
         logEmbed.set_thumbnail(url=member.avatar_url)
         await ctx.send(embed = logEmbed)
+
+    @commands.command(help="Shows a user's modlogs")
+    @commands.check(functions.has_modrole)
+    async def modlogs(self, ctx, member : discord.User):
+        await self.modlog_command(ctx, member)
+
+    @cog_ext.cog_slash(name="modlogs")
+    @commands.check(functions.has_modrole)
+    async def _modlogs(self, ctx:SlashContext, member : discord.User):
+        await self.modlog_command(ctx, member)
 
     @commands.command(help="Shows information on a case")
     @commands.check(functions.has_modrole)

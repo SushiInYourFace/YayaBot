@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 import sqlite3
 import logging
+import discord_slash
 from discord_slash import SlashCommand
 
 # Logging config
@@ -24,7 +25,7 @@ async def get_pre(bot, message):
 #intents, initializing bot
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix=get_pre, intents=intents, help_command=None)
-slash = SlashCommand(bot, override_type = True, sync_commands=True)
+slash = SlashCommand(bot,sync_commands=True)
 
 #SQLite
 con = sqlite3.connect("database.db")
@@ -104,6 +105,10 @@ async def on_command_error(ctx, error):
         await ctx.send("Something has gone wrong somewhere, and most likely needs to be fixed")
         raise error
 
+#slash error handling
+@bot.event
+async def on_slash_command_error(ctx, ex):
+    await ctx.send("There was an error of some sort raised involving slash commands")
 #check for mod-only commands
 def has_modrole(ctx):
     modrole = cursor.execute("SELECT moderator FROM role_ids WHERE guild = ?", (ctx.guild.id,)).fetchone()
