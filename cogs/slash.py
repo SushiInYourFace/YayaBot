@@ -8,8 +8,8 @@ class Slash(commands.Cog):
 
     @cog_ext.cog_slash(name="test")
     async def _test(self, ctx: SlashContext):
-        embed = discord.Embed(title="embed test")
-        await ctx.send(content="test", embed=embed)
+        embed = discord.Embed(title="The Industrial Revolution and its consequences have been a disaster for the human race")
+        await ctx.send(embed=embed)
 
 def setup(bot):
     bot.add_cog(Slash(bot))
