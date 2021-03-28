@@ -11,5 +11,10 @@ class Slash(commands.Cog):
         embed = discord.Embed(title="The Industrial Revolution and its consequences have been a disaster for the human race")
         await ctx.send(embed=embed)
 
+    @cog_ext.cog_slash(name="input")
+    async def _input(self,ctx:SlashContext, input):
+        await ctx.send(f"You really said \"{input}\"? Out of all the possible things you could say...")
+        
+
 def setup(bot):
     bot.add_cog(Slash(bot))
