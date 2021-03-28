@@ -147,6 +147,9 @@ class AutoMod(commands.Cog):
     async def check_message(self,message):
         if message.author == message.author.bot:
             return
+        if message.author.discriminator == "0000":
+            await message.channel.send("A webhook sent a message. The system works, the error is fixed, and all is right with the world")
+            return
         if isinstance(message.channel, discord.channel.DMChannel):
             return
         if message.author.guild_permissions.manage_messages:
