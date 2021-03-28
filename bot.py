@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 import sqlite3
 import logging
+from discord_slash import SlashCommand
 
 # Logging config
 logging.basicConfig(format='[%(asctime)s] %(levelname)s: %(message)s', level=logging.INFO)
@@ -21,9 +22,9 @@ async def get_pre(bot, message):
     return prefix
 
 #intents, initializing bot
-intents = discord.Intents.default()
-intents.members = True
+intents = discord.Intents.all()
 bot = commands.Bot(command_prefix=get_pre, intents=intents, help_command=None)
+slash = SlashCommand(bot, override_type = True, sync_commands=True)
 
 #SQLite
 con = sqlite3.connect("database.db")
@@ -56,6 +57,7 @@ default_extensions = [
     ('cogs.utilities',),
     ('cogs.owner',),
     ('cogs.automod',),
+    ('cogs.slash',),
 ]
 
 extensions = cursor.execute("SELECT * FROM extensions").fetchall()

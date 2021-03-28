@@ -6,6 +6,7 @@ import json
 import random
 import requests
 
+
 #sets up SQLite
 connection = sqlite3.connect("database.db")
 cursor = connection.cursor()
