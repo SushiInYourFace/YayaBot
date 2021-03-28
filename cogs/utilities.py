@@ -202,12 +202,12 @@ class Utilities(commands.Cog):
         if ctx.guild.get_role(int(guildTags[1])) <= ctx.author.top_role:
             tags = json.loads(guildTags[2])
             try:
-                if tags[tag]["text"] and tags[tag]["embed"]:
-                    await ctx.send(tags[tag]["text"],embed=discord.Embed.from_dict(tags[tag]["embed"]))
-                elif tags[tag]["text"]:
-                    await ctx.send(tags[tag]["text"])
-                elif tags[tag]["embed"]:
-                    await ctx.send(embed=discord.Embed.from_dict(tags[tag]["embed"]))
+                if (texttag := tags[tag]["text"]) and (embedtag := tags[tag]["embed"]):
+                    await ctx.send(texttag,embed=discord.Embed.from_dict(embedtag))
+                elif (texttag := tags[tag]["text"]):
+                    await ctx.send(texttag)
+                elif (embedtag := tags[tag]["embed"]):
+                    await ctx.send(embed=discord.Embed.from_dict(embedtag))
             except KeyError:
                 pass
 
