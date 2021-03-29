@@ -213,9 +213,9 @@ class Moderation(commands.Cog):
         else:
             totaltime = "N/A"
         logEmbed = discord.Embed(title="Case " + str(case), color=0x000080)
-        member = ctx.guild.get_member(caseinfo[2])
-        logEmbed.add_field(name=member, value="**Type- **" + caseinfo[3] + "\n**Reason- **" + caseinfo[4] + "\n**Time- **" + start + "\n**Length- **" + totaltime + "\n**Moderator- **" + caseinfo[7], inline=True)
-        logEmbed.set_thumbnail(url=member.avatar_url)
+        user = await self.bot.fetch_user(caseinfo[2])
+        logEmbed.add_field(name=user, value="**Type- **" + caseinfo[3] + "\n**Reason- **" + caseinfo[4] + "\n**Time- **" + start + "\n**Length- **" + totaltime + "\n**Moderator- **" + caseinfo[7], inline=True)
+        logEmbed.set_thumbnail(url=user.avatar_url)
         await ctx.send(embed = logEmbed)
 
 
@@ -354,4 +354,3 @@ TimeConversions = functions.timeconverters()
 
 def setup(bot):
     bot.add_cog(Moderation(bot))
-    

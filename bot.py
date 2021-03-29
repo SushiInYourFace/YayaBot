@@ -116,3 +116,4 @@ def has_modrole(ctx):
         return False
 
 bot.run(Token)
+print("Bot Session Ended")
