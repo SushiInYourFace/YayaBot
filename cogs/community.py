@@ -18,6 +18,10 @@ class Community(commands.Cog):
     async def hello(self, ctx):
         await ctx.send("Hello there")
 
+    @commands.command(help="Gives you the number of people in the server")
+    async def membercount(self, ctx):
+        await ctx.send(f"There are currently {ctx.guild.member_count} members in the server")
+
     @commands.Cog.listener()
     async def on_message(self,message):
         if message.type == discord.MessageType.new_member:
