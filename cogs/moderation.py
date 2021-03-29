@@ -134,9 +134,7 @@ class Moderation(commands.Cog):
             successEmbed.set_footer(text="Failed to send a message to this user")
         await ctx.send(embed=successEmbed)
 
-    @commands.command(help="Mutes a user")
-    @commands.check(functions.has_modrole)
-    async def mute(self, ctx, member : discord.Member, mutetime, *, reason):
+    async def mute_command(self, ctx, member, mutetime, reason):
         now = time.time()    
         if mutetime[-1] == "m" or mutetime[-1] == "h" or mutetime[-1] == "d" or mutetime[-1] == "s":
             timeformat = mutetime[-1]
@@ -211,10 +209,7 @@ class Moderation(commands.Cog):
         logEmbed.set_thumbnail(url=member.avatar_url)
         await ctx.send(embed = logEmbed)
 
-
-    @commands.command(help="Unmutes a User")
-    @commands.check(functions.has_modrole)
-    async def unmute(self, ctx, member : discord.Member):
+    async def unmute_command(self, ctx, member):
         mod = str(ctx.author)
         unmutetime = time.time()
         muted = SqlCommands.get_role(ctx.guild.id, "muted")
@@ -224,9 +219,7 @@ class Moderation(commands.Cog):
         await ctx.send(embed=successEmbed)
         SqlCommands.new_case(member.id, ctx.guild.id, "unmute", "N/A", unmutetime, -1, mod)
 
-    @commands.command(help="Ungravels a User")
-    @commands.check(functions.has_modrole)
-    async def ungravel(self, ctx, member : discord.Member):
+    async def ungravel_command(self, ctx, member):
         mod = str(ctx.author)
         ungraveltime = time.time()
         gravel = SqlCommands.get_role(ctx.guild.id, "gravel")
@@ -275,6 +268,36 @@ class Moderation(commands.Cog):
     @commands.check(functions.has_modrole)
     async def _unban(self, ctx:SlashContext, user:discord.User):
         await self.unban_command(ctx,user)
+
+    @commands.command(help="Mutes a user")
+    @commands.check(functions.has_modrole)
+    async def mute(self, ctx, member:discord.Member, mutetime, *, reason):
+        await self.mute_command(ctx, member, mutetime, reason)
+
+    @cog_ext.cog_slash(name="mute")
+    @commands.check(functions.has_modrole)
+    async def _mute(self, ctx:SlashContext, member:discord.Member, mutetime, *, reason):
+        await self.mute_command(ctx, member, mutetime, reason)
+
+    @commands.command(help="Ungravels a User")
+    @commands.check(functions.has_modrole)
+    async def ungravel(self, ctx, member:discord.Member):
+        await self.ungravel_command(ctx, member)
+
+    @cog_ext.cog_slash(name="ungravel")
+    @commands.check(functions.has_modrole)
+    async def _ungravel(self, ctx:SlashContext, member:discord.Member):
+        await self.ungravel_command(ctx, member)
+
+    @commands.command(help="Unmutes a User")
+    @commands.check(functions.has_modrole)
+    async def unmute(self, ctx, member:discord.Member):
+        await self.unmute_command(ctx, member)
+
+    @cog_ext.cog_slash(name="unmute")
+    @commands.check(functions.has_modrole)
+    async def _unmute(self, ctx:SlashContext, member:discord.Member):
+        await self.unmute_command(ctx, member)
 
     #checks if a role needs to be removed
     @tasks.loop(seconds=5.0)
