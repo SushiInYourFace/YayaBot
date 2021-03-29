@@ -18,9 +18,7 @@ class Owner(commands.Cog):
         self.bot = bot
         self.bot.previousReload = None
 
-    @commands.command()
-    @commands.is_owner()
-    async def shutdown(self,ctx):
+    async def shutdown_command(self,ctx):
         """Shuts the bot down!"""
         await ctx.send("👋 Goodbye")
         await self.bot.close()
@@ -92,15 +90,6 @@ class Owner(commands.Cog):
         await ctx.send(f"Cog {cog} reloaded.")
         self.bot.previousReload = cog
 
-    @cog.command(aliases = ['r'])
-    async def reload(self,ctx,cog=None):
-        """Reload cog."""
-        await self.reload_command(ctx,cog)
-
-    @cog_ext.cog_slash(name="reload")
-    async def _reload(self, ctx: SlashContext, cog=None):
-        await self.reload_command(ctx,cog)
-
     @cog.command(name="list",aliases=["ls"])
     async def cogs_list(self,ctx):
         """Lists loaded and unloaded cogs."""
@@ -119,6 +108,27 @@ class Owner(commands.Cog):
         """Reloads specified cog or previously reloaded cog."""
         command = self.bot.get_command("cog reload")
         await ctx.invoke(command,cog)
+
+    @cog.command(aliases = ['r'])
+    async def reload(self,ctx,cog=None):
+        """Reload cog."""
+        await self.reload_command(ctx,cog)
+
+    @cog_ext.cog_slash(name="reload")
+    async def _reload(self, ctx: SlashContext, cog=None):
+        await self.reload_command(ctx,cog)
+
+    @commands.command()
+    @commands.is_owner()
+    async def shutdown(self, ctx):
+        """Shuts the bot down"""
+        await self.shutdown_command(ctx)
+
+    @cog_ext.cog_slash(name="shutdown")
+    @commands.is_owner()
+    async def _shutdown(self, ctx:SlashContext):
+        await self.shutdown_command(ctx)
+
 
     @commands.Cog.listener()
     async def on_message(self,message):
