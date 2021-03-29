@@ -51,7 +51,7 @@ async def on_ready():
 
 #cogs to be loaded on startup
 default_extensions = [
-    ('cogs.cmty',),
+    ('cogs.community',),
     ('cogs.moderation',),
     ('cogs.utilities',),
     ('cogs.owner',),
