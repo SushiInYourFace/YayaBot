@@ -53,7 +53,7 @@ async def on_ready():
 
 #cogs to be loaded on startup
 default_extensions = [
-    ('cogs.cmty',),
+    ('cogs.community',),
     ('cogs.moderation',),
     ('cogs.utilities',),
     ('cogs.owner',),
@@ -123,3 +123,4 @@ def has_modrole(ctx):
         return False
 
 bot.run(Token)
+print("Bot Session Ended")
