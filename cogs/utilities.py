@@ -95,7 +95,7 @@ class Utilities(commands.Cog):
         if not modrole:
             await ctx.send("That does not appear to be a valid role ID. Cancelling")
             return
-        await ctx.send("Almost there! Please send the ID (not a mention) of your modlog channel, or type \"None\" if you do not want a modlog channel")
+        await ctx.send("Almost there! Please send me your modlog channel, or type \"None\" if you do not want a modlog channel")
         try:
             modlogs = await self.bot.wait_for('message', timeout=60.0, check=check)
         except asyncio.TimeoutError:
@@ -104,7 +104,7 @@ class Utilities(commands.Cog):
         modlogs = modlogs.content
         if modlogs != "None" and modlogs != "none":
             try:
-                logchannel = guild.get_channel(int(modlogs))
+                logchannel = guild.get_channel(int(modlogs[2:-1]))
             except ValueError:
                 logchannel = False
             if not logchannel:
@@ -119,7 +119,7 @@ class Utilities(commands.Cog):
             await ctx.send("No response recieved. Cancelling")
             return
         cursor.execute("INSERT INTO guild_prefixes(guild,prefix) VALUES(?, ?) ON CONFLICT(guild) DO UPDATE SET prefix=excluded.prefix", (guild.id, prefix.content))
-        cursor.execute("INSERT INTO role_ids(guild,gravel,muted,moderator, modlogs) VALUES(?, ?, ?, ?, ?) ON CONFLICT(guild) DO UPDATE SET gravel=excluded.gravel, muted=excluded.muted, moderator=excluded.moderator, modlogs=excluded.modlogs", (guild.id, gravel, muted, moderator, modlogs))
+        cursor.execute("INSERT INTO role_ids(guild,gravel,muted,moderator, modlogs) VALUES(?, ?, ?, ?, ?) ON CONFLICT(guild) DO UPDATE SET gravel=excluded.gravel, muted=excluded.muted, moderator=excluded.moderator, modlogs=excluded.modlogs", (guild.id, gravel, muted, moderator, modlogs[2:-1]))
 
         connection.commit()
         response = discord.Embed(title="Server set up successfully!", color=0x00FF00)
@@ -131,14 +131,13 @@ class Utilities(commands.Cog):
 
     @setup.command(name="modlogs", help="Specifies the channel to be used for modlogs", aliases=["logchannel", "modlog", "logs",])
     async def setup_modlogs(self, ctx, channelID):
-        #maybe change this to be able to take channel names or mentions at some point? 
         if channelID != "None" and channelID != "none":
             try:
-                logchannel = ctx.guild.get_channel(int(channelID))
+                logchannel = ctx.guild.get_channel(int(channelID[2:-1]))
                 await logchannel.send("Set up modlogs in this channel!")
                 cursor.execute("INSERT INTO role_ids(guild, modlogs) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET modlogs=excluded.modlogs", (ctx.guild.id, channelID))
             except:
-                await ctx.send("Something went wrong. Please make sure you specify a valid channel ID, and that I have permissions to send messages to it")
+                await ctx.send("Something went wrong. Please make sure you specify a valid channel, and that I have permissions to send messages to it")
                 return
         else:
             cursor.execute("INSERT INTO role_ids(guild,modlogs) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET modlogs=excluded.modlogs", (ctx.guild.id, 0))
