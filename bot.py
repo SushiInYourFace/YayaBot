@@ -89,7 +89,10 @@ async def on_command_error(ctx, error):
     if isinstance(error, commands.MemberNotFound):
         await ctx.send("Sorry, I couldn't find that user")
     elif isinstance(error, commands.MissingRequiredArgument):
-        await ctx.send('Sorry, that is not a valid number of arguments for this command. If you need help understanding how this command works, please use the command help (your command)')
+        commandUsageLine = f"{ctx.prefix}{ctx.command.qualified_name} {ctx.command.signature}"
+        paramLocation = commandUsageLine.index("<" + str(error.param) + ">")
+        paramLength = len("<" + str(error.param) + ">")
+        await ctx.send(f"```{commandUsageLine}\n{' '*paramLocation}{'^'*paramLength}\n{str(error)}```")
     elif isinstance(error, commands.MissingPermissions):
         await ctx.send("Sorry, you don't have permission to use that command!")
     elif isinstance(error, discord.errors.Forbidden):
