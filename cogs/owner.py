@@ -96,10 +96,9 @@ class Owner(commands.Cog):
     @cog.command(name="list",aliases=["ls"])
     async def cogs_list(self,ctx):
         """Lists loaded and unloaded cogs."""
-        colour = discord.Colour.from_rgb(random.randint(1,255),random.randint(1,255),random.randint(1,255))
         loaded_cogs = [cog.split(".")[1] for cog in self.bot.extensions.keys()]
         unloaded_cogs = [cog[:-3] for cog in os.listdir("cogs") if (cog[:-3] not in loaded_cogs and cog.endswith(".py"))]
-        embed = discord.Embed(colour=colour,title="Cogs.")
+        embed = discord.Embed(colour=discord.Colour.random(),title="Cogs.")
         embed.set_footer(text=ctx.author.name, icon_url=ctx.author.avatar_url)
         embed.add_field(name="Loaded Cogs:", value=", ".join(loaded_cogs)+".", inline=False)
         embed.add_field(name="Unloaded Cogs:", value=", ".join(unloaded_cogs)+".", inline=False)

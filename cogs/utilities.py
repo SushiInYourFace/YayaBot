@@ -293,8 +293,7 @@ class Utilities(commands.Cog):
         """Lists tags and their text assosiation."""
         guildTags = cursor.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,)).fetchone()
         tags = json.loads(guildTags[2])
-        colour = discord.Colour.from_rgb(random.randint(1,255),random.randint(1,255),random.randint(1,255))
-        embed = discord.Embed(colour=colour,title="Tags.",description=", ".join(tags.keys())+f"\n\nUsable by {ctx.guild.get_role(int(guildTags[1])).mention} and above.")
+        embed = discord.Embed(colour=discord.Colour.random(),title="Tags.",description=", ".join(tags.keys())+f"\n\nUsable by {ctx.guild.get_role(int(guildTags[1])).mention} and above.")
         embed.set_footer(text=ctx.author.name, icon_url=ctx.author.avatar_url)
         await ctx.send(embed=embed)
 
@@ -324,7 +323,7 @@ class Utilities(commands.Cog):
         return embed
 
     async def send_all_help(self,ctx,pageOut):
-        colour = discord.Colour.from_rgb(random.randint(1,255),random.randint(1,255),random.randint(1,255))
+        colour = discord.Colour.random()
         titleDesc = ["YayaBot Help!",f"Say `{ctx.prefix}help <command>` for more info on a command!"] 
         page = [discord.Embed(colour=colour,title=titleDesc[0],description=titleDesc[1])]
         cogs = sorted(list(self.bot.cogs.keys()))
@@ -377,10 +376,7 @@ class Utilities(commands.Cog):
                 await command.can_run(ctx)
             except:
                 return
-        random.seed(command.qualified_name)
-        colour = discord.Colour.from_rgb(random.randint(1,255),random.randint(1,255),random.randint(1,255))
-        random.seed()
-        embed = discord.Embed(colour=colour,title=f"Help for {command.qualified_name}" + (" cog" if isinstance(command,commands.Cog) else ' command'),description=(f"Aliases: {', '.join(list(command.aliases))}" if command.aliases else ""))
+        embed = discord.Embed(colour=discord.Colour.random(seed=command.qualified_name),title=f"Help for {command.qualified_name}" + (" cog" if isinstance(command,commands.Cog) else ' command'),description=(f"Aliases: {', '.join(list(command.aliases))}" if command.aliases else ""))
         if not isinstance(command,commands.Cog):
             embed.add_field(name="Usage",value=f"`{ctx.prefix}{command.qualified_name}{(' ' + command.signature.replace('_',' ')    ) if command.signature else ' <subcommand>' if isinstance(command,commands.Group) else ''}`")
         embed.add_field(name="Description",value=(command.help.replace("[p]",ctx.prefix) if command.help else '...'),inline=False)
