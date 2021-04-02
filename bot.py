@@ -139,6 +139,7 @@ default_extensions = [
     ('cogs.utilities',),
     ('cogs.owner',),
     ('cogs.automod',),
+    ('cogs.fancyEmbeds',),
 ]
 
 extensions = cursor.execute("SELECT * FROM extensions").fetchall()
