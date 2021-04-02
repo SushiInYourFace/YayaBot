@@ -4,7 +4,6 @@ from discord.ext import commands, tasks
 import sqlite3
 import time
 import datetime
-import requests
 import io
 import functions
 import json
@@ -35,7 +34,7 @@ class Moderation(commands.Cog):
     @commands.check(functions.has_modrole)
     async def purge(self,ctx):
         if ctx.invoked_subcommand is None:
-            await self.bot.send_help(ctx)
+            await ctx.send_help(ctx.command)
 
     #purge command
     @purge.command(help="Purges a specified amount of messages from the chat",name="number",aliases=["n"])
@@ -275,12 +274,12 @@ class Moderation(commands.Cog):
     @commands.has_permissions(manage_guild=True)
     async def permissions(self,ctx):
         if ctx.invoked_subcommand is None:
-            await self.bot.send_help(ctx)
+            await ctx.send_help(ctx.command)
 
     @permissions.group(name="channel")
     async def permissions_channel(self,ctx):
         if ctx.invoked_subcommand is None:
-            await self.bot.send_help(ctx)
+            await ctx.send_help(ctx.command)
 
     @permissions_channel.command(name="add",aliases=["new"])
     async def permissions_channel_add(self,ctx,*channels:discord.TextChannel):
@@ -307,7 +306,7 @@ class Moderation(commands.Cog):
     @permissions.group(name="role")
     async def permissions_role(self,ctx):
         if ctx.invoked_subcommand is None:
-            await self.bot.send_help(ctx)
+            await ctx.send_help(ctx.command)
 
     @permissions_role.command(name="add",aliases=["new"])
     async def permissions_role_add(self,ctx,*roles:discord.Role):

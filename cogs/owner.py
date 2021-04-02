@@ -3,6 +3,7 @@ from discord.ext import commands
 import random
 import os
 import sqlite3
+import typing
 
 connection = sqlite3.connect("database.db")
 cursor = connection.cursor()
@@ -29,7 +30,7 @@ class Owner(commands.Cog):
     async def cog(self,ctx):
         """Commands to add, reload and remove cogs."""
         if ctx.invoked_subcommand is None:
-            await self.bot.send_help(ctx)
+            await ctx.send_help(ctx.command)
 
     @cog.command(aliases = ['l'])
     async def load(self,ctx,*cogs):
@@ -82,16 +83,29 @@ class Owner(commands.Cog):
             await ctx.send(f"Cog {cog} {'unloaded' if unloadCog else ''}{' and ' if (unloadCog and inDb) else ''}{'removed from database' if inDb else ''}.")
 
     @cog.command(aliases = ['r'])
-    async def reload(self,ctx,cog=None):
-        """Reload cog."""
-        if cog == None:
+    async def reload(self,ctx,*cogs:typing.Optional[str]):
+        """Reload cogs."""
+        allReloaded = False
+        if not cogs:
             if self.bot.previousReload == None:
+                await ctx.send("Please specify a cog!")
                 return
             else:
-                cog = self.bot.previousReload
-        self.bot.reload_extension(f"cogs.{cog}")
-        await ctx.send(f"Cog {cog} reloaded.")
-        self.bot.previousReload = cog
+                cogs = self.bot.previousReload
+        if cogs[0] in ["*","all"]:
+            cogs = [cog.split(".")[1] for cog in self.bot.extensions.keys()]
+            allReloaded = True
+        for cog in cogs:
+            try:
+                self.bot.reload_extension(f"cogs.{cog}")
+            except:
+                await ctx.send(f"Error while reloading {cog}")
+                raise
+        await ctx.send(f"Cogs {', '.join(cogs)} reloaded.")
+        if allReloaded:
+            self.bot.previousReload = ["*"]
+        else:
+            self.bot.previousReload = cogs
 
     @cog.command(name="list",aliases=["ls"])
     async def cogs_list(self,ctx):
@@ -106,10 +120,10 @@ class Owner(commands.Cog):
 
     @commands.command(name="reload")
     @commands.is_owner()
-    async def reload_alias(self,ctx,cog=None):
+    async def reload_alias(self,ctx,*cogs:typing.Optional[str]):
         """Reloads specified cog or previously reloaded cog."""
         command = self.bot.get_command("cog reload")
-        await ctx.invoke(command,cog)
+        await ctx.invoke(command,*cogs)
 
     @commands.Cog.listener()
     async def on_message(self,message):
