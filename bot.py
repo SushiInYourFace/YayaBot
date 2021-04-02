@@ -173,8 +173,8 @@ async def on_command_error(ctx, error):
         await ctx.send("Sorry, I couldn't find that user")
     elif isinstance(error, commands.MissingRequiredArgument):
         commandUsageLine = f"{ctx.prefix}{ctx.command.qualified_name} {ctx.command.signature}"
-        paramLocation = commandUsageLine.index("<" + str(error.param) + ">")
-        paramLength = len("<" + str(error.param) + ">")
+        paramLocation = commandUsageLine.index("<" + error.param.name + ">")
+        paramLength = len("<" + error.param.name + ">")
         await ctx.send(f"```{commandUsageLine}\n{' '*paramLocation}{'^'*paramLength}\n{str(error)}```")
     elif isinstance(error, commands.MissingPermissions):
         await ctx.send("Sorry, you don't have permission to use that command!")
