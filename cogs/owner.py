@@ -4,6 +4,7 @@ from discord_slash import cog_ext, SlashContext
 import random
 import os
 import sqlite3
+import typing
 
 connection = sqlite3.connect("database.db")
 cursor = connection.cursor()
@@ -28,7 +29,7 @@ class Owner(commands.Cog):
     async def cog(self,ctx):
         """Commands to add, reload and remove cogs."""
         if ctx.invoked_subcommand is None:
-            await self.bot.send_help(ctx)
+            await ctx.send_help(ctx.command)
 
     @cog.command(aliases = ['l'])
     async def load(self,ctx,*cogs):
@@ -83,20 +84,31 @@ class Owner(commands.Cog):
     async def reload_command(self,ctx,cog=None):
         if cog == None:
             if self.bot.previousReload == None:
+                await ctx.send("Please specify a cog!")
                 return
             else:
-                cog = self.bot.previousReload
-        self.bot.reload_extension(f"cogs.{cog}")
-        await ctx.send(f"Cog {cog} reloaded.")
-        self.bot.previousReload = cog
+                cogs = self.bot.previousReload
+        if cogs[0] in ["*","all"]:
+            cogs = [cog.split(".")[1] for cog in self.bot.extensions.keys()]
+            allReloaded = True
+        for cog in cogs:
+            try:
+                self.bot.reload_extension(f"cogs.{cog}")
+            except:
+                await ctx.send(f"Error while reloading {cog}")
+                raise
+        await ctx.send(f"Cogs {', '.join(cogs)} reloaded.")
+        if allReloaded:
+            self.bot.previousReload = ["*"]
+        else:
+            self.bot.previousReload = cogs
 
     @cog.command(name="list",aliases=["ls"])
     async def cogs_list(self,ctx):
         """Lists loaded and unloaded cogs."""
-        colour = discord.Colour.from_rgb(random.randint(1,255),random.randint(1,255),random.randint(1,255))
         loaded_cogs = [cog.split(".")[1] for cog in self.bot.extensions.keys()]
         unloaded_cogs = [cog[:-3] for cog in os.listdir("cogs") if (cog[:-3] not in loaded_cogs and cog.endswith(".py"))]
-        embed = discord.Embed(colour=colour,title="Cogs.")
+        embed = discord.Embed(colour=discord.Colour.random(),title="Cogs.")
         embed.set_footer(text=ctx.author.name, icon_url=ctx.author.avatar_url)
         embed.add_field(name="Loaded Cogs:", value=", ".join(loaded_cogs)+".", inline=False)
         embed.add_field(name="Unloaded Cogs:", value=", ".join(unloaded_cogs)+".", inline=False)
@@ -104,10 +116,10 @@ class Owner(commands.Cog):
 
     @commands.command(name="reload")
     @commands.is_owner()
-    async def reload_alias(self,ctx,cog=None):
+    async def reload_alias(self,ctx,*cogs:typing.Optional[str]):
         """Reloads specified cog or previously reloaded cog."""
         command = self.bot.get_command("cog reload")
-        await ctx.invoke(command,cog)
+        await ctx.invoke(command,*cogs)
 
     @cog.command(aliases = ['r'])
     async def reload(self,ctx,cog=None):

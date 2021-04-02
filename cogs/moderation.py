@@ -5,7 +5,6 @@ from discord_slash import cog_ext, SlashContext
 import sqlite3
 import time
 import datetime
-import requests
 import io
 import functions
 import json
@@ -36,7 +35,7 @@ class Moderation(commands.Cog):
     @commands.check(functions.has_modrole)
     async def purge(self,ctx):
         if ctx.invoked_subcommand is None:
-            await self.bot.send_help(ctx)
+            await ctx.send_help(ctx.command)
 
     #purge command
     @purge.command(help="Purges a specified amount of messages from the chat",name="number",aliases=["n"])
@@ -169,7 +168,7 @@ class Moderation(commands.Cog):
 
     @commands.command(help="warns a user")
     @commands.check(functions.has_modrole)
-    async def warn(self, ctx, member : discord.Member, reason):
+    async def warn(self, ctx, member : discord.Member, *, reason):
         warnEmbed = discord.Embed(title="You have been warned in "+ ctx.guild.name, color=0xFF0000)
         warnEmbed.add_field(name="Reason:", value=reason)
         SqlCommands.new_case(member.id, ctx.guild.id, "warn", reason, time.time(), -1, str(ctx.author))
@@ -183,7 +182,7 @@ class Moderation(commands.Cog):
 
     async def modlog_command(self, ctx, member):
         logEmbed = discord.Embed(title = str(member) + "'s Modlogs", color=0x000080)
-        logs = cursor.execute("SELECT id, guild, user, type, reason, started, expires, moderator FROM caselog WHERE user = ? AND guild = ?", (member.id, ctx.guild.id)).fetchall()
+        logs = cursor.execute("SELECT id_in_guild, guild, user, type, reason, started, expires, moderator FROM caselog WHERE user = ? AND guild = ?", (member.id, ctx.guild.id)).fetchall()
         for log in logs:
             start = datetime.datetime.fromtimestamp(int(log[5])).strftime('%Y-%m-%d %H:%M:%S')
             if int(log[6]) != -1:
@@ -197,7 +196,7 @@ class Moderation(commands.Cog):
     @commands.command(help="Shows information on a case")
     @commands.check(functions.has_modrole)
     async def case(self, ctx, case:int):
-        caseinfo = cursor.execute("SELECT id, guild, user, type, reason, started, expires, moderator FROM caselog WHERE id = ?", (case,)).fetchone()
+        caseinfo = cursor.execute("SELECT id_in_guild, guild, user, type, reason, started, expires, moderator FROM caselog WHERE id = ?", (case,)).fetchone()
         start = datetime.datetime.fromtimestamp(int(caseinfo[5])).strftime('%Y-%m-%d %H:%M:%S')
         if int(caseinfo[6]) != -1:
             totaltime = TimeConversions.fromseconds(int(int(caseinfo[6])) - int(caseinfo[5]))
@@ -331,12 +330,12 @@ class Moderation(commands.Cog):
     @commands.has_permissions(manage_guild=True)
     async def permissions(self,ctx):
         if ctx.invoked_subcommand is None:
-            await self.bot.send_help(ctx)
+            await ctx.send_help(ctx.command)
 
     @permissions.group(name="channel")
     async def permissions_channel(self,ctx):
         if ctx.invoked_subcommand is None:
-            await self.bot.send_help(ctx)
+            await ctx.send_help(ctx.command)
 
     @permissions_channel.command(name="add",aliases=["new"])
     async def permissions_channel_add(self,ctx,*channels:discord.TextChannel):
@@ -363,7 +362,7 @@ class Moderation(commands.Cog):
     @permissions.group(name="role")
     async def permissions_role(self,ctx):
         if ctx.invoked_subcommand is None:
-            await self.bot.send_help(ctx)
+            await ctx.send_help(ctx.command)
 
     @permissions_role.command(name="add",aliases=["new"])
     async def permissions_role_add(self,ctx,*roles:discord.Role):

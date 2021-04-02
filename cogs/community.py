@@ -3,6 +3,7 @@ from discord.ext import commands
 import random
 
 class Community(commands.Cog):
+    """Commands for the community!"""
     def __init__(self, bot):
         self.bot = bot
         self._last_member = None
@@ -17,6 +18,10 @@ class Community(commands.Cog):
     @commands.command(help="Says hello")
     async def hello(self, ctx):
         await ctx.send("Hello there")
+
+    @commands.command(help="Gives you the number of people in the server")
+    async def membercount(self, ctx):
+        await ctx.send(f"There are currently {ctx.guild.member_count} members in the server")
 
     @commands.Cog.listener()
     async def on_message(self,message):

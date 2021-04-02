@@ -16,7 +16,6 @@ def has_modrole(ctx):
     else:
         return False
 
-
 class Sql:
     def newest_case(self):
         caseNumber = cursor.execute("SELECT id FROM caselog ORDER BY id DESC LIMIT 1").fetchone()
@@ -27,8 +26,19 @@ class Sql:
         caseNumber += 1
         return(caseNumber)
 
+    def newest_guild_case(self, guild):
+        guildCaseNumber = cursor.execute("SELECT id_in_guild FROM caselog WHERE guild = ? ORDER BY id DESC LIMIT 1", (guild,)).fetchone()
+        if guildCaseNumber == None:
+            guildCaseNumber = 0
+        else:
+            guildCaseNumber = guildCaseNumber[0]
+        guildCaseNumber += 1
+        return(guildCaseNumber)
+
+
     def new_case(self, user, guild, casetype, reason, started, expires, mod):
         caseID = self.newest_case()
+        id_in_guild = self.newest_guild_case(guild)
         if expires != -1:
             #checks if user already has an active case of the same type, and removes it if it is less severe
             unexpired_cases = cursor.execute("SELECT id FROM caselog WHERE guild=? AND user=? AND type=? AND expires >=? AND expires <=? ", (guild,user, casetype, time.time(), expires)).fetchall()
@@ -37,7 +47,7 @@ class Sql:
                 for case in unexpired_cases:
                     cursor.execute("DELETE FROM active_cases WHERE id = ?", (case[0],))
             cursor.execute("INSERT INTO active_cases(id, expiration) VALUES(?,?)", (caseID, expires))
-        cursor.execute("INSERT INTO caselog(id, guild, user, type, reason, started, expires, moderator) VALUES(?,?,?,?,?,?,?,?)", (caseID, guild, user, casetype, reason, started, expires, mod))
+        cursor.execute("INSERT INTO caselog(id, id_in_guild, guild, user, type, reason, started, expires, moderator) VALUES(?,?,?,?,?,?,?,?,?)", (caseID, id_in_guild, guild, user, casetype, reason, started, expires, mod))
         con.commit()
 
     def get_role(self, guild, role):

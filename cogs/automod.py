@@ -1,13 +1,15 @@
-import discord
-from discord import errors
-from discord.ext import commands, tasks
-import functions
+import datetime
+import difflib
+import io
+import re
 import sqlite3
 import time
-import difflib
-import datetime
-import requests
-import io
+
+import aiohttp
+import discord
+from discord.ext import commands, tasks
+
+import functions
 
 #sets up SQLite
 connection = sqlite3.connect("database.db")
@@ -35,7 +37,7 @@ class AutoMod(commands.Cog):
     async def messageFilter(self,ctx):
         """Modifies the server message word filter."""
         if ctx.invoked_subcommand is None:
-            await self.bot.send_help(ctx)
+            await ctx.send_help(ctx.command)
 
     @messageFilter.group(name="set")
     async def messageFilter_set(self,ctx):
@@ -44,13 +46,14 @@ class AutoMod(commands.Cog):
         For exmaple to filter both mark and john you'd put `mark;john`
         Put nothing for filter to be reset to nothing."""
         if ctx.invoked_subcommand is None:
-            self.bot.send_help(ctx)
+            await ctx.send_help(ctx.command)
 
     async def new_filter_format(self,ctx,new_filter):
         if (new_filter is None and ctx.message.attachments):
-            response = requests.get(ctx.message.attachments[0].url)
-            response.raise_for_status()
-            new_filter = response.text
+            async with aiohttp.ClientSession() as session:
+                async with session.get(ctx.message.attachments[0].url) as r:
+                    if r.status == 200:
+                        new_filter = await r.text()
         elif (not ctx.message.attachments and new_filter is None):
             new_filter = ""
         if new_filter.endswith(";"):
@@ -127,13 +130,13 @@ class AutoMod(commands.Cog):
         """Sends the filter.
         Usually sent as a message but is sent as a text file if it's over 2000 characters"""
         guildFilter = cursor.execute("SELECT * FROM message_filter WHERE guild = ?",(ctx.guild.id,)).fetchone()
-        text = f'Wildcard:\n{str(guildFilter[2])}\nExact:\n{str(guildFilter[3])}'
+        text = f'Wildcard:\n{str(guildFilter[2])}\n\nExact:\n{str(guildFilter[3])}'
         if len(text) <= 1977:
             await ctx.send(f"Filter {'enabled' if guildFilter[1] == 1 else 'disabled'} ```{guildFilter[2] if guildFilter[2] else ' '}```")
         else:
-            fp = io.StringIO(guildFilter[2])
+            fp = io.StringIO(text)
             f = discord.File(fp,filename="filter.txt")
-            await ctx.send(file=f)    
+            await ctx.send("Filter is too large so is sent as a file:",file=f)    
 
     @messageFilter.command(name="toggle")
     async def messageFilter_toggle(self,ctx):
@@ -153,7 +156,7 @@ class AutoMod(commands.Cog):
             return
         if message.author.guild_permissions.manage_messages:
             return
-        guildFilter = cursor.execute("SELECT * FROM message_filter WHERE guild = ?",(message.guild.id,)).fetchone()
+        guildFilter = cursor.execute("SELECT * FROM message_filter WHERE guild = ?",(message.guild.id,)).fetchone() # Bad words.
         if not guildFilter:
             return
         if guildFilter[1] == 1:
@@ -166,6 +169,18 @@ class AutoMod(commands.Cog):
                     self.bot.wordWarnCooldown[message.channel.id] = 0
                 if self.bot.wordWarnCooldown[message.channel.id] < time.time():
                     await message.channel.send(f"Watch your language {message.author.mention}",delete_after=2)
+                self.bot.wordWarnCooldown[message.channel.id] = time.time()+2
+        if False: # this should be a check for enabled emoji shit
+            unicodeCheck = r"[^\w\s,.]"
+            customCheck = r'<:\w*:\d*>'
+            emojis = len(re.findall(unicodeCheck,message.content))
+            emojis += len(re.findall(customCheck,message.content))
+            if emojis > 5: # the number of emojis the guild allows
+                await message.delete()
+                if message.channel.id not in self.bot.wordWarnCooldown:
+                    self.bot.wordWarnCooldown[message.channel.id] = 0
+                if self.bot.wordWarnCooldown[message.channel.id] < time.time():
+                    await message.channel.send(f"Too many emojis! {message.author.mention}",delete_after=2)
                 self.bot.wordWarnCooldown[message.channel.id] = time.time()+2
 
     @commands.Cog.listener()
@@ -222,7 +237,10 @@ class AutoMod(commands.Cog):
             deleteEmbed = discord.Embed(color=0xFF0000)
             deleteEmbed.set_author(name=str(message.author), icon_url=message.author.avatar_url)
             now = datetime.datetime.now()
-            deleteEmbed.add_field(name=f"Message deleted from **{message.channel.name}**", value=message.content)
+            content = message.content
+            if len(content) > 1024:
+                content = content[:1020] + "..."
+            deleteEmbed.add_field(name=f"Message deleted from **{message.channel.name}**", value=content)
             date = now.strftime("%Y-%m-%d, %H:%M:%S")
             deleteEmbed.set_footer(text=f"deleted at {date}")
             await channel.send(embed=deleteEmbed)

@@ -12,3 +12,5 @@ if you want to run it:
 `python bot.py`
 
 ("python" may be "py" or "python3") (sudo/admin may be required for downloading requirements or use `--user` to install for your user)
+
+currently uses git version of discord.py, will be changed with 1.7 release

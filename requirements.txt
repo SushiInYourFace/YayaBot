@@ -1,3 +1,2 @@
-discord.py
-requests
 discord-py-slash-command
+git+git://github.com/Rapptz/discord.py.git
