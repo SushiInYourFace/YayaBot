@@ -1,13 +1,15 @@
-import discord
-from discord import errors
-from discord.ext import commands, tasks
-import functions
+import datetime
+import difflib
+import io
+import re
 import sqlite3
 import time
-import difflib
-import datetime
+
 import aiohttp
-import io
+import discord
+from discord.ext import commands, tasks
+
+import functions
 
 #sets up SQLite
 connection = sqlite3.connect("database.db")
@@ -154,7 +156,7 @@ class AutoMod(commands.Cog):
             return
         if message.author.guild_permissions.manage_messages:
             return
-        guildFilter = cursor.execute("SELECT * FROM message_filter WHERE guild = ?",(message.guild.id,)).fetchone()
+        guildFilter = cursor.execute("SELECT * FROM message_filter WHERE guild = ?",(message.guild.id,)).fetchone() # Bad words.
         if not guildFilter:
             return
         if guildFilter[1] == 1:
@@ -167,6 +169,18 @@ class AutoMod(commands.Cog):
                     self.bot.wordWarnCooldown[message.channel.id] = 0
                 if self.bot.wordWarnCooldown[message.channel.id] < time.time():
                     await message.channel.send(f"Watch your language {message.author.mention}",delete_after=2)
+                self.bot.wordWarnCooldown[message.channel.id] = time.time()+2
+        if False: # this should be a check for enabled emoji shit
+            unicodeCheck = r"[^\w\s,.]"
+            customCheck = r'<:\w*:\d*>'
+            emojis = len(re.findall(unicodeCheck,message.content))
+            emojis += len(re.findall(customCheck,message.content))
+            if emojis > 5: # the number of emojis the guild allows
+                await message.delete()
+                if message.channel.id not in self.bot.wordWarnCooldown:
+                    self.bot.wordWarnCooldown[message.channel.id] = 0
+                if self.bot.wordWarnCooldown[message.channel.id] < time.time():
+                    await message.channel.send(f"Too many emojis! {message.author.mention}",delete_after=2)
                 self.bot.wordWarnCooldown[message.channel.id] = time.time()+2
 
     @commands.Cog.listener()
@@ -223,7 +237,10 @@ class AutoMod(commands.Cog):
             deleteEmbed = discord.Embed(color=0xFF0000)
             deleteEmbed.set_author(name=str(message.author), icon_url=message.author.avatar_url)
             now = datetime.datetime.now()
-            deleteEmbed.add_field(name=f"Message deleted from **{message.channel.name}**", value=message.content)
+            content = message.content
+            if len(content) > 1024:
+                content = content[:1020] + "..."
+            deleteEmbed.add_field(name=f"Message deleted from **{message.channel.name}**", value=content)
             date = now.strftime("%Y-%m-%d, %H:%M:%S")
             deleteEmbed.set_footer(text=f"deleted at {date}")
             await channel.send(embed=deleteEmbed)

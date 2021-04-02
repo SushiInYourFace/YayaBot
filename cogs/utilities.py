@@ -32,7 +32,6 @@ class Utilities(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self._last_member = None
-        self.bot.help_command = self.NewHelp()
 
     @commands.group(name="setup", help="setup some (or all) features of the bot", aliases=["su",])
     @commands.has_permissions(administrator=True)
@@ -307,91 +306,6 @@ class Utilities(commands.Cog):
         cursor.execute("UPDATE tags SET role=? WHERE guild=?",(role.id,ctx.guild.id))
         connection.commit()
         await ctx.send(f"Tag role set to {role.name}.")
-
-    class NewHelp(commands.HelpCommand):
-        async def create_help_field(self,ctx,embed,command):
-            try:
-                can_run = await command.can_run(ctx)
-            except commands.CheckFailure:
-                can_run = False
-            if can_run:
-                if command.help:
-                    description = (command.help[:command.help.find("\n")+1] if '\n' in command.help else command.help)
-                    if len(description) > 200:
-                        description = description[:197] + "..."
-                else:
-                    description = "..."
-                embed.add_field(name=f"{command.name}", value=f"{description}", inline=True)
-            return embed
-
-        async def send_bot_help(self,mapping):
-            pageOut = 0
-            colour = discord.Colour.random()
-            titleDesc = ["YayaBot Help!",f"Say `{self.clean_prefix}help <command>` for more info on a command!"] 
-            page = [discord.Embed(colour=colour,title=titleDesc[0],description=titleDesc[1])]
-            for cog,commands in mapping.items():
-                if len(page[-1].fields) >= 24: # If no space for commands or no space at all
-                    page.append(discord.Embed(colour=colour,title=titleDesc[0],description=titleDesc[1])) # New page
-                cogName = getattr(cog,'qualified_name','No Category')
-                cogDesc = '\n> '+ getattr(cog,"description",'...')
-                page[-1].add_field(name=f"> **{cogName}**", value=cogDesc, inline=False) # Add cog field
-                for command in commands:
-                    page[-1] = await self.create_help_field(self.context,page[-1],command)
-                    if command != commands[-1] and len(page[-1].fields) == 25: # If not the last command and new page is required
-                        page.append(discord.Embed(colour=colour,title=titleDesc[0],description=titleDesc[1])) # New page
-                        page[-1].add_field(name=f"> **cogName**", value=cogDesc, inline=False) # Add cog field
-            if pageOut + 1 > len(page):
-                pageOut = len(page) - 1
-            page[pageOut].set_footer(text=f"Page {pageOut+1} of {len(page)}") # Add footer now (didn't know how many pages previously)
-            msg = await self.get_destination().send(embed=page[pageOut])
-            if len(page) == 1: # If only one page no turning is required
-                return
-            for emoji in ["⏪","◀️","▶️","⏩","❎"]: # Page turning
-                await msg.add_reaction(emoji)
-            def check(react, user):
-                return react.message == msg and (ctx.message.author == user and str(react.emoji) in ["⏪","◀️","▶️","⏩","❎"])
-            while True:
-                try:
-                    reaction,user = await self.bot.wait_for("reaction_add",timeout=30,check=check)
-                except asyncio.TimeoutError:
-                    await msg.clear_reactions()
-                    break
-                if str(reaction.emoji) == "❎":
-                    await ctx.channel.delete_messages([ctx.message,msg])
-                    return
-                pageOut = {"⏪":0,"◀️":(pageOut-1) if pageOut-1 >= 0 else pageOut,"▶️":(pageOut+1) if pageOut+1 < len(page) else pageOut,"⏩":len(page)-1}[str(reaction.emoji)]
-                page[pageOut].set_footer(text=f"{pageOut+1} of {len(page)}")
-                await msg.edit(embed=page[pageOut])
-                await reaction.remove(user)
-
-        async def send_command_help(self,command):
-            if not isinstance(command,commands.Cog):
-                try:
-                    await command.can_run(self.context)
-                except:
-                    return
-            embed = discord.Embed(colour=discord.Colour.random(seed=command.qualified_name),title=f"Help for {command.qualified_name}" + (" cog" if isinstance(command,commands.Cog) else ' command'),description=(f"Aliases: {', '.join(list(command.aliases))}" if command.aliases else ""))
-            if not isinstance(command,commands.Cog):
-                embed.add_field(name="Usage",value=f"`{self.clean_prefix}{command.qualified_name}{(' ' + command.signature.replace('_',' ')    ) if command.signature else ' <subcommand>' if isinstance(command,commands.Group) else ''}`")
-            embed.add_field(name="Description",value=(command.help.replace("[p]",self.clean_prefix) if command.help else '...'),inline=False)
-            if isinstance(command,commands.Group) or isinstance(command,commands.Cog):
-                embed.add_field(name="———————",value="**Subcommands**" if isinstance(command,commands.Group) else "**Commands**",inline=False)
-                for subcommand in sorted(command.commands, key=lambda x: x.name):
-                    embed = await self.create_help_field(self.context,embed,subcommand)
-                while not len(embed.fields) % 3 == 0:
-                    embed.add_field(name=".",value=".", inline=True)
-            await self.get_destination().send(embed=embed)
-
-        async def send_group_help(self,group):
-            await self.send_command_help(group)
-
-        async def send_cog_help(self,cog):
-            cog.aliases = None
-            cog.help = cog.description
-            cog.commands = cog.get_commands()
-            await self.send_command_help(cog)
-
-
 
 def setup(bot):
     bot.add_cog(Utilities(bot))
