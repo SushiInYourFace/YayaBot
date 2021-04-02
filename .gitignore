@@ -3,3 +3,4 @@ Discord_Token.txt
 database.db
 **/__pycache__/
 token.txt
+embeds.json
