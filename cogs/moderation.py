@@ -175,7 +175,7 @@ class Moderation(commands.Cog):
 
     @commands.command(help="warns a user")
     @commands.check(functions.has_modrole)
-    async def warn(self, ctx, member : discord.Member, reason):
+    async def warn(self, ctx, member : discord.Member, *, reason):
         warnEmbed = discord.Embed(title="You have been warned in "+ ctx.guild.name, color=0xFF0000)
         warnEmbed.add_field(name="Reason:", value=reason)
         SqlCommands.new_case(member.id, ctx.guild.id, "warn", reason, time.time(), -1, str(ctx.author))
@@ -191,7 +191,7 @@ class Moderation(commands.Cog):
     @commands.check(functions.has_modrole)
     async def modlogs(self, ctx, member : discord.User):
         logEmbed = discord.Embed(title = str(member) + "'s Modlogs", color=0x000080)
-        logs = cursor.execute("SELECT id, guild, user, type, reason, started, expires, moderator FROM caselog WHERE user = ? AND guild = ?", (member.id, ctx.guild.id)).fetchall()
+        logs = cursor.execute("SELECT id_in_guild, guild, user, type, reason, started, expires, moderator FROM caselog WHERE user = ? AND guild = ?", (member.id, ctx.guild.id)).fetchall()
         for log in logs:
             start = datetime.datetime.fromtimestamp(int(log[5])).strftime('%Y-%m-%d %H:%M:%S')
             if int(log[6]) != -1:
@@ -205,7 +205,7 @@ class Moderation(commands.Cog):
     @commands.command(help="Shows information on a case")
     @commands.check(functions.has_modrole)
     async def case(self, ctx, case:int):
-        caseinfo = cursor.execute("SELECT id, guild, user, type, reason, started, expires, moderator FROM caselog WHERE id = ?", (case,)).fetchone()
+        caseinfo = cursor.execute("SELECT id_in_guild, guild, user, type, reason, started, expires, moderator FROM caselog WHERE id = ?", (case,)).fetchone()
         start = datetime.datetime.fromtimestamp(int(caseinfo[5])).strftime('%Y-%m-%d %H:%M:%S')
         if int(caseinfo[6]) != -1:
             totaltime = TimeConversions.fromseconds(int(int(caseinfo[6])) - int(caseinfo[5]))
