@@ -26,18 +26,13 @@ async def get_pre(bot, message):
 #Help command
 class NewHelp(commands.HelpCommand):
     async def create_help_field(self,ctx,embed,command):
-        try:
-            can_run = await command.can_run(ctx)
-        except commands.CheckFailure:
-            can_run = False
-        if can_run:
-            if command.help:
-                description = (command.help[:command.help.find("\n")+1] if '\n' in command.help else command.help)
-                if len(description) > 200:
-                    description = description[:197] + "..."
-            else:
-                description = "..."
-            embed.add_field(name=f"{command.name}", value=f"{description}", inline=True)
+        if command.help:
+            description = (command.help[:command.help.find("\n")+1] if '\n' in command.help else command.help)
+            if len(description) > 200:
+                description = description[:197] + "..."
+        else:
+            description = "..."
+        embed.add_field(name=f"{command.name}", value=f"{description}", inline=True)
         return embed
 
     async def send_bot_help(self,mapping):
@@ -46,6 +41,9 @@ class NewHelp(commands.HelpCommand):
         titleDesc = ["YayaBot Help!",f"Say `{self.clean_prefix}help <command>` for more info on a command!"] 
         page = [discord.Embed(colour=colour,title=titleDesc[0],description=titleDesc[1])]
         for cog,commands in mapping.items():
+            commands = await self.filter_commands(commands)
+            if not commands:
+                continue
             if len(page[-1].fields) >= 24: # If no space for commands or no space at all
                 page.append(discord.Embed(colour=colour,title=titleDesc[0],description=titleDesc[1])) # New page
             cogName = getattr(cog,'qualified_name','No Category')
@@ -55,7 +53,7 @@ class NewHelp(commands.HelpCommand):
                 page[-1] = await self.create_help_field(self.context,page[-1],command)
                 if command != commands[-1] and len(page[-1].fields) == 25: # If not the last command and new page is required
                     page.append(discord.Embed(colour=colour,title=titleDesc[0],description=titleDesc[1])) # New page
-                    page[-1].add_field(name=f"> **cogName**", value=cogDesc, inline=False) # Add cog field
+                    page[-1].add_field(name=f"> **{cogName}**", value=cogDesc, inline=False) # Add cog field
         if pageOut + 1 > len(page):
             pageOut = len(page) - 1
         page[pageOut].set_footer(text=f"Page {pageOut+1} of {len(page)}") # Add footer now (didn't know how many pages previously)
@@ -92,7 +90,7 @@ class NewHelp(commands.HelpCommand):
         embed.add_field(name="Description",value=(command.help.replace("[p]",self.clean_prefix) if command.help else '...'),inline=False)
         if isinstance(command,commands.Group) or isinstance(command,commands.Cog):
             embed.add_field(name="———————",value="**Subcommands**" if isinstance(command,commands.Group) else "**Commands**",inline=False)
-            for subcommand in sorted(command.commands, key=lambda x: x.name):
+            for subcommand in await self.filter_commands(command.commands, sort=True):
                 embed = await self.create_help_field(self.context,embed,subcommand)
         await self.get_destination().send(embed=embed)
 
