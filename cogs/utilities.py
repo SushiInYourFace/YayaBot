@@ -84,7 +84,7 @@ class Utilities(commands.Cog):
         modlogs = await get_message()
         if modlogs.content.lower() != "none":
             try:
-                logChannel = await commands.TextChannelConverter().convert(ctx,muted.content)
+                logChannel = await commands.TextChannelConverter().convert(ctx,modlogs.content)
                 modlogs = logChannel.id
             except commands.ChannelNotFound:
                 await ctx.send("That does not appear to be a valid channel. Cancelling")
