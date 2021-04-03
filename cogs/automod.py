@@ -132,7 +132,7 @@ class AutoMod(commands.Cog):
         guildFilter = cursor.execute("SELECT * FROM message_filter WHERE guild = ?",(ctx.guild.id,)).fetchone()
         text = f'Wildcard:\n{str(guildFilter[2])}\n\nExact:\n{str(guildFilter[3])}'
         if len(text) <= 1977:
-            await ctx.send(f"Filter {'enabled' if guildFilter[1] == 1 else 'disabled'} ```{guildFilter[2] if guildFilter[2] else ' '}```")
+            await ctx.send(f"Filter {'enabled' if guildFilter[1] == 1 else 'disabled'} ```{text}```")
         else:
             fp = io.StringIO(text)
             f = discord.File(fp,filename="filter.txt")
@@ -160,10 +160,17 @@ class AutoMod(commands.Cog):
         if not guildFilter:
             return
         if guildFilter[1] == 1:
-            bannedWords = guildFilter[2].split(";")
-            if "" in bannedWords:
-                bannedWords.remove("")
-            if any(bannedWord in message.content.lower() for bannedWord in bannedWords):
+            bannedWilds = guildFilter[2].split(";")
+            bannedExacts = guildFilter[3].split(";")
+            if "" in bannedWilds:
+                bannedWilds.remove("")
+            if "" in bannedExacts:
+                bannedExacts.remove("")
+            if " " in message.content.lower():
+                words = message.content.split(" ")
+            else:
+                words = [message.content]
+            if (any(bannedWord in message.content.lower() for bannedWord in bannedWilds) or any(bannedWord in words for bannedWord in bannedExacts)):
                 await message.delete()
                 if message.channel.id not in self.bot.wordWarnCooldown:
                     self.bot.wordWarnCooldown[message.channel.id] = 0

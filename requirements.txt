@@ -1,1 +1,2 @@
 git+git://github.com/Rapptz/discord.py.git
+pillow
