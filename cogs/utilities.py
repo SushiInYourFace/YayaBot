@@ -129,12 +129,12 @@ class Utilities(commands.Cog):
         await ctx.send(embed=response)
 
     @setup.command(name="modlogs", help="Specifies the channel to be used for modlogs", aliases=["logchannel", "modlog", "logs",])
-    async def setup_modlogs(self, ctx, channelID):
-        if channelID != "None" and channelID != "none":
+    async def setup_modlogs(self, ctx, channel):
+        if channel != "None" and channel != "none":
             try:
-                logchannel = ctx.guild.get_channel(int(channelID[2:-1]))
+                logchannel = ctx.guild.get_channel(int(channel[2:-1]))
                 await logchannel.send("Set up modlogs in this channel!")
-                cursor.execute("INSERT INTO role_ids(guild, modlogs) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET modlogs=excluded.modlogs", (ctx.guild.id, channelID))
+                cursor.execute("INSERT INTO role_ids(guild, modlogs) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET modlogs=excluded.modlogs", (ctx.guild.id, channel[2:-1]))
             except:
                 await ctx.send("Something went wrong. Please make sure you specify a valid channel, and that I have permissions to send messages to it")
                 return
