@@ -120,7 +120,6 @@ class Owner(commands.Cog):
         """Lists loaded and unloaded cogs."""
         loaded_cogs = [cog.split(".")[1] for cog in self.bot.extensions.keys()]
         unloaded_cogs = [cog[:-3] for cog in os.listdir("cogs") if (cog[:-3] not in loaded_cogs and cog.endswith(".py"))]
-        #embed = discord.Embed(colour=discord.Colour.random(),title="Cogs.")
         
         style = fEmbeds.fancyEmbeds.getActiveStyle(self)
         emoji = fEmbeds.fancyEmbeds.getStyleValue(self, style, "emoji")
@@ -135,7 +134,6 @@ class Owner(commands.Cog):
             emojic = ":tools: "
 
         embed = fEmbeds.fancyEmbeds.makeEmbed(self, embTitle=f"{emojia}Cogs.", desc=None, useColor=2)
-        #embed.set_footer(text=ctx.author.name, icon_url=ctx.author.avatar_url)
         embed.add_field(name=f"{emojib}Loaded Cogs:", value=", ".join(loaded_cogs)+".", inline=False)
         embed.add_field(name=f"{emojic}Unloaded Cogs:", value=", ".join(unloaded_cogs)+".", inline=False)
         await ctx.send(embed=embed)
