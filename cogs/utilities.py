@@ -5,6 +5,7 @@ import asyncio
 import json
 import random
 import aiohttp
+import cogs.fancyEmbeds as fEmbeds
 
 #sets up SQLite
 connection = sqlite3.connect("database.db")
@@ -99,11 +100,29 @@ class Utilities(commands.Cog):
         cursor.execute("INSERT INTO role_ids(guild,gravel,muted,moderator, modlogs) VALUES(?, ?, ?, ?, ?) ON CONFLICT(guild) DO UPDATE SET gravel=excluded.gravel, muted=excluded.muted, moderator=excluded.moderator, modlogs=excluded.modlogs", (guild.id, gravelRole.id, mutedRole.id, modRole.id, modlogs))
         connection.commit()
 
-        response = discord.Embed(title="Server set up successfully!", color=0x00FF00)
-        response.add_field(name="Gravel role", value=gravelRole.mention) 
-        response.add_field(name="Muted role", value=mutedRole.mention)
-        response.add_field(name="Moderator role", value=modRole.mention)
-        response.add_field(name="Modlog channel", value=getattr(logChannel,"mention","None"))
+        e = fEmbeds.fancyEmbeds.getActiveStyle(self)
+        emoji = fEmbeds.fancyEmbeds.getStyleValue(self, e, "emoji")
+        if emoji is False:
+            emojia = ""
+            emojib = ""
+            emojic = ""
+            emojid = ""
+            emojie = ""
+            emojif = ""
+        else:
+            emojia = ":wrench: "
+            emojib = ":mute: "
+            emojic = ":mute: "
+            emojid = ":hammer: "
+            emojie = ":file_folder: "
+            emojif = ":pencil2: "
+
+        response = fEmbeds.fancyEmbeds.makeEmbed(self, embTitle=f"{emojia}Server set up successfully!", useColor=0)
+        response.add_field(name=f"{emojib}Gravel role", value=gravelRole.mention) 
+        response.add_field(name=f"{emojic}Muted role", value=mutedRole.mention)
+        response.add_field(name=f"{emojid}Moderator role", value=modRole.mention)
+        response.add_field(name=f"{emojie}Modlog channel", value=getattr(logChannel,"mention","None"))
+        response.add_field(name=f"{emojif}Command Prefix", value=f"```Prefix: {prefix.content}```")
         await ctx.send(embed=response)
 
     @setup.command(name="modlogs", help="Specifies the channel to be used for modlogs, do not specify a channel to remove logs.", aliases=["logchannel", "modlog", "logs",])
@@ -125,21 +144,48 @@ class Utilities(commands.Cog):
     async def setup_gravel(self, ctx, role:discord.Role):
         cursor.execute("INSERT INTO role_ids(guild, gravel) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET gravel=excluded.gravel", (ctx.guild.id, role.id))
         connection.commit()
-        embed = discord.Embed(title="Gravel role set",description=role.mention)
+
+        e = fEmbeds.fancyEmbeds.getActiveStyle(self)
+        emoji = fEmbeds.fancyEmbeds.getStyleValue(self, e, "emoji")
+
+        if emoji is False:
+            emojia = ""
+        else:
+            emojia = ":mute: "
+
+        embed = fEmbeds.fancyEmbeds.makeEmbed(self, embTitle=f"{emojia}Changed Gravel Role:", desc=role.mention, useColor=1)
         await ctx.send(embed=embed)
         
     @setup.command(name="mute", help="Specifies the role given to someone who is muted", aliases=["muterole", "muted", "mutedrole"])
     async def setup_mute(self, ctx, role:discord.Role):
         cursor.execute("INSERT INTO role_ids(guild, muted) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET muted=excluded.muted", (ctx.guild.id, role.id))
         connection.commit()
-        embed = discord.Embed(title="Muted role set",description=role.mention)
+
+        e = fEmbeds.fancyEmbeds.getActiveStyle(self)
+        emoji = fEmbeds.fancyEmbeds.getStyleValue(self, e, "emoji")
+
+        if emoji is False:
+            emojia = ""
+        else:
+            emojia = ":mute: "
+
+        embed = fEmbeds.fancyEmbeds.makeEmbed(self, embTitle=f"{emojia}Changed Muted Role:", desc=role.mention, useColor=1)
         await ctx.send(embed=embed)
 
     @setup.command(name="moderator", help="Sets the role used to determine whether a user can use moderation commands", aliases=["mod", "modrole"])
     async def setup_moderator(self, ctx, role:discord.Role=None):
         cursor.execute("INSERT INTO role_ids(guild, moderator) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET moderator=excluded.moderator", (ctx.guild.id, role.id))
         connection.commit()
-        embed = discord.Embed(title="Moderator role set",description=role.mention)
+
+        e = fEmbeds.fancyEmbeds.getActiveStyle(self)
+        emoji = fEmbeds.fancyEmbeds.getStyleValue(self, e, "emoji")
+
+        if emoji is False:
+            emojia = ""
+        else:
+            emojia = ":hammer: "
+
+        embed = fEmbeds.fancyEmbeds.makeEmbed(self, embTitle=f"{emojia}Changed Moderator Role:", desc=role.mention, useColor=1)
         await ctx.send(embed=embed)
 
     @commands.group(aliases=["t"])
@@ -249,8 +295,16 @@ class Utilities(commands.Cog):
         """Lists tags and their text assosiation."""
         guildTags = cursor.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,)).fetchone()
         tags = json.loads(guildTags[2])
-        embed = discord.Embed(colour=discord.Colour.random(),title="Tags.",description=", ".join(tags.keys())+f"\n\nUsable by {ctx.guild.get_role(int(guildTags[1])).mention} and above.")
-        embed.set_footer(text=ctx.author.name, icon_url=ctx.author.avatar_url)
+
+        e = fEmbeds.fancyEmbeds.getActiveStyle(self)
+        emoji = fEmbeds.fancyEmbeds.getStyleValue(self, e, "emoji")
+
+        if emoji is False:
+            emojia = ""
+        else:
+            emojia = ":bookmark_tabs: "
+        
+        embed = fEmbeds.fancyEmbeds.makeEmbed(self, embTitle=f"{emojia}Tags:", desc=", ".join(tags.keys())+f"\n\nUsable by {ctx.guild.get_role(int(guildTags[1])).mention} and above.", useColor=2)
         await ctx.send(embed=embed)
 
     @tag.command(name="role")
