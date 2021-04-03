@@ -320,13 +320,13 @@ class Moderation(commands.Cog):
         await ctx.send("Added role to permissions!")
 
     @permissions_role.command(name="remove",aliases=["delete","del"])
-    async def permissions_role_remove(self,ctx,*channels:discord.TextChannel):
+    async def permissions_role_remove(self,ctx,*roles:discord.Role):
         perms = cursor.execute("SELECT * FROM permissions WHERE guild = ?", (ctx.guild.id,)).fetchone()
         guildRoles = json.loads(perms[1])
         for role in roles:
             if str(role.id) in guildRoles:
                 guildRoles.append(str(role.id))
-        cursor.execute("UPDATE permissions SET channels=? WHERE guild=?",(json.dumps(guildRoles),ctx.guild.id))
+        cursor.execute("UPDATE permissions SET roles=? WHERE guild=?",(json.dumps(guildRoles),ctx.guild.id))
         connection.commit()
         await ctx.send("Removed role from permissions!")
 
