@@ -4,6 +4,10 @@ import random
 import os
 import sqlite3
 import typing
+import logging
+
+# Logging config
+logging.basicConfig(format='[%(asctime)s] %(levelname)s: %(message)s', level=logging.INFO)
 
 connection = sqlite3.connect("database.db")
 cursor = connection.cursor()
@@ -46,6 +50,7 @@ class Owner(commands.Cog):
             if loadCog:
                 try:
                     self.bot.load_extension(cog)
+                    logging.info(f"{cog} loaded.")
                 except commands.ExtensionNotFound:
                     await ctx.send(f"Cog `{cog}` could not be found.")
                     return
@@ -74,6 +79,7 @@ class Owner(commands.Cog):
             if unloadCog:
                 try:
                     self.bot.unload_extension(cog)
+                    logging.info(f"{cog} unloaded")
                 except:
                     await ctx.send(f"Unloading cog `{cog}` failed")
                     raise
@@ -98,6 +104,7 @@ class Owner(commands.Cog):
         for cog in cogs:
             try:
                 self.bot.reload_extension(f"cogs.{cog}")
+                logging.info(f"{cog} reloaded.")
             except:
                 await ctx.send(f"Error while reloading {cog}")
                 raise
