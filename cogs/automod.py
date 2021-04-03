@@ -10,6 +10,7 @@ import discord
 from discord.ext import commands, tasks
 
 import functions
+import cogs.fancyEmbeds as fEmbeds
 
 #sets up SQLite
 connection = sqlite3.connect("database.db")
@@ -199,12 +200,20 @@ class AutoMod(commands.Cog):
         await self.check_message(after)
         if isinstance(after.channel, discord.channel.DMChannel):
             return
+
+        style = fEmbeds.fancyEmbeds.getActiveStyle(self)
+        emoji = fEmbeds.fancyEmbeds.getStyleValue(self, style, "emoji")
+
+        if emoji == False:
+            emojia = ""
+        else:
+            emojia = ":memo: "
+
         logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(after.guild.id,)).fetchone()
         if logID and logID !=0 and not after.author.bot:
             channel = after.guild.get_channel(logID[0])
-            editEmbed = discord.Embed(title=f"Message edited in {after.channel.name}", color=0xFFFF00)
+            editEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, embTitle=f"{emojia}Message edited in {after.channel.name}", useColor=3)
             editEmbed.set_author(name=str(after.author), icon_url=after.author.avatar_url)
-            now = datetime.datetime.now()
             #difference
             d = difflib.Differ()
             beforecontent = discord.utils.escape_markdown(before.content)
@@ -232,24 +241,29 @@ class AutoMod(commands.Cog):
                     pass
             editEmbed.add_field(name="Before", value=" ".join(start))
             editEmbed.add_field(name="After", value=" ".join(end))
-            date = now.strftime("%Y-%m-%d, %H:%M:%S")
-            editEmbed.set_footer(text=f"edited at {date}")
             await channel.send(embed=editEmbed)
 
     @commands.Cog.listener()
     async def on_message_delete(self, message):
+
+        style = fEmbeds.fancyEmbeds.getActiveStyle(self)
+        emoji = fEmbeds.fancyEmbeds.getStyleValue(self, style, "emoji")
+
+        if emoji == False:
+            emojia = ""
+        else:
+            emojia = ":wastebasket: "
+
         logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(message.guild.id,)).fetchone()
         if logID and logID !=0 and not message.author.bot:
             channel = message.guild.get_channel(logID[0])
-            deleteEmbed = discord.Embed(color=0xFF0000)
-            deleteEmbed.set_author(name=str(message.author), icon_url=message.author.avatar_url)
-            now = datetime.datetime.now()
             content = message.content
             if len(content) > 1024:
                 content = content[:1020] + "..."
-            deleteEmbed.add_field(name=f"Message deleted from **{message.channel.name}**", value=content)
-            date = now.strftime("%Y-%m-%d, %H:%M:%S")
-            deleteEmbed.set_footer(text=f"deleted at {date}")
+
+            deleteEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, embTitle=f"{emojia}Message deleted from **{message.channel.name}**", desc=content, force=True, forceColor=0xff0000)
+            deleteEmbed.set_author(name=str(message.author), icon_url=message.author.avatar_url)
+
             await channel.send(embed=deleteEmbed)
 
     @commands.Cog.listener()
