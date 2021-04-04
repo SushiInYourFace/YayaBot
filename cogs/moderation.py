@@ -48,13 +48,15 @@ class Moderation(commands.Cog):
     #ban
     @commands.command(help="bans a user")
     @commands.check(functions.has_modrole)
-    async def ban(self, ctx, member : discord.Member, *, reason):
+    async def ban(self, ctx, member : discord.Member, *, reason=None):
         if not ctx.guild.me.guild_permissions.ban_members:
             await ctx.send("I don't have permissions to ban people.")
             return
         elif ctx.guild.me.top_role <= member.top_role:
             await ctx.send("I don't have permission to ban that member.")
             return
+        if reason is None:
+            reason = "No reason specified"
         await ctx.guild.ban(member, reason=reason)
         bantime = time.time()
         banEmbed = discord.Embed(title="You have been banned from "+ ctx.guild.name, color=0xFF0000)
@@ -66,19 +68,21 @@ class Moderation(commands.Cog):
             unsent = True
         successEmbed = discord.Embed(title="Banned " + str(member), color=0xFF0000)
         if unsent:
-            successEmbed.set_footer(text="Failed to send a message to the user" + str(member))
+            successEmbed.set_footer(text="Failed to send a message to the user " + str(member))
         await ctx.send(embed=successEmbed)
         SqlCommands.new_case(member.id, ctx.guild.id, "ban", reason, bantime, -1, str(ctx.author))
 
     @commands.command(help="kicks a user")
     @commands.check(functions.has_modrole)
-    async def kick(self, ctx, member : discord.Member, *, reason):
+    async def kick(self, ctx, member : discord.Member, *, reason=None):
         if not ctx.guild.me.guild_permissions.kick_members:
             await ctx.send("I don't have permissions to kick people.")
             return
         elif ctx.guild.me.top_role <= member.top_role:
             await ctx.send("I don't have permission to kick that member.")
             return
+        if reason == None:
+            reason = "No reason specified"
         kicktime = time.time()
         kickEmbed = discord.Embed(title="You have been kicked from "+ ctx.guild.name, color=0xFF0000)
         kickEmbed.add_field(name="Kick reason:", value=reason)
@@ -90,7 +94,7 @@ class Moderation(commands.Cog):
             unsent = True
         successEmbed = discord.Embed(title="Kicked " + str(member), color=0xFF0000)
         if unsent:
-            successEmbed.set_footer(text="Failed to send a message to the user" + str(member))
+            successEmbed.set_footer(text="Failed to send a message to the user " + str(member))
         await ctx.send(embed=successEmbed)
         SqlCommands.new_case(member.id, ctx.guild.id, "kick", reason, kicktime, -1, str(ctx.author))
 
@@ -113,7 +117,7 @@ class Moderation(commands.Cog):
     #gravel
     @commands.command(help="Gravels a user")
     @commands.check(functions.has_modrole)
-    async def gravel(self, ctx, member : discord.Member, graveltime, *, reason):
+    async def gravel(self, ctx, member : discord.Member, graveltime, *, reason=None):
         now = time.time()    
         if graveltime[-1] == "m" or graveltime[-1] == "h" or graveltime[-1] == "d" or graveltime[-1] == "s":
             timeformat = graveltime[-1]
@@ -126,6 +130,8 @@ class Moderation(commands.Cog):
         except ValueError:
             await ctx.send("Oops! That's not a valid time format")
             return
+        if reason == None:
+            reason = "No reason specified"
         totalsecs = TimeConversions.secondsconverter(timevalue, timeformat)
         roleid = SqlCommands.get_role(ctx.guild.id, "gravel")
         converter = commands.RoleConverter()
@@ -147,7 +153,7 @@ class Moderation(commands.Cog):
 
     @commands.command(help="Mutes a user")
     @commands.check(functions.has_modrole)
-    async def mute(self, ctx, member : discord.Member, mutetime, *, reason):
+    async def mute(self, ctx, member : discord.Member, mutetime, *, reason=None):
         now = time.time()    
         if mutetime[-1] == "m" or mutetime[-1] == "h" or mutetime[-1] == "d" or mutetime[-1] == "s":
             timeformat = mutetime[-1]
@@ -160,6 +166,8 @@ class Moderation(commands.Cog):
         except ValueError:
             await ctx.send("Oops! That's not a valid time format")
             return
+        if reason == None:
+            reason = "No reason specified"
         totalsecs = TimeConversions.secondsconverter(timevalue, timeformat)
         roleid = SqlCommands.get_role(ctx.guild.id, "muted")
         roleid = str(roleid)
