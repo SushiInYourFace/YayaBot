@@ -45,7 +45,7 @@ class fancyEmbeds(commands.Cog):
             f_ = json.load(f)
             return f_["styles"][style][data]
 
-    def makeEmbed(self, embTitle="", desc=None, useColor=0, force=False, forceColor=None):
+    def makeEmbed(self, embTitle="", desc=None, useColor=0, force=False, forceColor=None, footer=None):
         """Build an embed based on the current embed Style.
         
         Returns a discord.Embed with a title, description (if specified), color and footer based on the active embed style values.\n
@@ -71,7 +71,10 @@ class fancyEmbeds(commands.Cog):
         else:
             emb = discord.Embed(title=embTitle, color=discord.Colour(colorType), description=desc, timestamp=datetime.datetime.utcfromtimestamp(time.time()))
 
-        emb.set_footer(text=self.bot.user.name, icon_url=self.bot.user.avatar_url)
+        if footer == None:
+            emb.set_footer(text=self.bot.user.name, icon_url=self.bot.user.avatar_url)
+        else:
+            emb.set_footer(text=f"{self.bot.user.name} - {footer}", icon_url=self.bot.user.avatar_url)
 
         return emb
 
@@ -94,9 +97,9 @@ class fancyEmbeds(commands.Cog):
             emojib = ""
             emojic = ""
         else:
-            emojia = ":ledger:"
-            emojib = ":clock3:"
-            emojic = ":slight_smile:"
+            emojia = ":ledger: "
+            emojib = ":clock3: "
+            emojic = ":slight_smile: "
 
         emb = fancyEmbeds.makeEmbed(self, embTitle=f"{emojia}Embed Styles", desc="Currently available embed styles:", useColor=0)
 
@@ -179,7 +182,7 @@ class fancyEmbeds(commands.Cog):
         if ctx.invoked_subcommand is None:
             await self.bot.send_help(ctx)
 
-    @customize.command(help="Change the colors of an embed style.\nColors should use base16/hexcolor values.")
+    @customize.command(help="Change the colors of an embed style. Colors should use base16/hexcolor values.")
     async def color(self, ctx, style: str, color1, color2, color3, color4):
         with open("embeds.json", "r+") as f:
             f_ = json.load(f)

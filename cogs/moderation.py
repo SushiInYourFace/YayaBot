@@ -9,6 +9,7 @@ from discord import errors
 from discord.ext import commands, tasks
 
 import functions
+import cogs.fancyEmbeds as fEmbeds
 
 #sets up SQLite
 connection = sqlite3.connect("database.db")
@@ -48,6 +49,7 @@ class Moderation(commands.Cog):
     #ban
     @commands.command(help="bans a user")
     @commands.check(functions.has_modrole)
+
     async def ban(self, ctx, member : discord.Member, *, reason=None):
         if not ctx.guild.me.guild_permissions.ban_members:
             await ctx.send("I don't have permissions to ban people.")
@@ -57,19 +59,36 @@ class Moderation(commands.Cog):
             return
         if reason is None:
             reason = "No reason specified"
+
         await ctx.guild.ban(member, reason=reason)
+
+        style = fEmbeds.fancyEmbeds.getActiveStyle(self)
+        emoji = fEmbeds.fancyEmbeds.getStyleValue(self, style, "emoji")
+
+        if emoji == False:
+            emojia = ""
+            emojib = ""
+        else:
+            emojia = ":no_entry_sign: "
+            emojib = ":hammer: "
+
         bantime = time.time()
-        banEmbed = discord.Embed(title="You have been banned from "+ ctx.guild.name, color=0xFF0000)
+        
+        banEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, embTitle=f"{emojia}You have been banned from "+ ctx.guild.name, force=True, forceColor=0xff0000)
         banEmbed.add_field(name="Ban reason:", value=reason)
         try:
             await member.send(embed=banEmbed)
             unsent = False
         except errors.HTTPException:
             unsent = True
-        successEmbed = discord.Embed(title="Banned " + str(member), color=0xFF0000)
+        
         if unsent:
-            successEmbed.set_footer(text="Failed to send a message to the user " + str(member))
+            successEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, embTitle=f"{emojib}Banned " + str(member), force=True, forceColor=0x00ff00, desc="Failed to send a message to the user.")
+        else:
+            successEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, embTitle=f"{emojib}Banned " + str(member), force=True, forceColor=0x00ff00)
+            
         await ctx.send(embed=successEmbed)
+
         SqlCommands.new_case(member.id, ctx.guild.id, "ban", reason, bantime, -1, str(ctx.author))
 
     @commands.command(help="kicks a user")
@@ -83,19 +102,34 @@ class Moderation(commands.Cog):
             return
         if reason == None:
             reason = "No reason specified"
+
+        style = fEmbeds.fancyEmbeds.getActiveStyle(self)
+        emoji = fEmbeds.fancyEmbeds.getStyleValue(self, style, "emoji")
+
+        if emoji == False:
+            emojia = ""
+        else:
+            emojia = ":boot: "
+
         kicktime = time.time()
-        kickEmbed = discord.Embed(title="You have been kicked from "+ ctx.guild.name, color=0xFF0000)
+
+        kickEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, embTitle=f"{emojia}You have been kicked from "+ ctx.guild.name, force=True, forceColor=0xff0000)
         kickEmbed.add_field(name="Kick reason:", value=reason)
+
         await ctx.guild.kick(member, reason=reason)
         try:
             await member.send(embed=kickEmbed)
             unsent = False
         except errors.HTTPException:
             unsent = True
-        successEmbed = discord.Embed(title="Kicked " + str(member), color=0xFF0000)
+        
         if unsent:
-            successEmbed.set_footer(text="Failed to send a message to the user " + str(member))
+            successEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, embTitle=f"{emojia}Kicked " + str(member), force=True, forceColor=0x00ff00, desc="Failed to send a message to the user.")
+        else:
+            successEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, embTitle=f"{emojia}Kicked " + str(member), force=True, forceColor=0x00ff00)
+
         await ctx.send(embed=successEmbed)
+
         SqlCommands.new_case(member.id, ctx.guild.id, "kick", reason, kicktime, -1, str(ctx.author))
 
     #unban
