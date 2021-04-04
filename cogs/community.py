@@ -1,8 +1,10 @@
+import io
+import random
+
 import discord
 from discord.ext import commands
-import random
-import io
 from PIL import Image
+
 
 class Community(commands.Cog):
     """Commands for the community!"""
@@ -16,14 +18,13 @@ class Community(commands.Cog):
         rat = random.choice(open("resources/rats.txt").readlines())
         await ctx.send(rat)
 
-    #hello
-    @commands.command(help="Says hello")
-    async def hello(self, ctx):
-        await ctx.send("Hello there")
-
     @commands.command(help="Gives you the number of people in the server")
     async def membercount(self, ctx):
         await ctx.send(f"There are currently {ctx.guild.member_count} members in the server")
+
+    @commands.command(help="No")
+    async def dyno(self, ctx):
+        await ctx.send("No")
 
     @commands.Cog.listener()
     async def on_message(self,message):
@@ -54,7 +55,6 @@ class Community(commands.Cog):
         im.save(arr, format='PNG')
         arr.seek(0)
         return discord.File(arr,filename="worm.png"),wormColour
-
 
 def setup(bot):
     bot.add_cog(Community(bot))

@@ -1,25 +1,18 @@
+import datetime
+import io
+import json
+import sqlite3
+import time
+
 import discord
 from discord import errors
 from discord.ext import commands, tasks
-import sqlite3
-import time
-import datetime
-import io
+
 import functions
-import json
 
 #sets up SQLite
 connection = sqlite3.connect("database.db")
 cursor = connection.cursor()
-
-async def perms_check(ctx):
-    inDb = cursor.execute("SELECT * FROM permissions WHERE guild = ?", (ctx.guild.id,)).fetchone()
-    if (inDb is None): # Guild perms doesn't exist
-        cursor.execute("INSERT INTO permissions(guild,channels,roles) VALUES(?,?,?)",(ctx.guild.id,"[]","[]"))
-        connection.commit()
-        await ctx.send("Permissions created with no role and no channels.")
-    return True
-
 
 class Moderation(commands.Cog):
     """Cog for moderators to help them moderate!"""
@@ -28,7 +21,9 @@ class Moderation(commands.Cog):
         self.bot = bot
         self._last_member = None
         self.timedRoleCheck.start()
-        self.bot.wordWarnCooldown = {}
+        self.bot.cooldowns = {}
+        self.bot.pending_cooldowns = {}
+        self.bot.before_invoke(self.before_invoke)
 
     @commands.group(help="Purge command.")
     @commands.check(functions.has_modrole)
@@ -53,7 +48,16 @@ class Moderation(commands.Cog):
     #ban
     @commands.command(help="bans a user")
     @commands.check(functions.has_modrole)
-    async def ban(self, ctx, member : discord.Member, *, reason):
+    async def ban(self, ctx, member : discord.Member, *, reason=None):
+        if not ctx.guild.me.guild_permissions.ban_members:
+            await ctx.send("I don't have permissions to ban people.")
+            return
+        elif ctx.guild.me.top_role <= member.top_role:
+            await ctx.send("I don't have permission to ban that member.")
+            return
+        if reason is None:
+            reason = "No reason specified"
+        await ctx.guild.ban(member, reason=reason)
         bantime = time.time()
         banEmbed = discord.Embed(title="You have been banned from "+ ctx.guild.name, color=0xFF0000)
         banEmbed.add_field(name="Ban reason:", value=reason)
@@ -62,28 +66,35 @@ class Moderation(commands.Cog):
             unsent = False
         except errors.HTTPException:
             unsent = True
-        await ctx.guild.ban(member, reason=reason)
         successEmbed = discord.Embed(title="Banned " + str(member), color=0xFF0000)
         if unsent:
-            successEmbed.set_footer(text="Failed to send a message to the user" + str(member))
+            successEmbed.set_footer(text="Failed to send a message to the user " + str(member))
         await ctx.send(embed=successEmbed)
         SqlCommands.new_case(member.id, ctx.guild.id, "ban", reason, bantime, -1, str(ctx.author))
 
     @commands.command(help="kicks a user")
     @commands.check(functions.has_modrole)
-    async def kick(self, ctx, member : discord.Member, *, reason):
+    async def kick(self, ctx, member : discord.Member, *, reason=None):
+        if not ctx.guild.me.guild_permissions.kick_members:
+            await ctx.send("I don't have permissions to kick people.")
+            return
+        elif ctx.guild.me.top_role <= member.top_role:
+            await ctx.send("I don't have permission to kick that member.")
+            return
+        if reason == None:
+            reason = "No reason specified"
         kicktime = time.time()
         kickEmbed = discord.Embed(title="You have been kicked from "+ ctx.guild.name, color=0xFF0000)
         kickEmbed.add_field(name="Kick reason:", value=reason)
+        await ctx.guild.kick(member, reason=reason)
         try:
             await member.send(embed=kickEmbed)
             unsent = False
         except errors.HTTPException:
             unsent = True
-        await ctx.guild.kick(member, reason=reason)
         successEmbed = discord.Embed(title="Kicked " + str(member), color=0xFF0000)
         if unsent:
-            successEmbed.set_footer(text="Failed to send a message to the user" + str(member))
+            successEmbed.set_footer(text="Failed to send a message to the user " + str(member))
         await ctx.send(embed=successEmbed)
         SqlCommands.new_case(member.id, ctx.guild.id, "kick", reason, kicktime, -1, str(ctx.author))
 
@@ -106,19 +117,21 @@ class Moderation(commands.Cog):
     #gravel
     @commands.command(help="Gravels a user")
     @commands.check(functions.has_modrole)
-    async def gravel(self, ctx, member : discord.Member, graveltime, *, reason):
+    async def gravel(self, ctx, member : discord.Member, graveltime, *, reason=None):
         now = time.time()    
         if graveltime[-1] == "m" or graveltime[-1] == "h" or graveltime[-1] == "d" or graveltime[-1] == "s":
             timeformat = graveltime[-1]
             timevalue = graveltime[:-1]
         else:
-            await ctx.send("Oops! That's not a valid time format")
-            return
+            timeformat = "m"
+            timevalue = graveltime
         try:
             timevalue = int(timevalue)
         except ValueError:
             await ctx.send("Oops! That's not a valid time format")
             return
+        if reason == None:
+            reason = "No reason specified"
         totalsecs = TimeConversions.secondsconverter(timevalue, timeformat)
         roleid = SqlCommands.get_role(ctx.guild.id, "gravel")
         converter = commands.RoleConverter()
@@ -140,19 +153,21 @@ class Moderation(commands.Cog):
 
     @commands.command(help="Mutes a user")
     @commands.check(functions.has_modrole)
-    async def mute(self, ctx, member : discord.Member, mutetime, *, reason):
+    async def mute(self, ctx, member : discord.Member, mutetime, *, reason=None):
         now = time.time()    
         if mutetime[-1] == "m" or mutetime[-1] == "h" or mutetime[-1] == "d" or mutetime[-1] == "s":
             timeformat = mutetime[-1]
             timevalue = mutetime[:-1]
         else:
-            await ctx.send("Oops! That's not a valid time format")
-            return
+            timeformat = "m"
+            timevalue = mutetime
         try:
             timevalue = int(timevalue)
         except ValueError:
             await ctx.send("Oops! That's not a valid time format")
             return
+        if reason == None:
+            reason = "No reason specified"
         totalsecs = TimeConversions.secondsconverter(timevalue, timeformat)
         roleid = SqlCommands.get_role(ctx.guild.id, "muted")
         roleid = str(roleid)
@@ -206,7 +221,11 @@ class Moderation(commands.Cog):
     @commands.check(functions.has_modrole)
     async def case(self, ctx, case:int):
         caseinfo = cursor.execute("SELECT id_in_guild, guild, user, type, reason, started, expires, moderator FROM caselog WHERE id = ?", (case,)).fetchone()
-        start = datetime.datetime.fromtimestamp(int(caseinfo[5])).strftime('%Y-%m-%d %H:%M:%S')
+        try:
+            start = datetime.datetime.fromtimestamp(int(caseinfo[5])).strftime('%Y-%m-%d %H:%M:%S')
+        except TypeError:
+            await ctx.send("Could not find that case number")
+            return
         if int(caseinfo[6]) != -1:
             totaltime = TimeConversions.fromseconds(int(int(caseinfo[6])) - int(caseinfo[5]))
         else:
@@ -269,84 +288,41 @@ class Moderation(commands.Cog):
             cursor.execute("DELETE FROM active_cases WHERE id = ?", (item[0],))
             connection.commit()
          
-    @commands.group(aliases=["perms"])
-    @commands.check(perms_check)
-    @commands.has_permissions(manage_guild=True)
-    async def permissions(self,ctx):
-        if ctx.invoked_subcommand is None:
-            await ctx.send_help(ctx.command)
-
-    @permissions.group(name="channel")
-    async def permissions_channel(self,ctx):
-        if ctx.invoked_subcommand is None:
-            await ctx.send_help(ctx.command)
-
-    @permissions_channel.command(name="add",aliases=["new"])
-    async def permissions_channel_add(self,ctx,*channels:discord.TextChannel):
-        perms = cursor.execute("SELECT * FROM permissions WHERE guild = ?", (ctx.guild.id,)).fetchone()
-        guildChannels = json.loads(perms[1])
-        for channel in channels:
-            if str(channel.id) not in guildChannels:
-                guildChannels.append(str(channel.id))
-        cursor.execute("UPDATE permissions SET channels=? WHERE guild=?",(json.dumps(guildChannels),ctx.guild.id))
-        connection.commit()
-        await ctx.send("Added channels to permissions!")
-
-    @permissions_channel.command(name="remove",aliases=["delete","del"])
-    async def permissions_channel_remove(self,ctx,*channels:discord.TextChannel):
-        perms = cursor.execute("SELECT * FROM permissions WHERE guild = ?", (ctx.guild.id,)).fetchone()
-        guildChannels = json.loads(perms[1])
-        for channel in channels:
-            if str(channel.id) in guildChannels:
-                guildChannels.remove(str(channel.id))
-        cursor.execute("UPDATE permissions SET channels=? WHERE guild=?",(json.dumps(guildChannels),ctx.guild.id))
-        connection.commit()
-        await ctx.send("Removed channels from permissions!")
-
-    @permissions.group(name="role")
-    async def permissions_role(self,ctx):
-        if ctx.invoked_subcommand is None:
-            await ctx.send_help(ctx.command)
-
-    @permissions_role.command(name="add",aliases=["new"])
-    async def permissions_role_add(self,ctx,*roles:discord.Role):
-        perms = cursor.execute("SELECT * FROM permissions WHERE guild = ?", (ctx.guild.id,)).fetchone()
-        guildRoles = json.loads(perms[1])
-        for role in roles:
-            if str(role.id) not in roles:
-                guildRoles.append(str(role.id))
-        cursor.execute("UPDATE permissions SET roles=? WHERE guild=?",(json.dumps(guildRoles),ctx.guild.id))
-        connection.commit()
-        await ctx.send("Added role to permissions!")
-
-    @permissions_role.command(name="remove",aliases=["delete","del"])
-    async def permissions_role_remove(self,ctx,*roles:discord.Role):
-        perms = cursor.execute("SELECT * FROM permissions WHERE guild = ?", (ctx.guild.id,)).fetchone()
-        guildRoles = json.loads(perms[1])
-        for role in roles:
-            if str(role.id) in guildRoles:
-                guildRoles.append(str(role.id))
-        cursor.execute("UPDATE permissions SET roles=? WHERE guild=?",(json.dumps(guildRoles),ctx.guild.id))
-        connection.commit()
-        await ctx.send("Removed role from permissions!")
-
-    async def bot_check(self,ctx):
+    async def bot_check_once(self,ctx):
         if isinstance(ctx.channel,discord.DMChannel):
             return True
-        if ctx.author.guild_permissions.manage_messages:
+        if ctx.guild.id not in self.bot.cooldowns.keys():
+            self.bot.cooldowns[ctx.guild.id] = {}
+        if ctx.guild.id not in self.bot.pending_cooldowns.keys():
+            self.bot.pending_cooldowns[ctx.guild.id] = {}
+        if functions.has_modrole(ctx) or functions.has_adminrole(ctx):
             return True
-        perms = cursor.execute("SELECT * FROM permissions WHERE guild = ?", (ctx.guild.id,)).fetchone()
-        if (perms is None): # Guild perms doesn't exist
+        now = datetime.datetime.now()
+        if now < self.bot.cooldowns[ctx.guild.id].get(ctx.author.id,now):
+            await ctx.message.add_reaction("🕐")
+            return False
+        cmd = cursor.execute("SELECT command_usage, command_cooldown FROM role_ids WHERE guild = ?", (ctx.guild.id,)).fetchone()
+        if cmd:
+            commandRole, commandCooldown = cmd
+        else:
             return True
-        if perms[1] is not None:
-            channels = json.loads(perms[1])
-            if str(ctx.channel.id) not in channels:
-                return False
-        if perms[2] is not None:
-            roles = json.loads(perms[2])
-            if not [str(role.id) for role in ctx.author.roles if str(role.id) in roles]:
-                return False
-        return True
+        member_roles = [role.id for role in ctx.author.roles]
+        if not commandRole:
+            if commandCooldown and not (ctx.invoked_with == "help" and ctx.command.name != "help"):
+                self.bot.pending_cooldowns[ctx.guild.id][ctx.author.id] = (ctx.command,datetime.datetime.now() + datetime.timedelta(milliseconds=commandCooldown))
+            return True
+        elif (commandRole in member_roles):
+            if commandCooldown and not (ctx.invoked_with == "help" and ctx.command.name != "help"):
+                self.bot.pending_cooldowns[ctx.guild.id][ctx.author.id] = (ctx.command,datetime.datetime.now() + datetime.timedelta(milliseconds=commandCooldown))
+            return True
+        else:
+            return False
+
+    async def before_invoke(self,ctx): # There is no way to put a global check behind local checks so cooldowns were being added even if the command was not ran and before_invoke cannot stop a command from being run, this stops that by adding the cooldowns when the command is invoked rather than during the global check.
+        if ctx.author.id in self.bot.pending_cooldowns[ctx.guild.id].keys():
+            cooldown = [(user,self.bot.pending_cooldowns[ctx.guild.id][user][1]) for user in self.bot.pending_cooldowns[ctx.guild.id] if (self.bot.pending_cooldowns[ctx.guild.id][user][0] == ctx.command and user == ctx.author.id)]
+            if cooldown:
+                self.bot.cooldowns[ctx.guild.id][cooldown[0][0]] = cooldown[0][1]
 
 SqlCommands = functions.Sql()
 TimeConversions = functions.timeconverters()

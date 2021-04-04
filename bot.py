@@ -1,8 +1,10 @@
+import asyncio
+import logging
+import sqlite3
+import time
+
 import discord
 from discord.ext import commands
-import sqlite3
-import logging
-import asyncio
 
 # Logging config
 logging.basicConfig(format='[%(asctime)s] %(levelname)s: %(message)s', level=logging.INFO)
@@ -46,8 +48,8 @@ class NewHelp(commands.HelpCommand):
                 continue
             if len(page[-1].fields) >= 24: # If no space for commands or no space at all
                 page.append(discord.Embed(colour=colour,title=titleDesc[0],description=titleDesc[1])) # New page
-            cogName = getattr(cog,'qualified_name','No Category')
-            cogDesc = '\n> '+ getattr(cog,"description",'...')
+            cogName = getattr(cog,'qualified_name','Other')
+            cogDesc = '\n> '+ getattr(cog,"description",'...') if not cogName == "Other" else "> Other commands that don't fit into a category."
             page[-1].add_field(name=f"> **{cogName}**", value=cogDesc, inline=False) # Add cog field
             for command in commands:
                 page[-1] = await self.create_help_field(self.context,page[-1],command)
@@ -112,25 +114,45 @@ bot = commands.Bot(command_prefix=get_pre, intents=intents, help_command=NewHelp
 con = sqlite3.connect("database.db")
 cursor = con.cursor()
 cursor.execute("CREATE TABLE IF NOT EXISTS guild_prefixes (guild INTEGER PRIMARY KEY, prefix TEXT)")
-cursor.execute("CREATE TABLE IF NOT EXISTS role_ids (guild INTEGER PRIMARY KEY, gravel INTEGER, muted INTEGER, moderator INTEGER, modlogs INTEGER)")
+cursor.execute("CREATE TABLE IF NOT EXISTS role_ids (guild INTEGER PRIMARY KEY, gravel INTEGER, muted INTEGER, moderator INTEGER, admin INTEGER, modlogs INTEGER, command_usage INTEGER, command_cooldown INTEGER)")
 cursor.execute("CREATE TABLE IF NOT EXISTS active_cases (id INTEGER PRIMARY KEY, expiration FLOAT)")
 cursor.execute("CREATE TABLE IF NOT EXISTS caselog (id INTEGER PRIMARY KEY, id_in_guild INTEGER, guild INTEGER, user INTEGER, type TEXT, reason TEXT, started FLOAT, expires FLOAT, moderator TEXT)")
 cursor.execute("CREATE TABLE IF NOT EXISTS extensions (extension TEXT PRIMARY KEY)")
 cursor.execute("CREATE TABLE IF NOT EXISTS message_filter (guild INTEGER PRIMARY KEY, enabled INTEGER NOT NULL, filterWildCard TEXT NOT NULL, filterExact TEXT NOT NULL)")
+cursor.execute("CREATE TABLE IF NOT EXISTS spam_filters (guild INTEGER PRIMARY KEY, emoji_limit INTEGER, invite_filter INTEGER, message_spam_limit INTEGER, character_repeat_limit INTEGER)")
 cursor.execute("CREATE TABLE IF NOT EXISTS tags (guild INTEGER PRIMARY KEY, role INTEGER, tags TEXT NOT NULL)")
 cursor.execute("CREATE TABLE IF NOT EXISTS modlog_channels (guild INTEGER PRIMARY KEY, channel INTEGER)")
-cursor.execute("CREATE TABLE IF NOT EXISTS permissions (guild INTEGER PRIMARY KEY, channels TEXT NOT NULL, roles TEXT NOT NULL)")
 con.commit()
 
 #startup
 @bot.event
 async def on_ready():
+    bot.startTime = time.time()
     appinfo = await bot.application_info()
     print("")
     logging.info(f"Bot started! Hello {str(appinfo.owner)}")
     logging.info(f"I'm connected as {str(bot.user)} - {bot.user.id}!")
     logging.info(f"In {len(bot.guilds)} guilds overlooking {len(list(bot.get_all_channels()))} channels and {len(list(bot.get_all_members()))} users.")
     print("")
+
+@bot.command(aliases=["info","bot"])
+async def about(ctx):
+    """Sends some information about the bot!"""
+    currentTime = time.time()
+    uptime = int(round(currentTime - bot.startTime))
+    uptime = str(datetime.timedelta(seconds=uptime))
+    appinfo = await bot.application_info()
+    embed = discord.Embed(colour=discord.Colour.random(),description="YayaBot!")
+    embed.set_author(name="YayaBot", url="https://wwww.github.com/SushiInYourFace/YayaBot", icon_url=bot.user.avatar_url)
+    embed.set_footer(text=ctx.author.name, icon_url=ctx.author.avatar_url)
+    embed.add_field(name="Instance Owner:", value=appinfo.owner, inline=True)
+    embed.add_field(name="_ _", value="_ _", inline=True)
+    embed.add_field(name="Python Version:", value=f"[{platform.python_version()}](https://www.python.org)", inline=True)
+    embed.add_field(name="Bot Uptime:", value=f"{uptime}", inline=True)
+    embed.add_field(name="_ _", value="_ _", inline=True)
+    embed.add_field(name="Discord.py Version:", value=f"[{discord.__version__}](https://github.com/Rapptz/discord.py)", inline=True)
+    await ctx.send(embed=embed)
+
 
 #cogs to be loaded on startup
 default_extensions = [
@@ -183,24 +205,13 @@ async def on_command_error(ctx, error):
         await ctx.send("I don't have permission to do that.")
     elif isinstance(error, commands.NotOwner):
         await ctx.send("You need to be owner to do that.")
+    elif isinstance(error,commands.ExpectedClosingQuoteError):
+        await ctx.send("You have inputted arguments incorrectly, you may have forgotten a closing \" or put one in by accident.")
     elif isinstance(error, commands.RoleNotFound):
         await ctx.send("That role could not be found.")
     else:
         await ctx.send("Something has gone wrong somewhere, and most likely needs to be fixed")
         raise error
-
-#check for mod-only commands
-def has_modrole(ctx):
-    modrole = cursor.execute("SELECT moderator FROM role_ids WHERE guild = ?", (ctx.guild.id,)).fetchone()
-    member_roles = []
-    for role in ctx.member.roles:
-        member_roles.append(role.id)
-    if modrole is None:
-        return False
-    elif (modrole in member_roles):
-        return True
-    else:
-        return False
 
 bot.run(Token)
 print("Bot Session Ended")

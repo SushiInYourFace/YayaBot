@@ -1,11 +1,11 @@
-import discord
-from discord.ext import commands
-import random
+import logging
 import os
+import random
 import sqlite3
 import typing
 import cogs.fancyEmbeds as fEmbeds
-import logging
+import discord
+from discord.ext import commands
 
 # Logging config
 logging.basicConfig(format='[%(asctime)s] %(levelname)s: %(message)s', level=logging.INFO)
@@ -54,7 +54,7 @@ class Owner(commands.Cog):
                     logging.info(f"{cog} loaded.")
                 except commands.ExtensionNotFound:
                     await ctx.send(f"Cog `{cog}` could not be found.")
-                    return
+                    continue
                 except:
                     await ctx.send(f"Loading cog `{cog}` failed")
                     raise
@@ -102,18 +102,24 @@ class Owner(commands.Cog):
         if cogs[0] in ["*","all"]:
             cogs = [cog.split(".")[1] for cog in self.bot.extensions.keys()]
             allReloaded = True
+        notLoaded = []
+        loaded = []
         for cog in cogs:
             try:
                 self.bot.reload_extension(f"cogs.{cog}")
                 logging.info(f"{cog} reloaded.")
+                loaded.append(cog)
+            except commands.ExtensionNotLoaded:
+                notLoaded.append(cog)
+                continue
             except:
-                await ctx.send(f"Error while reloading {cog}")
+                await ctx.send(f"Error while reloading {cog}.")
                 raise
-        await ctx.send(f"Cogs {', '.join(cogs)} reloaded.")
+        await ctx.send(f"{'Cog '+', '.join(loaded)+' reloaded.' if loaded else ''}{(' Cog '+', '.join(notLoaded)+' was not found so not reloaded.') if notLoaded else ''}")
         if allReloaded:
             self.bot.previousReload = ["*"]
         else:
-            self.bot.previousReload = cogs
+            self.bot.previousReload = loaded
 
     @cog.command(name="list",aliases=["ls"])
     async def cogs_list(self,ctx):
@@ -160,4 +166,4 @@ class Owner(commands.Cog):
                 prefix = (str(guildcommand[0]))
             except TypeError:
                 pass
-            await message.channel.send(f"My prefix here is `{prefix}`",delete_after=4)
+            await message.channel.send(f"My prefix here is `{prefix}`",delete_after=6)

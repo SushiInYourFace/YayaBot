@@ -1,17 +1,22 @@
-import discord
-from discord.ext import commands
-import sqlite3
 import asyncio
 import json
 import random
+import sqlite3
 import aiohttp
+
 import cogs.fancyEmbeds as fEmbeds
+import functions
+
+import discord
+from discord.ext import commands
 
 #sets up SQLite
 connection = sqlite3.connect("database.db")
 cursor = connection.cursor()
 
 async def tag_check(ctx):
+    if ctx.invoked_with == "help":
+        return True
     tags = cursor.execute("SELECT * FROM tags WHERE guild = ?", (ctx.guild.id,)).fetchone()
     if (tags is None and ctx.author.guild_permissions.manage_messages): # No guild tags and the user can manage messages
         if not (ctx.command.root_parent == "tag" or ctx.command.name == "tag"): # Check is not coming from a tag command so return True
@@ -35,7 +40,7 @@ class Utilities(commands.Cog):
         self._last_member = None
 
     @commands.group(name="setup", help="setup some (or all) features of the bot", aliases=["su",])
-    @commands.has_permissions(administrator=True)
+    @commands.check_any(commands.has_permissions(administrator=True),commands.check(functions.has_adminrole))
     async def setup(self,ctx):
         if ctx.invoked_subcommand is None:
             await ctx.invoke(self.bot.get_command('setup all'),)
@@ -44,7 +49,7 @@ class Utilities(commands.Cog):
     async def setup_prefix(self, ctx, prefix):
         cursor.execute("INSERT INTO guild_prefixes(guild,prefix) VALUES(?, ?) ON CONFLICT(guild) DO UPDATE SET prefix=excluded.prefix", (ctx.guild.id, prefix))
         connection.commit()
-        await ctx.send("Your new server-specific prefex is " + prefix)
+        await ctx.send("Your new server-specific prefix is " + prefix)
 
     #all, chonky function
     @setup.command(help="Sets up all the bot's features", name="all")
@@ -61,43 +66,68 @@ class Utilities(commands.Cog):
             except asyncio.TimeoutError:
                 await ctx.send("No response received. Cancelling")
                 return
-        gravel = await get_message()
+        message = await get_message()
         try:
-            gravelRole = await commands.RoleConverter().convert(ctx,gravel.content)
+            gravelRole = await commands.RoleConverter().convert(ctx,message.content)
         except commands.RoleNotFound:
             await ctx.send("That does not appear to be a valid role. Cancelling")
             return
         await ctx.send("Next, please give the name of your muted role.")
-        muted = await get_message()
+        message = await get_message()
         try:
-            mutedRole = await commands.RoleConverter().convert(ctx,muted.content)
+            mutedRole = await commands.RoleConverter().convert(ctx,message.content)
         except commands.RoleNotFound:
             await ctx.send("That does not appear to be a valid role. Cancelling")
             return
         await ctx.send("Ok, now please tell me what the name is for your moderator role (people with this role will be able to use mod-only commands).")
-        moderator = await get_message()
+        message = await get_message()
         try:
-            modRole = await commands.RoleConverter().convert(ctx,moderator.content)
+            modRole = await commands.RoleConverter().convert(ctx,message.content)
         except commands.RoleNotFound:
             await ctx.send("That does not appear to be a valid role. Cancelling")
             return
-        await ctx.send("Almost there! Please send me your modlog channel, or type \"None\" if you do not want a modlog channel.")
-        modlogs = await get_message()
-        if modlogs.content.lower() != "none":
+        await ctx.send("Now for the name of your admin role (people with this role will be able to use admin-only commands).")
+        message = await get_message()
+        try:
+            adminRole = await commands.RoleConverter().convert(ctx,message.content)
+        except commands.RoleNotFound:
+            await ctx.send("That does not appear to be a valid role. Cancelling")
+            return
+        await ctx.send("Enter the name of your commands role or 'none' for no role (if supplied, this role will be required to use any commands).")
+        message = await get_message()
+        if message.content.lower() != "none":
             try:
-                logChannel = await commands.TextChannelConverter().convert(ctx,modlogs.content)
-                modlogs = logChannel.id
+                commandRole = await commands.RoleConverter().convert(ctx,message.content)
+            except commands.RoleNotFound:
+                await ctx.send("That does not appear to be a valid role. Cancelling")
+                return
+        else:
+            commandRole = None
+        await ctx.send("Enter the cooldown for your commands (in milliseconds) or type 'none' for no cooldown (cooldown does not apply to mods and admins).")
+        message = await get_message()
+        if message.content.lower() != "none":
+            try:
+                commandCooldown = int(message.content)
+            except ValueError:
+                await ctx.send("That does not appear to be a valid number. Cancelling")
+                return
+        else:
+            commandCooldown = 0
+        await ctx.send("Almost there! Please send me your modlog channel, or type \"None\" if you do not want a modlog channel.")
+        message = await get_message()
+        if message.content.lower() != "none":
+            try:
+                logChannel = await commands.TextChannelConverter().convert(ctx,message.content)
             except commands.ChannelNotFound:
                 await ctx.send("That does not appear to be a valid channel. Cancelling")
                 return
         else:
-            modlogs = 0
             logChannel = None
         await ctx.send("Last, please tell me what prefix you would like to use for commands")
         prefix = await get_message()
 
         cursor.execute("INSERT INTO guild_prefixes(guild,prefix) VALUES(?, ?) ON CONFLICT(guild) DO UPDATE SET prefix=excluded.prefix", (guild.id, prefix.content))
-        cursor.execute("INSERT INTO role_ids(guild,gravel,muted,moderator, modlogs) VALUES(?, ?, ?, ?, ?) ON CONFLICT(guild) DO UPDATE SET gravel=excluded.gravel, muted=excluded.muted, moderator=excluded.moderator, modlogs=excluded.modlogs", (guild.id, gravelRole.id, mutedRole.id, modRole.id, modlogs))
+        cursor.execute("INSERT INTO role_ids(guild,gravel,muted,moderator,admin,modlogs,command_usage,command_cooldown) VALUES(?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(guild) DO UPDATE SET gravel=excluded.gravel, muted=excluded.muted, moderator=excluded.moderator, admin=excluded.admin, modlogs=excluded.modlogs, command_usage=excluded.command_usage, command_cooldown=excluded.command_cooldown", (guild.id, gravelRole.id, mutedRole.id, modRole.id, adminRole.id, getattr(logChannel,"id",0), getattr(commandRole,"id",0),commandCooldown))
         connection.commit()
 
         e = fEmbeds.fancyEmbeds.getActiveStyle(self)
@@ -109,20 +139,30 @@ class Utilities(commands.Cog):
             emojid = ""
             emojie = ""
             emojif = ""
+            emojig = ""
+            emojih = ""
+            emojii = ""
         else:
             emojia = ":wrench: "
             emojib = ":mute: "
             emojic = ":mute: "
             emojid = ":hammer: "
-            emojie = ":file_folder: "
-            emojif = ":pencil2: "
+            emojie = ":tools: "
+            emojif = ":file_folder: "
+            emojig = ":page_facing_up: "
+            emojih = ":stopwatch: "
+            emojii = ":pencil2: "
 
         response = fEmbeds.fancyEmbeds.makeEmbed(self, embTitle=f"{emojia}Server set up successfully!", useColor=0)
         response.add_field(name=f"{emojib}Gravel role", value=gravelRole.mention) 
         response.add_field(name=f"{emojic}Muted role", value=mutedRole.mention)
         response.add_field(name=f"{emojid}Moderator role", value=modRole.mention)
-        response.add_field(name=f"{emojie}Modlog channel", value=getattr(logChannel,"mention","None"))
-        response.add_field(name=f"{emojif}Command Prefix", value=f"```Prefix: {prefix.content}```")
+        response.add_field(name=f"{emojie}Admin role", value=adminRole.mention)
+        response.add_field(name=f"{emojif}Modlog channel", value=getattr(logChannel,"mention","None"))
+        response.add_field(name=f"{emojig}Command role", value=getattr(commandRole,"mention","None"))
+        response.add_field(name=f"{emojih}Command cooldown", value=f"{commandCooldown / 1000} Seconds")
+        response.add_field(name=f"{emojii}Command Prefix", value=f"`{prefix.content}`")
+
         await ctx.send(embed=response)
 
     @setup.command(name="modlogs", help="Specifies the channel to be used for modlogs, do not specify a channel to remove logs.", aliases=["logchannel", "modlog", "logs",])
@@ -173,7 +213,7 @@ class Utilities(commands.Cog):
         await ctx.send(embed=embed)
 
     @setup.command(name="moderator", help="Sets the role used to determine whether a user can use moderation commands", aliases=["mod", "modrole"])
-    async def setup_moderator(self, ctx, role:discord.Role=None):
+    async def setup_moderator(self, ctx, role:discord.Role):
         cursor.execute("INSERT INTO role_ids(guild, moderator) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET moderator=excluded.moderator", (ctx.guild.id, role.id))
         connection.commit()
 
@@ -187,6 +227,28 @@ class Utilities(commands.Cog):
 
         embed = fEmbeds.fancyEmbeds.makeEmbed(self, embTitle=f"{emojia}Changed Moderator Role:", desc=role.mention, useColor=1)
         await ctx.send(embed=embed)
+
+    @setup.command(name="admin", help="Sets the role used to determine whether a user can use admin commands", aliases=["adminrole"])
+    async def setup_admin(self, ctx, role:discord.Role):
+        cursor.execute("INSERT INTO role_ids(guild, admin) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET admin=excluded.admin", (ctx.guild.id, role.id))
+        connection.commit()
+        embed = discord.Embed(title="Admin role set",description=role.mention)
+        await ctx.send(embed=embed)
+
+    @setup.command(name="command", help="Sets the role used to determine whether a user can use commands", aliases=["commandrole"])
+    async def setup_command(self, ctx, role:discord.Role=None):
+        cursor.execute("INSERT INTO role_ids(guild, command_usage) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET command_usage=excluded.command_usage", (ctx.guild.id, getattr(role,"id",0)))
+        connection.commit()
+        embed = discord.Embed(title="Command role set",description=getattr(role,"id","None"))
+        await ctx.send(embed=embed)
+
+    @setup.command(name="cooldown", help="Sets the cooldown (in ms) between command uses", aliases=["commandCooldown","command_cooldown"])
+    async def setup_cooldown(self, ctx, cooldown:int=0):
+        cursor.execute("INSERT INTO role_ids(guild, command_cooldown) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET command_cooldown=excluded.command_cooldown", (ctx.guild.id, cooldown))
+        connection.commit()
+        embed = discord.Embed(title="Cooldown set",description=str(cooldown)+"ms")
+        await ctx.send(embed=embed)
+
 
     @commands.group(aliases=["t"])
     @commands.check(tag_check)
@@ -216,16 +278,15 @@ class Utilities(commands.Cog):
         """Sends the text assosiated to your tag."""
         return
 
-    @tag.group(name="set",aliases=["new","add"])
-    @commands.has_permissions(manage_messages=True)
-    async def tag_set(self,ctx):
+    @tag.group(name="add",aliases=["new","set"])
+    @commands.check(functions.has_modrole)
+    async def tag_add(self,ctx):
         """Sets a tags text assosiation."""
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
 
-    @tag_set.command(name="text",aliases=["t"])
-    @commands.has_permissions(manage_messages=True)
-    async def tag_set_text(self,ctx,tag,*,text):
+    @tag_add.command(name="text",aliases=["t"])
+    async def tag_add_text(self,ctx,tag,*,text):
         """Sets a tags text assosiation."""
         guildTags = cursor.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,)).fetchone()
         tags = json.loads(guildTags[2])
@@ -234,8 +295,8 @@ class Utilities(commands.Cog):
         connection.commit()
         await ctx.send("Tag updated.")
 
-    @tag_set.command(name="simpleEmbed",aliases=["se","simpleembed","simple_embed"])
-    async def tag_set_simpleEmbed(self,ctx,tag,title,*,description=None):
+    @tag_add.command(name="simpleEmbed",aliases=["se","simpleembed","simple_embed"])
+    async def tag_add_simpleEmbed(self,ctx,tag,title,*,description=None):
         """Creates a simple embed with only a title and description.
         Title must be in "s and has a character limit of 256.."""
         guildTags = cursor.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,)).fetchone()
@@ -245,10 +306,10 @@ class Utilities(commands.Cog):
         connection.commit()
         await ctx.send("Tag updated.")
 
-    @tag_set.command(name="embed",aliases=["e"])
-    async def tag_set_embed(self,ctx,tag,*,embed=None):
+    @tag_add.command(name="embed",aliases=["e"])
+    async def tag_add_embed(self,ctx,tag,*,embed=None):
         """Creates an embed tag from the dictionary given,
-        create an embed at https://leovoel.github.io/embed-visualizer/ and copy the JSON over.
+        create an embed at [https://leovoel.github.io/embed-visualizer/](https://leovoel.github.io/embed-visualizer/) and copy the JSON over.
         It must a be a single line with no newlines, this can be done easily by pasting it into a browser address bar and copying it again.
         If it is larger than 2000 characters you may send it as a text file.
         Note: timestamp will be ignored."""
@@ -280,7 +341,7 @@ class Utilities(commands.Cog):
         await ctx.send("Tag updated.")
 
     @tag.command(name="remove",aliases=["delete","del"])
-    @commands.has_permissions(manage_messages=True)
+    @commands.check(functions.has_modrole)
     async def tag_remove(self,ctx,tag):
         """Removes a tag text assosiation."""
         guildTags = cursor.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,)).fetchone()
@@ -308,7 +369,7 @@ class Utilities(commands.Cog):
         await ctx.send(embed=embed)
 
     @tag.command(name="role")
-    @commands.has_permissions(manage_messages=True)
+    @commands.check(functions.has_modrole)
     async def tag_role(self,ctx,*,role:discord.Role=None):
         """Sets the lowest role to be able to use tags."""
         if not role:
