@@ -114,7 +114,7 @@ class Owner(commands.Cog):
             except:
                 await ctx.send(f"Error while reloading {cog}.")
                 raise
-        await ctx.send(f"{'Cog '+', '.join(loaded)+' reloaded.' if loaded else ''}{(' Cog '+', '.join(notLoaded)+' were not found so not reloaded.') if notLoaded else ''}")
+        await ctx.send(f"{'Cog '+', '.join(loaded)+' reloaded.' if loaded else ''}{(' Cog '+', '.join(notLoaded)+' was not found so not reloaded.') if notLoaded else ''}")
         if allReloaded:
             self.bot.previousReload = ["*"]
         else:

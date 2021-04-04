@@ -37,7 +37,7 @@ class AutoMod(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self._last_member = None
-        self.wordWarnCooldown = {}
+        self.warnCooldown = {}
 
     @commands.group(aliases=["word_filter"])
     @commands.check(functions.has_modrole)
@@ -261,11 +261,11 @@ class AutoMod(commands.Cog):
                 words = [formatted_content]
             if (any(bannedWord in spaceless_content.lower() for bannedWord in bannedWilds) or any(bannedWord in words for bannedWord in bannedExacts)):
                 await message.delete()
-                if message.channel.id not in self.wordWarnCooldown:
-                    self.wordWarnCooldown[message.channel.id] = 0
-                if self.wordWarnCooldown[message.channel.id] < time.time():
+                if message.channel.id not in self.warnCooldown:
+                    self.warnCooldown[message.channel.id] = 0
+                if self.warnCooldown[message.channel.id] < time.time():
                     await message.channel.send(f"Watch your language {message.author.mention}",delete_after=2)
-                self.wordWarnCooldown[message.channel.id] = time.time()+2
+                self.warnCooldown[message.channel.id] = time.time()+2
         spamFilters = cursor.execute("SELECT * FROM spam_filters WHERE guild = ?",(message.guild.id,)).fetchone()
         if spamFilters:
             if spamFilters[1] > -1: # emoji limit enabled
@@ -275,19 +275,36 @@ class AutoMod(commands.Cog):
                 emojis += len(re.findall(customCheck,message.content))
                 if emojis > spamFilters[1]: # over the number of emojis the guild allows
                     await message.delete()
-                    if message.channel.id not in self.wordWarnCooldown:
-                        self.wordWarnCooldown[message.channel.id] = 0
-                    if self.wordWarnCooldown[message.channel.id] < time.time():
+                    if message.channel.id not in self.warnCooldown:
+                        self.warnCooldown[message.channel.id] = 0
+                    if self.warnCooldown[message.channel.id] < time.time():
                         await message.channel.send(f"Too many emojis! {message.author.mention}",delete_after=2)
-                    self.wordWarnCooldown[message.channel.id] = time.time()+2
+                    self.warnCooldown[message.channel.id] = time.time()+2
             if spamFilters[2] == 1: # invite censorship enabled:
                 if re.search(r"discord.gg/\S|discord.com/invite/\S|discordapp.com/invite/\S",message.content):
                     await message.delete()
-                    if message.channel.id not in self.wordWarnCooldown:
-                        self.wordWarnCooldown[message.channel.id] = 0
-                    if self.wordWarnCooldown[message.channel.id] < time.time():
+                    if message.channel.id not in self.warnCooldown:
+                        self.warnCooldown[message.channel.id] = 0
+                    if self.warnCooldown[message.channel.id] < time.time():
                         await message.channel.send(f"No invite links {message.author.mention}",delete_after=2)
-                    self.wordWarnCooldown[message.channel.id] = time.time()+2
+                    self.warnCooldown[message.channel.id] = time.time()+2
+            if spamFilters[3] > -1: # message spam limit
+                userMessages = [msg for msg in self.bot.cached_messages if msg.author == message.author and msg.created_at >= datetime.datetime.utcnow() - datetime.timedelta(seconds=5)]
+                if len(userMessages) >= spamFilters[3]:
+                    await message.delete()
+                    if message.channel.id not in self.warnCooldown:
+                        self.warnCooldown[message.channel.id] = 0
+                    if self.warnCooldown[message.channel.id] < time.time():
+                        await message.channel.send(f"No spamming {message.author.mention}",delete_after=2)
+                    self.warnCooldown[message.channel.id] = time.time()+2
+            if spamFilters[4] > -1:
+                if re.search(f"(.*.)(?=.*\\1{{{str(spamFilters[4]-1)},}})",message.content):
+                    await message.delete()
+                    if message.channel.id not in self.warnCooldown:
+                        self.warnCooldown[message.channel.id] = 0
+                    if self.warnCooldown[message.channel.id] < time.time():
+                        await message.channel.send(f"No spamming {message.author.mention}",delete_after=2)
+                    self.warnCooldown[message.channel.id] = time.time()+2
 
     @commands.Cog.listener()
     async def on_message(self,message):
