@@ -147,4 +147,4 @@ class Owner(commands.Cog):
                 prefix = (str(guildcommand[0]))
             except TypeError:
                 pass
-            await message.channel.send(f"My prefix here is `{prefix}`",delete_after=4)
+            await message.channel.send(f"My prefix here is `{prefix}`",delete_after=6)

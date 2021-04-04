@@ -15,7 +15,7 @@ import functions
 connection = sqlite3.connect("database.db")
 cursor = connection.cursor()
 
-async def filter_check(ctx):
+async def filter_pre_invoke(self,ctx):
     inDb = cursor.execute("SELECT * FROM message_filter WHERE guild = ?", (ctx.guild.id,)).fetchone()
     if (inDb is None): # Guild filter doesn't exist
         cursor.execute("INSERT INTO message_filter(guild,enabled,filterWildCard,filterExact) VALUES(?,?,?,?)",(ctx.guild.id,1,"",""))
@@ -29,13 +29,14 @@ class AutoMod(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self._last_member = None
-        self.bot.wordWarnCooldown = {}
+        self.wordWarnCooldown = {}
 
     @commands.group(name="filter",aliases=["messageFilter","message_filter"])
-    @commands.has_permissions(manage_guild=True)
-    @commands.check(filter_check)
+    @commands.check(functions.has_modrole)
+    @commands.before_invoke(filter_pre_invoke)
     async def messageFilter(self,ctx):
         """Modifies the server message word filter."""
+        print(ctx.invoked_subcommand)
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
 
@@ -154,7 +155,7 @@ class AutoMod(commands.Cog):
             return
         if isinstance(message.channel, discord.channel.DMChannel):
             return
-        if message.author.guild_permissions.manage_messages:
+        if functions.has_modrole(message) or functions.has_adminrole(message):
             return
         guildFilter = cursor.execute("SELECT * FROM message_filter WHERE guild = ?",(message.guild.id,)).fetchone() # Bad words.
         if not guildFilter:
@@ -172,11 +173,11 @@ class AutoMod(commands.Cog):
                 words = [message.content]
             if (any(bannedWord in message.content.lower() for bannedWord in bannedWilds) or any(bannedWord in words for bannedWord in bannedExacts)):
                 await message.delete()
-                if message.channel.id not in self.bot.wordWarnCooldown:
-                    self.bot.wordWarnCooldown[message.channel.id] = 0
-                if self.bot.wordWarnCooldown[message.channel.id] < time.time():
+                if message.channel.id not in self.wordWarnCooldown:
+                    self.wordWarnCooldown[message.channel.id] = 0
+                if self.wordWarnCooldown[message.channel.id] < time.time():
                     await message.channel.send(f"Watch your language {message.author.mention}",delete_after=2)
-                self.bot.wordWarnCooldown[message.channel.id] = time.time()+2
+                self.wordWarnCooldown[message.channel.id] = time.time()+2
         if False: # this should be a check for enabled emoji shit
             unicodeCheck = r"[^\w\s,.]"
             customCheck = r'<:\w*:\d*>'
@@ -184,11 +185,11 @@ class AutoMod(commands.Cog):
             emojis += len(re.findall(customCheck,message.content))
             if emojis > 5: # the number of emojis the guild allows
                 await message.delete()
-                if message.channel.id not in self.bot.wordWarnCooldown:
-                    self.bot.wordWarnCooldown[message.channel.id] = 0
-                if self.bot.wordWarnCooldown[message.channel.id] < time.time():
+                if message.channel.id not in self.wordWarnCooldown:
+                    self.wordWarnCooldown[message.channel.id] = 0
+                if self.wordWarnCooldown[message.channel.id] < time.time():
                     await message.channel.send(f"Too many emojis! {message.author.mention}",delete_after=2)
-                self.bot.wordWarnCooldown[message.channel.id] = time.time()+2
+                self.wordWarnCooldown[message.channel.id] = time.time()+2
 
     @commands.Cog.listener()
     async def on_message(self,message):
@@ -200,46 +201,49 @@ class AutoMod(commands.Cog):
         if isinstance(after.channel, discord.channel.DMChannel):
             return
         logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(after.guild.id,)).fetchone()
-        if logID and logID !=0 and not after.author.bot:
-            channel = after.guild.get_channel(logID[0])
-            editEmbed = discord.Embed(title=f"Message edited in {after.channel.name}", color=0xFFFF00)
-            editEmbed.set_author(name=str(after.author), icon_url=after.author.avatar_url)
-            now = datetime.datetime.now()
-            #difference
-            d = difflib.Differ()
-            beforecontent = discord.utils.escape_markdown(before.content)
-            aftercontent = discord.utils.escape_markdown(after.content)
-            result = list(d.compare(beforecontent.split(), aftercontent.split()))
-            start = []
-            end = []
-            for i in range(len(result)):
-                if result[i].startswith("- "):
-                    start.append("~~" + result[i].strip("- ")+ "~~")
-                elif result[i].startswith("+ "):
-                    end.append("*" + result[i].strip("+ ") + "*")
-                elif result[i].startswith("? "):
-                    pass
-                else:
-                    start.append(result[i].strip(" "))
-                    end.append(result[i].strip(" "))
-            #formats strikethroughs pretty
-            for i in range(len(start)):
-                try:
-                    if start[i].endswith("~~") and start[i+1].startswith("~~"):
-                        start[i] = start[i][:-2]
-                        start[i+1] = start[i+1][2:]
-                except IndexError:
-                    pass
-            editEmbed.add_field(name="Before", value=" ".join(start))
-            editEmbed.add_field(name="After", value=" ".join(end))
-            date = now.strftime("%Y-%m-%d, %H:%M:%S")
-            editEmbed.set_footer(text=f"edited at {date}")
-            await channel.send(embed=editEmbed)
+        if logID and not after.author.bot:
+            return
+        if not logID[0]:
+            return
+        channel = after.guild.get_channel(logID[0])
+        editEmbed = discord.Embed(title=f"Message edited in {after.channel.name}", color=0xFFFF00)
+        editEmbed.set_author(name=str(after.author), icon_url=after.author.avatar_url)
+        now = datetime.datetime.now()
+        #difference
+        d = difflib.Differ()
+        beforecontent = discord.utils.escape_markdown(before.content)
+        aftercontent = discord.utils.escape_markdown(after.content)
+        result = list(d.compare(beforecontent.split(), aftercontent.split()))
+        start = []
+        end = []
+        for i in range(len(result)):
+            if result[i].startswith("- "):
+                start.append("~~" + result[i].strip("- ")+ "~~")
+            elif result[i].startswith("+ "):
+                end.append("*" + result[i].strip("+ ") + "*")
+            elif result[i].startswith("? "):
+                pass
+            else:
+                start.append(result[i].strip(" "))
+                end.append(result[i].strip(" "))
+        #formats strikethroughs pretty
+        for i in range(len(start)):
+            try:
+                if start[i].endswith("~~") and start[i+1].startswith("~~"):
+                    start[i] = start[i][:-2]
+                    start[i+1] = start[i+1][2:]
+            except IndexError:
+                pass
+        editEmbed.add_field(name="Before", value=" ".join(start))
+        editEmbed.add_field(name="After", value=" ".join(end))
+        date = now.strftime("%Y-%m-%d, %H:%M:%S")
+        editEmbed.set_footer(text=f"edited at {date}")
+        await channel.send(embed=editEmbed)
 
     @commands.Cog.listener()
     async def on_message_delete(self, message):
         logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(message.guild.id,)).fetchone()
-        if logID and logID !=0 and not message.author.bot:
+        if logID and logID != 0 and not message.author.bot:
             channel = message.guild.get_channel(logID[0])
             deleteEmbed = discord.Embed(color=0xFF0000)
             deleteEmbed.set_author(name=str(message.author), icon_url=message.author.avatar_url)

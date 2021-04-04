@@ -6,15 +6,24 @@ cursor = con.cursor()
 
 def has_modrole(ctx):
     modrole = cursor.execute("SELECT moderator FROM role_ids WHERE guild = ?", (ctx.guild.id,)).fetchone()
-    member_roles = []
-    for role in ctx.author.roles:
-        member_roles.append(role.id)
+    member_roles = [role.id for role in ctx.author.roles]
     if modrole is None:
         return False
     elif (modrole[0] in member_roles):
         return True
     else:
         return False
+
+def has_adminrole(ctx):
+    adminrole = cursor.execute("SELECT admin FROM role_ids WHERE guild = ?", (ctx.guild.id,)).fetchone()
+    member_roles = [role.id for role in ctx.author.roles]
+    if adminrole is None:
+        return False
+    elif (adminrole[0] in member_roles):
+        return True
+    else:
+        return False
+
 
 class Sql:
     def newest_case(self):
