@@ -64,6 +64,7 @@ class AutoMod(commands.Cog):
                         new_filter = await r.text()
         elif (not ctx.message.attachments and new_filter is None):
             new_filter = ""
+        new_filter = re.sub("[^\w ]|_","",new_filter)
         if new_filter.endswith(";"):
             new_filter = new_filter[:-1]
         if new_filter.startswith(";"):
@@ -82,7 +83,7 @@ class AutoMod(commands.Cog):
     async def wordFilter_set_exact(self,ctx,*,new_filter=None):
         """Sets the exact filter."""
         new_filter = await self.new_filter_format(ctx,new_filter)
-        cursor.execute("UPDATE message_filter SET filterExact=? WHERE guild=?",(new_filter,ctx.guild.id))
+        cursor.execute("UPDATE message_filter SET filterExact=? WHERE guild=?",(new_filter.replace(" ",""),ctx.guild.id))
         connection.commit()
         await ctx.send("Filter set.")
 
@@ -91,7 +92,8 @@ class AutoMod(commands.Cog):
         """Adds specified words/phrases to filter.
         You can specify multiple words with spaces, to add something that includes a space you must encase it in ".
         To add a wildcard, prefix the word with `*`, for example `[p]filter add *mario luigi` would add mario to the wildcard filter and luigi to the exact.
-        For example `[p]filter add "mario and luigi"` would filter `mario and luigi` only and not `mario`, `and` or `luigi` separately"""
+        For example `[p]filter add "mario and luigi"` would filter `mario and luigi` only and not `mario`, `and` or `luigi` separately.
+        Filter words must not contain characters other than letters or spaces and exact words cannot contain spaces."""
         guildFilter = cursor.execute("SELECT * FROM message_filter WHERE guild = ?",(ctx.guild.id,)).fetchone()
         wildFilter = guildFilter[2].split(";")
         exactFilter = guildFilter[3].split(";")
@@ -104,13 +106,14 @@ class AutoMod(commands.Cog):
         if "" in wildFilter:
             wildFilter.remove("")
         for word in words:
+            word = re.sub("[^\w *]|_","",word)
             for w in word.split(";"):
                 if len(word) == 1:
                     continue
                 if word.startswith("*"):
-                    wildFilter.append(word[1:])
+                    wildFilter.append(word.replace("*",""))
                 else:
-                    exactFilter.append(word)
+                    exactFilter.append(word.replace(" ","").replace("*",""))
         wildFilter = ";".join(wildFilter)
         exactFilter = ";".join(exactFilter)
         cursor.execute("UPDATE message_filter SET filterWildCard=?, filterExact=? WHERE guild=?",(wildFilter,exactFilter,ctx.guild.id))
@@ -246,16 +249,16 @@ class AutoMod(commands.Cog):
         if guildFilter[1] == 1:
             bannedWilds = guildFilter[2].split(";")
             bannedExacts = guildFilter[3].split(";")
-            formetted_content = re.sub("[^\w ]", "", message.content)
-            spaceless_content = re.sub("[^\w]", "", message.content)
+            formatted_content = re.sub("[^\w ]|_", "", message.content)
+            spaceless_content = re.sub("[^\w]|_", "", message.content)
             if "" in bannedWilds:
                 bannedWilds.remove("")
             if "" in bannedExacts:
                 bannedExacts.remove("")
-            if " " in formetted_content.lower():
-                words = formetted_content.split(" ")
+            if " " in formatted_content.lower():
+                words = formatted_content.split(" ")
             else:
-                words = [formetted_content]
+                words = [formatted_content]
             if (any(bannedWord in spaceless_content.lower() for bannedWord in bannedWilds) or any(bannedWord in words for bannedWord in bannedExacts)):
                 await message.delete()
                 if message.channel.id not in self.wordWarnCooldown:

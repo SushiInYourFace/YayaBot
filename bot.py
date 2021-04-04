@@ -183,6 +183,8 @@ async def on_command_error(ctx, error):
         await ctx.send("I don't have permission to do that.")
     elif isinstance(error, commands.NotOwner):
         await ctx.send("You need to be owner to do that.")
+    elif isinstance(error,commands.ExpectedClosingQuoteError):
+        await ctx.send("You have inputted arguments incorrectly, you may have forgotten a closing \" or put one in by accident.")
     elif isinstance(error, commands.RoleNotFound):
         await ctx.send("That role could not be found.")
     else:
