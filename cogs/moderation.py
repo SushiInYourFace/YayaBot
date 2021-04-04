@@ -119,8 +119,8 @@ class Moderation(commands.Cog):
             timeformat = graveltime[-1]
             timevalue = graveltime[:-1]
         else:
-            await ctx.send("Oops! That's not a valid time format")
-            return
+            timeformat = "m"
+            timevalue = graveltime
         try:
             timevalue = int(timevalue)
         except ValueError:
@@ -153,8 +153,8 @@ class Moderation(commands.Cog):
             timeformat = mutetime[-1]
             timevalue = mutetime[:-1]
         else:
-            await ctx.send("Oops! That's not a valid time format")
-            return
+            timeformat = "m"
+            timevalue = mutetime
         try:
             timevalue = int(timevalue)
         except ValueError:
@@ -213,7 +213,11 @@ class Moderation(commands.Cog):
     @commands.check(functions.has_modrole)
     async def case(self, ctx, case:int):
         caseinfo = cursor.execute("SELECT id_in_guild, guild, user, type, reason, started, expires, moderator FROM caselog WHERE id = ?", (case,)).fetchone()
-        start = datetime.datetime.fromtimestamp(int(caseinfo[5])).strftime('%Y-%m-%d %H:%M:%S')
+        try:
+            start = datetime.datetime.fromtimestamp(int(caseinfo[5])).strftime('%Y-%m-%d %H:%M:%S')
+        except TypeError:
+            await ctx.send("Could not find that case number")
+            return
         if int(caseinfo[6]) != -1:
             totaltime = TimeConversions.fromseconds(int(int(caseinfo[6])) - int(caseinfo[5]))
         else:
