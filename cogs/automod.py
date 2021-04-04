@@ -64,6 +64,7 @@ class AutoMod(commands.Cog):
 
     @messageFilter_set.command(name="wild",aliases=["wildcard"])
     async def messageFilter_set_wild(self,ctx,*,new_filter=None):
+        """Sets the wildcard filter."""
         new_filter = await self.new_filter_format(ctx,new_filter)
         cursor.execute("UPDATE message_filter SET filterWildCard=? WHERE guild=?",(new_filter,ctx.guild.id))
         connection.commit()
@@ -71,6 +72,7 @@ class AutoMod(commands.Cog):
 
     @messageFilter_set.command(name="exact")
     async def messageFilter_set_exact(self,ctx,*,new_filter=None):
+        """Sets the exact filter."""
         new_filter = await self.new_filter_format(ctx,new_filter)
         cursor.execute("UPDATE message_filter SET filterExact=? WHERE guild=?",(new_filter,ctx.guild.id))
         connection.commit()
@@ -80,6 +82,7 @@ class AutoMod(commands.Cog):
     async def messageFilter_add(self,ctx,*words):
         """Adds specified words/phrases to filter.
         You can specify multiple words with spaces, to add something that includes a space you must encase it in ".
+        To add a wildcard, prefix the word with `*`, for example `[p]filter add *mario luigi` would add mario to the wildcard filter and luigi to the exact.
         For example `[p]filter add "mario and luigi"` would filter `mario and luigi` only and not `mario`, `and` or `luigi` separately"""
         guildFilter = cursor.execute("SELECT * FROM message_filter WHERE guild = ?",(ctx.guild.id,)).fetchone()
         wildFilter = guildFilter[2].split(";")
@@ -110,6 +113,7 @@ class AutoMod(commands.Cog):
     async def messageFilter_remove(self,ctx,*words):
         """Removes specified words/phrases from filter.
         You can specify multiple words with spaces, to remove something that includes a space you must encase it in ".
+        To remove a wildcard, prefix the word with `*`, for example `[p]filter remove *mario luigi` would remove mario from the wildcard filter and luigi from the exact.
         For example `[p]filter add "mario and luigi"` would remove `mario and luigi`"""
         guildFilter = cursor.execute("SELECT * FROM message_filter WHERE guild = ?",(ctx.guild.id,)).fetchone()
         wildFilter = guildFilter[2].split(";")
