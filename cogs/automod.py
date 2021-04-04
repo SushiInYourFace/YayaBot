@@ -269,7 +269,7 @@ class AutoMod(commands.Cog):
         spamFilters = cursor.execute("SELECT * FROM spam_filters WHERE guild = ?",(message.guild.id,)).fetchone()
         if spamFilters:
             if spamFilters[1] > -1: # emoji limit enabled
-                unicodeCheck = r"[^\w\s,.]"
+                unicodeCheck = re.compile('[\U00010000-\U0010ffff]', flags=re.UNICODE)
                 customCheck = r'<:\w*:\d*>'
                 emojis = len(re.findall(unicodeCheck,message.content))
                 emojis += len(re.findall(customCheck,message.content))
