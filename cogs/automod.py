@@ -181,15 +181,17 @@ class AutoMod(commands.Cog):
         if guildFilter[1] == 1:
             bannedWilds = guildFilter[2].split(";")
             bannedExacts = guildFilter[3].split(";")
+            formetted_content = re.sub("[^\w ]", "", message.content)
+            spaceless_content = re.sub("[^\w]", "", message.content)
             if "" in bannedWilds:
                 bannedWilds.remove("")
             if "" in bannedExacts:
                 bannedExacts.remove("")
-            if " " in message.content.lower():
-                words = message.content.split(" ")
+            if " " in formetted_content.lower():
+                words = formetted_content.split(" ")
             else:
-                words = [message.content]
-            if (any(bannedWord in message.content.lower() for bannedWord in bannedWilds) or any(bannedWord in words for bannedWord in bannedExacts)):
+                words = [formetted_content]
+            if (any(bannedWord in spaceless_content.lower() for bannedWord in bannedWilds) or any(bannedWord in words for bannedWord in bannedExacts)):
                 await message.delete()
                 if message.channel.id not in self.wordWarnCooldown:
                     self.wordWarnCooldown[message.channel.id] = 0
