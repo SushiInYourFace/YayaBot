@@ -1,11 +1,13 @@
+import datetime
+import io
+import platform
+import random
+import time
+
 import discord
 from discord.ext import commands
-import random
-import io
 from PIL import Image
-import platform
-import time
-import datetime
+
 
 class Community(commands.Cog):
     """Commands for the community!"""

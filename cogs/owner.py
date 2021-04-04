@@ -1,10 +1,11 @@
-import discord
-from discord.ext import commands
-import random
+import logging
 import os
+import random
 import sqlite3
 import typing
-import logging
+
+import discord
+from discord.ext import commands
 
 # Logging config
 logging.basicConfig(format='[%(asctime)s] %(levelname)s: %(message)s', level=logging.INFO)

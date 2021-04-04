@@ -1,9 +1,10 @@
+import asyncio
+import logging
+import sqlite3
+import time
+
 import discord
 from discord.ext import commands
-import sqlite3
-import logging
-import asyncio
-import time
 
 # Logging config
 logging.basicConfig(format='[%(asctime)s] %(levelname)s: %(message)s', level=logging.INFO)
