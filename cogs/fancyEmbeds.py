@@ -82,12 +82,12 @@ class fancyEmbeds(commands.Cog):
     @commands.check(functions.has_modrole)
     async def embed(self, ctx):
         if ctx.invoked_subcommand is None:
-            await self.bot.send_help(ctx)
+            await ctx.send_help(ctx.command)
 
     @embed.group(help="Manage your embed styles.")
     async def style(self, ctx):
         if ctx.invoked_subcommand is None:
-            await self.bot.send_help(ctx)
+            await ctx.send_help(ctx.command)
 
     @style.command(help="List available embed styles.")
     async def list(self, ctx):
@@ -180,7 +180,7 @@ class fancyEmbeds(commands.Cog):
     @style.group(help="Customize the properties of an embed style.")
     async def customize(self, ctx):
         if ctx.invoked_subcommand is None:
-            await self.bot.send_help(ctx)
+            await ctx.send_help(ctx.command)
 
     @customize.command(help="Change the colors of an embed style. Colors should use base16/hexcolor values.")
     async def color(self, ctx, style: str, color1, color2, color3, color4):
