@@ -53,6 +53,7 @@ class Owner(commands.Cog):
                     logging.info(f"{cog} loaded.")
                 except commands.ExtensionNotFound:
                     await ctx.send(f"Cog `{cog}` could not be found.")
+                    continue
                 except:
                     await ctx.send(f"Loading cog `{cog}` failed")
                     raise

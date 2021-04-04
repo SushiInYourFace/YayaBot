@@ -16,11 +16,6 @@ class Community(commands.Cog):
         rat = random.choice(open("resources/rats.txt").readlines())
         await ctx.send(rat)
 
-    #hello
-    @commands.command(help="Says hello")
-    async def hello(self, ctx):
-        await ctx.send("Hello there")
-
     @commands.command(help="Gives you the number of people in the server")
     async def membercount(self, ctx):
         await ctx.send(f"There are currently {ctx.guild.member_count} members in the server")
