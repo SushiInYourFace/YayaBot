@@ -36,7 +36,6 @@ class AutoMod(commands.Cog):
     @commands.before_invoke(filter_pre_invoke)
     async def messageFilter(self,ctx):
         """Modifies the server message word filter."""
-        print(ctx.invoked_subcommand)
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
 
