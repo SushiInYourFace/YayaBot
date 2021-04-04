@@ -3,6 +3,7 @@ from discord.ext import commands
 import sqlite3
 import logging
 import asyncio
+import time
 
 # Logging config
 logging.basicConfig(format='[%(asctime)s] %(levelname)s: %(message)s', level=logging.INFO)
@@ -125,6 +126,7 @@ con.commit()
 #startup
 @bot.event
 async def on_ready():
+    bot.startTime = time.time()
     appinfo = await bot.application_info()
     print("")
     logging.info(f"Bot started! Hello {str(appinfo.owner)}")
@@ -190,19 +192,6 @@ async def on_command_error(ctx, error):
     else:
         await ctx.send("Something has gone wrong somewhere, and most likely needs to be fixed")
         raise error
-
-#check for mod-only commands
-def has_modrole(ctx):
-    modrole = cursor.execute("SELECT moderator FROM role_ids WHERE guild = ?", (ctx.guild.id,)).fetchone()
-    member_roles = []
-    for role in ctx.member.roles:
-        member_roles.append(role.id)
-    if modrole is None:
-        return False
-    elif (modrole in member_roles):
-        return True
-    else:
-        return False
 
 bot.run(Token)
 print("Bot Session Ended")

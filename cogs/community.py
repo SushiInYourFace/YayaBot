@@ -3,6 +3,9 @@ from discord.ext import commands
 import random
 import io
 from PIL import Image
+import platform
+import time
+import datetime
 
 class Community(commands.Cog):
     """Commands for the community!"""
@@ -54,6 +57,23 @@ class Community(commands.Cog):
         arr.seek(0)
         return discord.File(arr,filename="worm.png"),wormColour
 
+    @commands.command(aliases=["info","bot"])
+    async def about(self,ctx):
+        """Sends some information about the bot like uptime, python version, discord.py version and instance owner!"""
+        currentTime = time.time()
+        uptime = int(round(currentTime - self.bot.startTime))
+        uptime = str(datetime.timedelta(seconds=uptime))
+        appinfo = await self.bot.application_info()
+        embed = discord.Embed(colour=discord.Colour.random(),description="YayaBot!")
+        embed.set_author(name="YayaBot", url="https://wwww.github.com/SushiInYourFace/YayaBot", icon_url=self.bot.user.avatar_url)
+        embed.set_footer(text=ctx.author.name, icon_url=ctx.author.avatar_url)
+        embed.add_field(name="Instance Owner:", value=appinfo.owner, inline=True)
+        embed.add_field(name="_ _", value="_ _", inline=True)
+        embed.add_field(name="Python Version:", value=f"[{platform.python_version()}](https://www.python.org)", inline=True)
+        embed.add_field(name="Bot Uptime:", value=f"{uptime}", inline=True)
+        embed.add_field(name="_ _", value="_ _", inline=True)
+        embed.add_field(name="Discord.py Version:", value=f"[{discord.__version__}](https://github.com/Rapptz/discord.py)", inline=True)
+        await ctx.send(embed=embed)
 
 def setup(bot):
     bot.add_cog(Community(bot))
