@@ -99,7 +99,7 @@ class AutoMod(commands.Cog):
             if word.startswith("*"):
                 wildFilter.append(word[1:])
             else:
-                guildFilter.append(word)
+                exactFilter.append(word)
         wildFilter = ";".join(wildFilter)
         exactFilter = ";".join(exactFilter)
         cursor.execute("UPDATE message_filter SET filterWildCard=?, filterExact=? WHERE guild=?",(wildFilter,exactFilter,ctx.guild.id))
@@ -149,7 +149,7 @@ class AutoMod(commands.Cog):
         await ctx.send(f"Filter now {'enabled' if enabled == 1 else 'disabled'}.")
 
     async def check_message(self,message):
-        if message.author == message.author.bot:
+        if message.author.bot:
             return
         if message.author.discriminator == "0000":
             return
@@ -201,7 +201,7 @@ class AutoMod(commands.Cog):
         if isinstance(after.channel, discord.channel.DMChannel):
             return
         logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(after.guild.id,)).fetchone()
-        if logID and not after.author.bot:
+        if after.author.bot:
             return
         if not logID[0]:
             return
