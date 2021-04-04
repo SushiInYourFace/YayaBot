@@ -226,15 +226,15 @@ class Utilities(commands.Cog):
         """Sends the text assosiated to your tag."""
         return
 
-    @tag.group(name="set",aliases=["new","add"])
+    @tag.group(name="add",aliases=["new","set"])
     @commands.check(functions.has_modrole)
-    async def tag_set(self,ctx):
+    async def tag_add(self,ctx):
         """Sets a tags text assosiation."""
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
 
-    @tag_set.command(name="text",aliases=["t"])
-    async def tag_set_text(self,ctx,tag,*,text):
+    @tag_add.command(name="text",aliases=["t"])
+    async def tag_add_text(self,ctx,tag,*,text):
         """Sets a tags text assosiation."""
         guildTags = cursor.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,)).fetchone()
         tags = json.loads(guildTags[2])
@@ -243,8 +243,8 @@ class Utilities(commands.Cog):
         connection.commit()
         await ctx.send("Tag updated.")
 
-    @tag_set.command(name="simpleEmbed",aliases=["se","simpleembed","simple_embed"])
-    async def tag_set_simpleEmbed(self,ctx,tag,title,*,description=None):
+    @tag_add.command(name="simpleEmbed",aliases=["se","simpleembed","simple_embed"])
+    async def tag_add_simpleEmbed(self,ctx,tag,title,*,description=None):
         """Creates a simple embed with only a title and description.
         Title must be in "s and has a character limit of 256.."""
         guildTags = cursor.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,)).fetchone()
@@ -254,10 +254,10 @@ class Utilities(commands.Cog):
         connection.commit()
         await ctx.send("Tag updated.")
 
-    @tag_set.command(name="embed",aliases=["e"])
-    async def tag_set_embed(self,ctx,tag,*,embed=None):
+    @tag_add.command(name="embed",aliases=["e"])
+    async def tag_add_embed(self,ctx,tag,*,embed=None):
         """Creates an embed tag from the dictionary given,
-        create an embed at https://leovoel.github.io/embed-visualizer/ and copy the JSON over.
+        create an embed at [https://leovoel.github.io/embed-visualizer/](https://leovoel.github.io/embed-visualizer/) and copy the JSON over.
         It must a be a single line with no newlines, this can be done easily by pasting it into a browser address bar and copying it again.
         If it is larger than 2000 characters you may send it as a text file.
         Note: timestamp will be ignored."""

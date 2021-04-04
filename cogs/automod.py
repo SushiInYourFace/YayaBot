@@ -289,9 +289,10 @@ class AutoMod(commands.Cog):
                         await message.channel.send(f"No invite links {message.author.mention}",delete_after=2)
                     self.warnCooldown[message.channel.id] = time.time()+2
             if spamFilters[3] > -1: # message spam limit
-                userMessages = [msg for msg in self.bot.cached_messages if msg.author == message.author and msg.created_at >= datetime.datetime.utcnow() - datetime.timedelta(seconds=5)]
+                fiveSecondsAgo = datetime.datetime.utcnow() - datetime.timedelta(seconds=5)
+                userMessages = [msg for msg in self.bot.cached_messages if msg.author == message.author and msg.created_at >= fiveSecondsAgo]
                 if len(userMessages) >= spamFilters[3]:
-                    await message.delete()
+                    await message.channel.delete_messages(userMessages)
                     if message.channel.id not in self.warnCooldown:
                         self.warnCooldown[message.channel.id] = 0
                     if self.warnCooldown[message.channel.id] < time.time():
