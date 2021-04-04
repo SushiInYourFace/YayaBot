@@ -334,9 +334,9 @@ class AutoMod(commands.Cog):
         end = []
         for i in range(len(result)):
             if result[i].startswith("- "):
-                start.append("~~" + result[i].strip("- ")+ "~~")
+                start.append("~~" + result[i][2:] + "~~")
             elif result[i].startswith("+ "):
-                end.append("*" + result[i].strip("+ ") + "*")
+                end.append("*" + result[i][2:] + "*")
             elif result[i].startswith("? "):
                 pass
             else:
