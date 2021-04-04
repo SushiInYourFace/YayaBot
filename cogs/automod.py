@@ -93,12 +93,13 @@ class AutoMod(commands.Cog):
         if "" in wildFilter:
             wildFilter.remove("")
         for word in words:
-            if len(word) == 1:
-                continue
-            if word.startswith("*"):
-                wildFilter.append(word[1:])
-            else:
-                exactFilter.append(word)
+            for w in word.split(";"):
+                if len(word) == 1:
+                    continue
+                if word.startswith("*"):
+                    wildFilter.append(word[1:])
+                else:
+                    exactFilter.append(word)
         wildFilter = ";".join(wildFilter)
         exactFilter = ";".join(exactFilter)
         cursor.execute("UPDATE message_filter SET filterWildCard=?, filterExact=? WHERE guild=?",(wildFilter,exactFilter,ctx.guild.id))
@@ -110,18 +111,32 @@ class AutoMod(commands.Cog):
         """Removes specified words/phrases from filter.
         You can specify multiple words with spaces, to remove something that includes a space you must encase it in ".
         For example `[p]filter add "mario and luigi"` would remove `mario and luigi`"""
-        guildFilter = cursor.execute("SELECT * FROM message_filter WHERE guild = ?",(ctx.guild.id,)).fetchone()[2]
-        guildFilter = guildFilter.split(";")
-        if "" in guildFilter:
-            guildFilter.remove("")
+        guildFilter = cursor.execute("SELECT * FROM message_filter WHERE guild = ?",(ctx.guild.id,)).fetchone()
+        wildFilter = guildFilter[2].split(";")
+        exactFilter = guildFilter[3].split(";")
+        if not exactFilter:
+            exactFilter = []
+        if not wildFilter:
+            wildFilter = []
+        if "" in exactFilter:
+            exactFilter.remove("")
+        if "" in wildFilter:
+            wildFilter.remove("")
         notFoundWords = []
         for word in words:
-            try:
-                guildFilter.remove(word)
-            except:
-                notFoundWords.append(word)
-        guildFilter = ";".join(guildFilter)
-        cursor.execute("UPDATE message_filter SET filter=? WHERE guild=?",(guildFilter,ctx.guild.id))
+            if word.startswith("*"):
+                try:
+                    wildFilter.remove(word[1:])
+                except:
+                    notFoundWords.append(word)
+            else:
+                try:
+                    exactFilter.remove(word)
+                except:
+                    notFoundWords.append(word)
+        wildFilter = ";".join(wildFilter)
+        exactFilter = ";".join(exactFilter)
+        cursor.execute("UPDATE message_filter SET filterWildCard=?, filterExact=? WHERE guild=?",(wildFilter,exactFilter,ctx.guild.id))
         connection.commit()
         await ctx.send(f"Removed from filter. {'The following words were not found so not removed: ' if notFoundWords else ''}{' '.join(notFoundWords) if notFoundWords else ''}")
         
