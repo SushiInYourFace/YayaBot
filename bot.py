@@ -48,8 +48,8 @@ class NewHelp(commands.HelpCommand):
                 continue
             if len(page[-1].fields) >= 24: # If no space for commands or no space at all
                 page.append(discord.Embed(colour=colour,title=titleDesc[0],description=titleDesc[1])) # New page
-            cogName = getattr(cog,'qualified_name','No Category')
-            cogDesc = '\n> '+ getattr(cog,"description",'...')
+            cogName = getattr(cog,'qualified_name','Other')
+            cogDesc = '\n> '+ getattr(cog,"description",'...') if not cogName == "Other" else "> Other commands that don't fit into a category."
             page[-1].add_field(name=f"> **{cogName}**", value=cogDesc, inline=False) # Add cog field
             for command in commands:
                 page[-1] = await self.create_help_field(self.context,page[-1],command)
@@ -134,6 +134,25 @@ async def on_ready():
     logging.info(f"I'm connected as {str(bot.user)} - {bot.user.id}!")
     logging.info(f"In {len(bot.guilds)} guilds overlooking {len(list(bot.get_all_channels()))} channels and {len(list(bot.get_all_members()))} users.")
     print("")
+
+@bot.command(aliases=["info","bot"])
+async def about(ctx):
+    """Sends some information about the bot!"""
+    currentTime = time.time()
+    uptime = int(round(currentTime - bot.startTime))
+    uptime = str(datetime.timedelta(seconds=uptime))
+    appinfo = await bot.application_info()
+    embed = discord.Embed(colour=discord.Colour.random(),description="YayaBot!")
+    embed.set_author(name="YayaBot", url="https://wwww.github.com/SushiInYourFace/YayaBot", icon_url=bot.user.avatar_url)
+    embed.set_footer(text=ctx.author.name, icon_url=ctx.author.avatar_url)
+    embed.add_field(name="Instance Owner:", value=appinfo.owner, inline=True)
+    embed.add_field(name="_ _", value="_ _", inline=True)
+    embed.add_field(name="Python Version:", value=f"[{platform.python_version()}](https://www.python.org)", inline=True)
+    embed.add_field(name="Bot Uptime:", value=f"{uptime}", inline=True)
+    embed.add_field(name="_ _", value="_ _", inline=True)
+    embed.add_field(name="Discord.py Version:", value=f"[{discord.__version__}](https://github.com/Rapptz/discord.py)", inline=True)
+    await ctx.send(embed=embed)
+
 
 #cogs to be loaded on startup
 default_extensions = [
