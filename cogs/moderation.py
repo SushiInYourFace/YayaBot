@@ -49,6 +49,13 @@ class Moderation(commands.Cog):
     @commands.command(help="bans a user")
     @commands.check(functions.has_modrole)
     async def ban(self, ctx, member : discord.Member, *, reason):
+        if not ctx.guild.me.guild_permissions.ban_members:
+            await ctx.send("I don't have permissions to ban people.")
+            return
+        elif ctx.guild.me.top_role <= member.top_role:
+            await ctx.send("I don't have permission to ban that member.")
+            return
+        await ctx.guild.ban(member, reason=reason)
         bantime = time.time()
         banEmbed = discord.Embed(title="You have been banned from "+ ctx.guild.name, color=0xFF0000)
         banEmbed.add_field(name="Ban reason:", value=reason)
@@ -57,7 +64,6 @@ class Moderation(commands.Cog):
             unsent = False
         except errors.HTTPException:
             unsent = True
-        await ctx.guild.ban(member, reason=reason)
         successEmbed = discord.Embed(title="Banned " + str(member), color=0xFF0000)
         if unsent:
             successEmbed.set_footer(text="Failed to send a message to the user" + str(member))
@@ -67,15 +73,21 @@ class Moderation(commands.Cog):
     @commands.command(help="kicks a user")
     @commands.check(functions.has_modrole)
     async def kick(self, ctx, member : discord.Member, *, reason):
+        if not ctx.guild.me.guild_permissions.kick_members:
+            await ctx.send("I don't have permissions to kick people.")
+            return
+        elif ctx.guild.me.top_role <= member.top_role:
+            await ctx.send("I don't have permission to kick that member.")
+            return
         kicktime = time.time()
         kickEmbed = discord.Embed(title="You have been kicked from "+ ctx.guild.name, color=0xFF0000)
         kickEmbed.add_field(name="Kick reason:", value=reason)
+        await ctx.guild.kick(member, reason=reason)
         try:
             await member.send(embed=kickEmbed)
             unsent = False
         except errors.HTTPException:
             unsent = True
-        await ctx.guild.kick(member, reason=reason)
         successEmbed = discord.Embed(title="Kicked " + str(member), color=0xFF0000)
         if unsent:
             successEmbed.set_footer(text="Failed to send a message to the user" + str(member))
