@@ -15,10 +15,18 @@ import functions
 connection = sqlite3.connect("database.db")
 cursor = connection.cursor()
 
-async def filter_pre_invoke(self,ctx):
+async def word_filter_pre_invoke(self,ctx):
     inDb = cursor.execute("SELECT * FROM message_filter WHERE guild = ?", (ctx.guild.id,)).fetchone()
     if (inDb is None): # Guild filter doesn't exist
         cursor.execute("INSERT INTO message_filter(guild,enabled,filterWildCard,filterExact) VALUES(?,?,?,?)",(ctx.guild.id,1,"",""))
+        connection.commit()
+        await ctx.send("Word filter created and enabled.")
+    return True
+
+async def spam_filter_pre_invoke(self,ctx):
+    inDb = cursor.execute("SELECT * FROM spam_filters WHERE guild = ?", (ctx.guild.id,)).fetchone()
+    if (inDb is None): # Guild filter doesn't exist
+        cursor.execute("INSERT INTO spam_filters(guild,emoji_limit,invite_filter,message_spam_limit,character_repeat_limit) VALUES(?,?,?,?,?)",(ctx.guild.id,-1,0,-1,-1))
         connection.commit()
         await ctx.send("Filter created and enabled.")
     return True
@@ -31,16 +39,16 @@ class AutoMod(commands.Cog):
         self._last_member = None
         self.wordWarnCooldown = {}
 
-    @commands.group(name="filter",aliases=["messageFilter","message_filter"])
+    @commands.group(aliases=["word_filter"])
     @commands.check(functions.has_modrole)
-    @commands.before_invoke(filter_pre_invoke)
-    async def messageFilter(self,ctx):
+    @commands.before_invoke(word_filter_pre_invoke)
+    async def wordFilter(self,ctx):
         """Modifies the server message word filter."""
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
 
-    @messageFilter.group(name="set")
-    async def messageFilter_set(self,ctx):
+    @wordFilter.group(name="set")
+    async def wordFilter_set(self,ctx):
         """Sets the server message filter to the specified string or contents of a supplied text file if the desired filter is longer than 2000 characters.
         Each word/phrase to be filtered should be separated by ;
         For exmaple to filter both mark and john you'd put `mark;john`
@@ -62,24 +70,24 @@ class AutoMod(commands.Cog):
             new_filter = new_filter[1:]
         return new_filter
 
-    @messageFilter_set.command(name="wild",aliases=["wildcard"])
-    async def messageFilter_set_wild(self,ctx,*,new_filter=None):
+    @wordFilter_set.command(name="wild",aliases=["wildcard"])
+    async def wordFilter_set_wild(self,ctx,*,new_filter=None):
         """Sets the wildcard filter."""
         new_filter = await self.new_filter_format(ctx,new_filter)
         cursor.execute("UPDATE message_filter SET filterWildCard=? WHERE guild=?",(new_filter,ctx.guild.id))
         connection.commit()
         await ctx.send("Filter set.")
 
-    @messageFilter_set.command(name="exact")
-    async def messageFilter_set_exact(self,ctx,*,new_filter=None):
+    @wordFilter_set.command(name="exact")
+    async def wordFilter_set_exact(self,ctx,*,new_filter=None):
         """Sets the exact filter."""
         new_filter = await self.new_filter_format(ctx,new_filter)
         cursor.execute("UPDATE message_filter SET filterExact=? WHERE guild=?",(new_filter,ctx.guild.id))
         connection.commit()
         await ctx.send("Filter set.")
 
-    @messageFilter.command(name="add")
-    async def messageFilter_add(self,ctx,*words):
+    @wordFilter.command(name="add")
+    async def wordFilter_add(self,ctx,*words):
         """Adds specified words/phrases to filter.
         You can specify multiple words with spaces, to add something that includes a space you must encase it in ".
         To add a wildcard, prefix the word with `*`, for example `[p]filter add *mario luigi` would add mario to the wildcard filter and luigi to the exact.
@@ -109,8 +117,8 @@ class AutoMod(commands.Cog):
         connection.commit()
         await ctx.send("Added to filter.")
 
-    @messageFilter.command(name="remove",aliases=["del","delete"])
-    async def messageFilter_remove(self,ctx,*words):
+    @wordFilter.command(name="remove",aliases=["del","delete"])
+    async def wordFilter_remove(self,ctx,*words):
         """Removes specified words/phrases from filter.
         You can specify multiple words with spaces, to remove something that includes a space you must encase it in ".
         To remove a wildcard, prefix the word with `*`, for example `[p]filter remove *mario luigi` would remove mario from the wildcard filter and luigi from the exact.
@@ -144,8 +152,8 @@ class AutoMod(commands.Cog):
         connection.commit()
         await ctx.send(f"Removed from filter. {'The following words were not found so not removed: ' if notFoundWords else ''}{' '.join(notFoundWords) if notFoundWords else ''}")
         
-    @messageFilter.command(name="get",aliases=["list"])
-    async def messageFilter_get(self,ctx):
+    @wordFilter.command(name="get",aliases=["list"])
+    async def wordFilter_get(self,ctx):
         """Sends the filter.
         Usually sent as a message but is sent as a text file if it's over 2000 characters"""
         guildFilter = cursor.execute("SELECT * FROM message_filter WHERE guild = ?",(ctx.guild.id,)).fetchone()
@@ -157,14 +165,71 @@ class AutoMod(commands.Cog):
             f = discord.File(fp,filename="filter.txt")
             await ctx.send("Filter is too large so is sent as a file:",file=f)    
 
-    @messageFilter.command(name="toggle")
-    async def messageFilter_toggle(self,ctx):
+    @wordFilter.command(name="toggle")
+    async def wordFilter_toggle(self,ctx):
         """Toggles whether the filter is on or not."""
         enabled = cursor.execute("SELECT * FROM message_filter WHERE guild = ?",(ctx.guild.id,)).fetchone()[1]
         enabled = 1 if enabled == 0 else 0
         cursor.execute("UPDATE message_filter SET enabled=? WHERE guild=?",(enabled,ctx.guild.id))
         connection.commit()
         await ctx.send(f"Filter now {'enabled' if enabled == 1 else 'disabled'}.")
+
+    @commands.group(name="spamFilter",aliases=["spam_filter"])
+    @commands.check(functions.has_modrole)
+    @commands.before_invoke(spam_filter_pre_invoke)
+    async def spamFilter(self,ctx):
+        """Set various filters to help reduce spam!"""
+        if ctx.invoked_subcommand is None:
+            await ctx.send_help(ctx.command)
+
+    @spamFilter.group(name="get",aliases=["list"])
+    async def spamFilter_get(self,ctx):
+        """Sends current values for the spam filters."""
+        values = cursor.execute("SELECT * FROM spam_filters WHERE guild = ?",(ctx.guild.id,)).fetchone()
+        if values:
+            embed = discord.Embed(colour=discord.Colour.random(),title="Spam Filters:")
+            embed.set_footer(text=ctx.author.name, icon_url=ctx.author.avatar_url)
+            embed.add_field(name="Emoji Limit:", value=(values[1] if values[1] > -1 else 'disabled'))
+            embed.add_field(name="Invite Filter:", value=('enabled' if values[2] == 1 else 'disabled'))
+            embed.add_field(name="Message Spam Limit:", value=(values[3] if values[3] > -1 else 'disabled'))
+            embed.add_field(name="Character Repeat Limit:", value=(values[4] if values[4] > -1 else 'disabled'))
+            await ctx.send(embed=embed)
+
+    @spamFilter.command(name="invites")
+    async def spamFilter_invites(self,ctx):
+        """Toggles if invites are filtered."""
+        enabled = cursor.execute("SELECT invite_filter FROM spam_filters WHERE guild = ?",(ctx.guild.id,)).fetchone()[0]
+        enabled = 1 if enabled == 0 else 0
+        cursor.execute("UPDATE spam_filters SET invite_filter=? WHERE guild=?",(enabled,ctx.guild.id))
+        connection.commit()
+        await ctx.send(f"Invite filter now {'enabled' if enabled == 1 else 'disabled'}.")
+
+    @spamFilter.command(name="emoji")
+    async def spamFilter_emoji(self,ctx,limit:int=None):
+        """Sets emoji limit. To remove, don't specify a limit."""
+        if not limit:
+            limit = -1
+        cursor.execute("UPDATE spam_filters SET emoji_limit=? WHERE guild=?",(limit,ctx.guild.id))
+        connection.commit()
+        await ctx.send(f"Emoji limit now {limit if limit > -1 else 'disabled'}.")
+
+    @spamFilter.command(name="messageLimit",aliases=["message_limit"])
+    async def spamFilter_messageLimit(self,ctx,limit:int=None):
+        """Sets the limit for messages sent within 5 seconds. To remove, don't specify a limit."""
+        if not limit:
+            limit = -1
+        cursor.execute("UPDATE spam_filters SET message_spam_limit=? WHERE guild=?",(limit,ctx.guild.id))
+        connection.commit()
+        await ctx.send(f"Message limit now {limit if limit > -1 else 'disabled'}.")
+
+    @spamFilter.command(name="repeatingLimit",aliases=["repeating_limit"])
+    async def spamFilter_repeatingLimit(self,ctx,limit:int=None):
+        """Sets the limit for repeating characters in a message. To remove don't specify a limit."""
+        if not limit:
+            limit = -1
+        cursor.execute("UPDATE spam_filters SET character_repeat_limit=? WHERE guild=?",(limit,ctx.guild.id))
+        connection.commit()
+        await ctx.send(f"Character repeat limit now {limit if limit > -1 else 'disabled'}.")
 
     async def check_message(self,message):
         if message.author.bot:
@@ -198,18 +263,28 @@ class AutoMod(commands.Cog):
                 if self.wordWarnCooldown[message.channel.id] < time.time():
                     await message.channel.send(f"Watch your language {message.author.mention}",delete_after=2)
                 self.wordWarnCooldown[message.channel.id] = time.time()+2
-        if False: # this should be a check for enabled emoji shit
-            unicodeCheck = r"[^\w\s,.]"
-            customCheck = r'<:\w*:\d*>'
-            emojis = len(re.findall(unicodeCheck,message.content))
-            emojis += len(re.findall(customCheck,message.content))
-            if emojis > 5: # the number of emojis the guild allows
-                await message.delete()
-                if message.channel.id not in self.wordWarnCooldown:
-                    self.wordWarnCooldown[message.channel.id] = 0
-                if self.wordWarnCooldown[message.channel.id] < time.time():
-                    await message.channel.send(f"Too many emojis! {message.author.mention}",delete_after=2)
-                self.wordWarnCooldown[message.channel.id] = time.time()+2
+        spamFilters = cursor.execute("SELECT * FROM spam_filters WHERE guild = ?",(message.guild.id,)).fetchone()
+        if spamFilters:
+            if spamFilters[1] > -1: # emoji limit enabled
+                unicodeCheck = r"[^\w\s,.]"
+                customCheck = r'<:\w*:\d*>'
+                emojis = len(re.findall(unicodeCheck,message.content))
+                emojis += len(re.findall(customCheck,message.content))
+                if emojis > spamFilters[1]: # over the number of emojis the guild allows
+                    await message.delete()
+                    if message.channel.id not in self.wordWarnCooldown:
+                        self.wordWarnCooldown[message.channel.id] = 0
+                    if self.wordWarnCooldown[message.channel.id] < time.time():
+                        await message.channel.send(f"Too many emojis! {message.author.mention}",delete_after=2)
+                    self.wordWarnCooldown[message.channel.id] = time.time()+2
+            if spamFilters[2] == 1: # invite censorship enabled:
+                if re.search(r"discord.gg/\S|discord.com/invite/\S|discordapp.com/invite/\S",message.content):
+                    await message.delete()
+                    if message.channel.id not in self.wordWarnCooldown:
+                        self.wordWarnCooldown[message.channel.id] = 0
+                    if self.wordWarnCooldown[message.channel.id] < time.time():
+                        await message.channel.send(f"No invite links {message.author.mention}",delete_after=2)
+                    self.wordWarnCooldown[message.channel.id] = time.time()+2
 
     @commands.Cog.listener()
     async def on_message(self,message):
