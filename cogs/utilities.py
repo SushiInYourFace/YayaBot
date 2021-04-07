@@ -1,10 +1,13 @@
-import discord
-from discord.ext import commands
-import sqlite3
 import asyncio
 import json
 import random
+import sqlite3
+
 import aiohttp
+import discord
+from discord.ext import commands
+
+import functions
 
 
 #sets up SQLite
@@ -12,6 +15,8 @@ connection = sqlite3.connect("database.db")
 cursor = connection.cursor()
 
 async def tag_check(ctx):
+    if ctx.invoked_with == "help":
+        return True
     tags = cursor.execute("SELECT * FROM tags WHERE guild = ?", (ctx.guild.id,)).fetchone()
     if (tags is None and ctx.author.guild_permissions.manage_messages): # No guild tags and the user can manage messages
         if not (ctx.command.root_parent == "tag" or ctx.command.name == "tag"): # Check is not coming from a tag command so return True
@@ -35,7 +40,7 @@ class Utilities(commands.Cog):
         self._last_member = None
 
     @commands.group(name="setup", help="setup some (or all) features of the bot", aliases=["su",])
-    @commands.has_permissions(administrator=True)
+    @commands.check_any(commands.has_permissions(administrator=True),commands.check(functions.has_adminrole))
     async def setup(self,ctx):
         if ctx.invoked_subcommand is None:
             await ctx.invoke(self.bot.get_command('setup all'),)
@@ -44,98 +49,105 @@ class Utilities(commands.Cog):
     async def setup_prefix(self, ctx, prefix):
         cursor.execute("INSERT INTO guild_prefixes(guild,prefix) VALUES(?, ?) ON CONFLICT(guild) DO UPDATE SET prefix=excluded.prefix", (ctx.guild.id, prefix))
         connection.commit()
-        await ctx.send("Your new server-specific prefex is " + prefix)
+        await ctx.send("Your new server-specific prefix is " + prefix)
 
     #all, chonky function
     @setup.command(help="Sets up all the bot's features", name="all")
     async def setup_all(self, ctx):
         guild = ctx.guild
         await ctx.send("Beginning server set-up")
-        await ctx.send("First, please give the ID (it will be a number) of your gravel role")
+        await ctx.send("First, please say the name of your gravel role. (case sensitive)")
         def check(response):
             return response.channel == ctx.channel and response.author == ctx.author
-        try:
-            gravel = await self.bot.wait_for('message', timeout=60.0, check=check)
-        except asyncio.TimeoutError:
-            await ctx.send("No response received. Cancelling")
-            return
-        gravel = gravel.content
-        try:
-            gravelRole = guild.get_role(int(gravel))
-        except ValueError:
-            gravelRole = False
-        if not gravelRole:
-            await ctx.send("That does not appear to be a valid role ID. Cancelling")
-            return
-        await ctx.send("Next, please give the ID of your muted role")
-        try:
-            muted = await self.bot.wait_for('message', timeout=60.0, check=check)
-        except asyncio.TimeoutError:
-            await ctx.send("No response recieved. Cancelling")
-            return
-        muted = muted.content
-        try:
-            mutedRole = guild.get_role(int(muted))
-        except ValueError:
-            mutedRole = False
-        if not mutedRole:
-            await ctx.send("That does not appear to be a valid role ID. Cancelling")
-            return
-        await ctx.send("Ok, now please tell me what the ID is for your moderator role (people with this role will be able to use mod-only commands)")
-        try:
-            moderator = await self.bot.wait_for('message', timeout=60.0, check=check)
-        except asyncio.TimeoutError:
-            await ctx.send("No response recieved. Cancelling")
-            return
-        moderator = moderator.content
-        try:
-            modrole = guild.get_role(int(moderator))
-        except ValueError:
-            modrole = False
-        if not modrole:
-            await ctx.send("That does not appear to be a valid role ID. Cancelling")
-            return
-        await ctx.send("Almost there! Please send me your modlog channel, or type \"None\" if you do not want a modlog channel")
-        try:
-            modlogs = await self.bot.wait_for('message', timeout=60.0, check=check)
-        except asyncio.TimeoutError:
-            await ctx.send("No response recieved. Cancelling")
-            return
-        modlogs = modlogs.content
-        if modlogs != "None" and modlogs != "none":
+        async def get_message():
             try:
-                logchannel = guild.get_channel(int(modlogs[2:-1]))
-            except ValueError:
-                logchannel = False
-            if not logchannel:
-                await ctx.send("That does not appear to be a valid channel ID. Cancelling")
+                message = await self.bot.wait_for('message', timeout=60.0, check=check)
+                return message
+            except asyncio.TimeoutError:
+                await ctx.send("No response received. Cancelling")
+                return
+        message = await get_message()
+        try:
+            gravelRole = await commands.RoleConverter().convert(ctx,message.content)
+        except commands.RoleNotFound:
+            await ctx.send("That does not appear to be a valid role. Cancelling")
+            return
+        await ctx.send("Next, please give the name of your muted role.")
+        message = await get_message()
+        try:
+            mutedRole = await commands.RoleConverter().convert(ctx,message.content)
+        except commands.RoleNotFound:
+            await ctx.send("That does not appear to be a valid role. Cancelling")
+            return
+        await ctx.send("Ok, now please tell me what the name is for your moderator role (people with this role will be able to use mod-only commands).")
+        message = await get_message()
+        try:
+            modRole = await commands.RoleConverter().convert(ctx,message.content)
+        except commands.RoleNotFound:
+            await ctx.send("That does not appear to be a valid role. Cancelling")
+            return
+        await ctx.send("Now for the name of your admin role (people with this role will be able to use admin-only commands).")
+        message = await get_message()
+        try:
+            adminRole = await commands.RoleConverter().convert(ctx,message.content)
+        except commands.RoleNotFound:
+            await ctx.send("That does not appear to be a valid role. Cancelling")
+            return
+        await ctx.send("Enter the name of your commands role or 'none' for no role (if supplied, this role will be required to use any commands).")
+        message = await get_message()
+        if message.content.lower() != "none":
+            try:
+                commandRole = await commands.RoleConverter().convert(ctx,message.content)
+            except commands.RoleNotFound:
+                await ctx.send("That does not appear to be a valid role. Cancelling")
                 return
         else:
-            modlogs = 0
+            commandRole = None
+        await ctx.send("Enter the cooldown for your commands (in milliseconds) or type 'none' for no cooldown (cooldown does not apply to mods and admins).")
+        message = await get_message()
+        if message.content.lower() != "none":
+            try:
+                commandCooldown = int(message.content)
+            except ValueError:
+                await ctx.send("That does not appear to be a valid number. Cancelling")
+                return
+        else:
+            commandCooldown = 0
+        await ctx.send("Almost there! Please send me your modlog channel, or type \"None\" if you do not want a modlog channel.")
+        message = await get_message()
+        if message.content.lower() != "none":
+            try:
+                logChannel = await commands.TextChannelConverter().convert(ctx,message.content)
+            except commands.ChannelNotFound:
+                await ctx.send("That does not appear to be a valid channel. Cancelling")
+                return
+        else:
+            logChannel = None
         await ctx.send("Last, please tell me what prefix you would like to use for commands")
-        try:
-            prefix = await self.bot.wait_for('message', timeout=60.0, check=check)
-        except asyncio.TimeoutError:
-            await ctx.send("No response recieved. Cancelling")
-            return
-        cursor.execute("INSERT INTO guild_prefixes(guild,prefix) VALUES(?, ?) ON CONFLICT(guild) DO UPDATE SET prefix=excluded.prefix", (guild.id, prefix.content))
-        cursor.execute("INSERT INTO role_ids(guild,gravel,muted,moderator, modlogs) VALUES(?, ?, ?, ?, ?) ON CONFLICT(guild) DO UPDATE SET gravel=excluded.gravel, muted=excluded.muted, moderator=excluded.moderator, modlogs=excluded.modlogs", (guild.id, gravel, muted, moderator, modlogs[2:-1]))
+        prefix = await get_message()
 
+        cursor.execute("INSERT INTO guild_prefixes(guild,prefix) VALUES(?, ?) ON CONFLICT(guild) DO UPDATE SET prefix=excluded.prefix", (guild.id, prefix.content))
+        cursor.execute("INSERT INTO role_ids(guild,gravel,muted,moderator,admin,modlogs,command_usage,command_cooldown) VALUES(?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(guild) DO UPDATE SET gravel=excluded.gravel, muted=excluded.muted, moderator=excluded.moderator, admin=excluded.admin, modlogs=excluded.modlogs, command_usage=excluded.command_usage, command_cooldown=excluded.command_cooldown", (guild.id, gravelRole.id, mutedRole.id, modRole.id, adminRole.id, getattr(logChannel,"id",0), getattr(commandRole,"id",0),commandCooldown))
         connection.commit()
+
         response = discord.Embed(title="Server set up successfully!", color=0x00FF00)
         response.add_field(name="Gravel role", value=gravelRole.mention) 
         response.add_field(name="Muted role", value=mutedRole.mention)
-        response.add_field(name="Moderator role", value=modrole.mention)
-        response.add_field(name="Modlog channel", value=logchannel.mention)
+        response.add_field(name="Moderator role", value=modRole.mention)
+        response.add_field(name="Admin role", value=adminRole.mention)
+        response.add_field(name="Modlog channel", value=getattr(logChannel,"mention","None"))
+        response.add_field(name="Command role", value=getattr(commandRole,"mention","None"))
+        response.add_field(name="Command cooldown", value=commandCooldown)
+        response.add_field(name="Prefix", value=f"`{prefix.content}`")
         await ctx.send(embed=response)
 
-    @setup.command(name="modlogs", help="Specifies the channel to be used for modlogs", aliases=["logchannel", "modlog", "logs",])
-    async def setup_modlogs(self, ctx, channelID):
-        if channelID != "None" and channelID != "none":
+    @setup.command(name="modlogs", help="Specifies the channel to be used for modlogs, do not specify a channel to remove logs.", aliases=["logchannel", "modlog", "logs",])
+    async def setup_modlogs(self, ctx, channel:discord.TextChannel=None):
+        if channel:
             try:
-                logchannel = ctx.guild.get_channel(int(channelID[2:-1]))
-                await logchannel.send("Set up modlogs in this channel!")
-                cursor.execute("INSERT INTO role_ids(guild, modlogs) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET modlogs=excluded.modlogs", (ctx.guild.id, channelID))
+                await channel.send("Set up modlogs in this channel!")
+                await ctx.send(f"Set up modlogs in {channel.mention}!")
+                cursor.execute("INSERT INTO role_ids(guild, modlogs) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET modlogs=excluded.modlogs", (ctx.guild.id, channel.id))
             except:
                 await ctx.send("Something went wrong. Please make sure you specify a valid channel, and that I have permissions to send messages to it")
                 return
@@ -145,46 +157,46 @@ class Utilities(commands.Cog):
         connection.commit()
 
     @setup.command(name="gravel", help="Specifies the role given to someone who is graveled", aliases=["gravelrole",])
-    async def setup_gravel(self, ctx, roleID):
-        try: 
-            if (role := ctx.guild.get_role(int(roleID))) is not None:
-                cursor.execute("INSERT INTO role_ids(guild, gravel) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET gravel=excluded.gravel", (ctx.guild.id, roleID))
-                connection.commit()
-                embed = discord.Embed(title=f"Gravel role set to {role.mention}")
-                await ctx.send(embed=embed)
-                #TODO: Change this to actually mention the role
-            else:
-                await ctx.send("Something went wrong. Please make sure you specify a valid role ID")
-        except ValueError:
-            await ctx.send("Something went wrong. Please make sure you specify a valid role ID")
+    async def setup_gravel(self, ctx, role:discord.Role):
+        cursor.execute("INSERT INTO role_ids(guild, gravel) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET gravel=excluded.gravel", (ctx.guild.id, role.id))
+        connection.commit()
+        embed = discord.Embed(title="Gravel role set",description=role.mention)
+        await ctx.send(embed=embed)
         
     @setup.command(name="mute", help="Specifies the role given to someone who is muted", aliases=["muterole", "muted", "mutedrole"])
-    async def setup_mute(self, ctx, roleID):
-        try: 
-            if (role := ctx.guild.get_role(int(roleID))) is not None:
-                cursor.execute("INSERT INTO role_ids(guild, muted) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET muted=excluded.muted", (ctx.guild.id, roleID))
-                connection.commit()
-                embed = discord.Embed(title=f"muted role set to {role.mention}")
-                await ctx.send(embed=embed)
-                #TODO: Change this to actually mention the role
-            else:
-                await ctx.send("Something went wrong. Please make sure you specify a valid role ID")
-        except ValueError:
-            await ctx.send("Something went wrong. Please make sure you specify a valid role ID")
+    async def setup_mute(self, ctx, role:discord.Role):
+        cursor.execute("INSERT INTO role_ids(guild, muted) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET muted=excluded.muted", (ctx.guild.id, role.id))
+        connection.commit()
+        embed = discord.Embed(title="Muted role set",description=role.mention)
+        await ctx.send(embed=embed)
 
     @setup.command(name="moderator", help="Sets the role used to determine whether a user can use moderation commands", aliases=["mod", "modrole"])
-    async def setup_moderator(self, ctx, roleID):
-        try: 
-            if (role := ctx.guild.get_role(int(roleID))) is not None:
-                cursor.execute("INSERT INTO role_ids(guild, moderator) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET moderator=excluded.moderator", (ctx.guild.id, roleID))
-                connection.commit()
-                embed = discord.Embed(title=f"Moderator role set to {role.mention}")
-                await ctx.send(embed=embed)
-                #TODO: Change this to actually mention the role
-            else:
-                await ctx.send("Something went wrong. Please make sure you specify a valid role ID")
-        except ValueError:
-            await ctx.send("Something went wrong. Please make sure you specify a valid role ID")
+    async def setup_moderator(self, ctx, role:discord.Role):
+        cursor.execute("INSERT INTO role_ids(guild, moderator) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET moderator=excluded.moderator", (ctx.guild.id, role.id))
+        connection.commit()
+        embed = discord.Embed(title="Moderator role set",description=role.mention)
+        await ctx.send(embed=embed)
+
+    @setup.command(name="admin", help="Sets the role used to determine whether a user can use admin commands", aliases=["adminrole"])
+    async def setup_admin(self, ctx, role:discord.Role):
+        cursor.execute("INSERT INTO role_ids(guild, admin) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET admin=excluded.admin", (ctx.guild.id, role.id))
+        connection.commit()
+        embed = discord.Embed(title="Admin role set",description=role.mention)
+        await ctx.send(embed=embed)
+
+    @setup.command(name="command", help="Sets the role used to determine whether a user can use commands", aliases=["commandrole"])
+    async def setup_command(self, ctx, role:discord.Role=None):
+        cursor.execute("INSERT INTO role_ids(guild, command_usage) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET command_usage=excluded.command_usage", (ctx.guild.id, getattr(role,"id",0)))
+        connection.commit()
+        embed = discord.Embed(title="Command role set",description=getattr(role,"id","None"))
+        await ctx.send(embed=embed)
+
+    @setup.command(name="cooldown", help="Sets the cooldown (in ms) between command uses", aliases=["commandCooldown","command_cooldown"])
+    async def setup_cooldown(self, ctx, cooldown:int=0):
+        cursor.execute("INSERT INTO role_ids(guild, command_cooldown) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET command_cooldown=excluded.command_cooldown", (ctx.guild.id, cooldown))
+        connection.commit()
+        embed = discord.Embed(title="Cooldown set",description=str(cooldown)+"ms")
+        await ctx.send(embed=embed)
 
 
     @commands.group(aliases=["t"])
@@ -215,16 +227,15 @@ class Utilities(commands.Cog):
         """Sends the text assosiated to your tag."""
         return
 
-    @tag.group(name="set",aliases=["new","add"])
-    @commands.has_permissions(manage_messages=True)
-    async def tag_set(self,ctx):
+    @tag.group(name="add",aliases=["new","set"])
+    @commands.check(functions.has_modrole)
+    async def tag_add(self,ctx):
         """Sets a tags text assosiation."""
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
 
-    @tag_set.command(name="text",aliases=["t"])
-    @commands.has_permissions(manage_messages=True)
-    async def tag_set_text(self,ctx,tag,*,text):
+    @tag_add.command(name="text",aliases=["t"])
+    async def tag_add_text(self,ctx,tag,*,text):
         """Sets a tags text assosiation."""
         guildTags = cursor.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,)).fetchone()
         tags = json.loads(guildTags[2])
@@ -233,8 +244,8 @@ class Utilities(commands.Cog):
         connection.commit()
         await ctx.send("Tag updated.")
 
-    @tag_set.command(name="simpleEmbed",aliases=["se","simpleembed","simple_embed"])
-    async def tag_set_simpleEmbed(self,ctx,tag,title,*,description=None):
+    @tag_add.command(name="simpleEmbed",aliases=["se","simpleembed","simple_embed"])
+    async def tag_add_simpleEmbed(self,ctx,tag,title,*,description=None):
         """Creates a simple embed with only a title and description.
         Title must be in "s and has a character limit of 256.."""
         guildTags = cursor.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,)).fetchone()
@@ -244,10 +255,10 @@ class Utilities(commands.Cog):
         connection.commit()
         await ctx.send("Tag updated.")
 
-    @tag_set.command(name="embed",aliases=["e"])
-    async def tag_set_embed(self,ctx,tag,*,embed=None):
+    @tag_add.command(name="embed",aliases=["e"])
+    async def tag_add_embed(self,ctx,tag,*,embed=None):
         """Creates an embed tag from the dictionary given,
-        create an embed at https://leovoel.github.io/embed-visualizer/ and copy the JSON over.
+        create an embed at [https://leovoel.github.io/embed-visualizer/](https://leovoel.github.io/embed-visualizer/) and copy the JSON over.
         It must a be a single line with no newlines, this can be done easily by pasting it into a browser address bar and copying it again.
         If it is larger than 2000 characters you may send it as a text file.
         Note: timestamp will be ignored."""
@@ -279,7 +290,7 @@ class Utilities(commands.Cog):
         await ctx.send("Tag updated.")
 
     @tag.command(name="remove",aliases=["delete","del"])
-    @commands.has_permissions(manage_messages=True)
+    @commands.check(functions.has_modrole)
     async def tag_remove(self,ctx,tag):
         """Removes a tag text assosiation."""
         guildTags = cursor.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,)).fetchone()
@@ -299,7 +310,7 @@ class Utilities(commands.Cog):
         await ctx.send(embed=embed)
 
     @tag.command(name="role")
-    @commands.has_permissions(manage_messages=True)
+    @commands.check(functions.has_modrole)
     async def tag_role(self,ctx,*,role:discord.Role=None):
         """Sets the lowest role to be able to use tags."""
         if not role:
