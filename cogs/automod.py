@@ -190,13 +190,30 @@ class AutoMod(commands.Cog):
     async def spamFilter_get(self,ctx):
         """Sends current values for the spam filters."""
         values = cursor.execute("SELECT * FROM spam_filters WHERE guild = ?",(ctx.guild.id,)).fetchone()
+
+        style = fEmbeds.fancyEmbeds.getActiveStyle(self)
+        emoji = fEmbeds.fancyEmbeds.getStyleValue(self, style, "emoji")
+
+        if emoji == False:
+            emojia = ""
+            emojib = ""
+            emojic = ""
+            emojid = ""
+            emojie = ""
+        else:
+            emojia = ":x: "
+            emojib = ":joy: "
+            emojic = ":envelope: "
+            emojid = ":speech_balloon: "
+            emojie = ":repeat: "
+
         if values:
-            embed = discord.Embed(colour=discord.Colour.random(),title="Spam Filters:")
-            embed.set_footer(text=ctx.author.name, icon_url=ctx.author.avatar_url)
-            embed.add_field(name="Emoji Limit:", value=(values[1] if values[1] > -1 else 'disabled'))
-            embed.add_field(name="Invite Filter:", value=('enabled' if values[2] == 1 else 'disabled'))
-            embed.add_field(name="Message Spam Limit:", value=(values[3] if values[3] > -1 else 'disabled'))
-            embed.add_field(name="Character Repeat Limit:", value=(values[4] if values[4] > -1 else 'disabled'))
+            embed = fEmbeds.fancyEmbeds.makeEmbed(self, embTitle=f"{emojia}Spam Filters:", useColor=2)
+            embed.add_field(name=f"{emojib}Emoji Limit:", value=(values[1] if values[1] > -1 else 'disabled'))
+            embed.add_field(name=f"{emojic}Invite Filter:", value=('enabled' if values[2] == 1 else 'disabled'))
+            embed.add_field(name=f"{emojid}Message Spam Limit:", value=(values[3] if values[3] > -1 else 'disabled'))
+            embed.add_field(name=f"{emojie}Character Repeat Limit:", value=(values[4] if values[4] > -1 else 'disabled'))
+            
             await ctx.send(embed=embed)
 
     @spamFilter.command(name="invites")

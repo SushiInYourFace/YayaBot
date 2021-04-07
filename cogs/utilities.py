@@ -232,23 +232,52 @@ class Utilities(commands.Cog):
     async def setup_admin(self, ctx, role:discord.Role):
         cursor.execute("INSERT INTO role_ids(guild, admin) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET admin=excluded.admin", (ctx.guild.id, role.id))
         connection.commit()
-        embed = discord.Embed(title="Admin role set",description=role.mention)
+
+        e = fEmbeds.fancyEmbeds.getActiveStyle(self)
+        emoji = fEmbeds.fancyEmbeds.getStyleValue(self, e, "emoji")
+
+        if emoji is False:
+            emojia = ""
+        else:
+            emojia = ":tools: "
+
+        embed = fEmbeds.fancyEmbeds.makeEmbed(self, embTitle=f"{emojia}Admin role set", desc=role.mention, useColor=3)
+
         await ctx.send(embed=embed)
 
     @setup.command(name="command", help="Sets the role used to determine whether a user can use commands", aliases=["commandrole"])
     async def setup_command(self, ctx, role:discord.Role=None):
         cursor.execute("INSERT INTO role_ids(guild, command_usage) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET command_usage=excluded.command_usage", (ctx.guild.id, getattr(role,"id",0)))
         connection.commit()
-        embed = discord.Embed(title="Command role set",description=getattr(role,"id","None"))
+
+        e = fEmbeds.fancyEmbeds.getActiveStyle(self)
+        emoji = fEmbeds.fancyEmbeds.getStyleValue(self, e, "emoji")
+
+        if emoji is False:
+            emojia = ""
+        else:
+            emojia = ":page_facing_up: "
+
+        embed = fEmbeds.fancyEmbeds.makeEmbed(self, embTitle=f"{emojia}Command role set", desc=role.mention, useColor=3)
+
         await ctx.send(embed=embed)
 
     @setup.command(name="cooldown", help="Sets the cooldown (in ms) between command uses", aliases=["commandCooldown","command_cooldown"])
     async def setup_cooldown(self, ctx, cooldown:int=0):
         cursor.execute("INSERT INTO role_ids(guild, command_cooldown) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET command_cooldown=excluded.command_cooldown", (ctx.guild.id, cooldown))
         connection.commit()
-        embed = discord.Embed(title="Cooldown set",description=str(cooldown)+"ms")
-        await ctx.send(embed=embed)
 
+        e = fEmbeds.fancyEmbeds.getActiveStyle(self)
+        emoji = fEmbeds.fancyEmbeds.getStyleValue(self, e, "emoji")
+
+        if emoji is False:
+            emojia = ""
+        else:
+            emojia = ":stopwatch: "
+
+        embed = fEmbeds.fancyEmbeds.makeEmbed(self, embTitle=f"{emojia}Cooldown set", desc=str(cooldown)+"ms", useColor=3)
+
+        await ctx.send(embed=embed)
 
     @commands.group(aliases=["t"])
     @commands.check(tag_check)
