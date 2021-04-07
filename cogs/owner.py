@@ -3,7 +3,7 @@ import os
 import random
 import sqlite3
 import typing
-
+import subprocess
 import discord
 from discord.ext import commands
 
@@ -138,6 +138,22 @@ class Owner(commands.Cog):
         """Reloads specified cog or previously reloaded cog."""
         command = self.bot.get_command("cog reload")
         await ctx.invoke(command,*cogs)
+
+    @commands.command()
+    @commands.is_owner()
+    async def update(self, ctx):
+        """Pulls the latest commit from Github"""
+        p = subprocess.Popen("./update.sh", stdout=subprocess.PIPE, shell=True)
+        p_status=p.wait()
+        if p_status == 126:
+            await ctx.send("It doesn't seem like the script to execute the update has permission to run")
+        elif p_status == 3:
+            await ctx.send("It looks like you have commited changes to the bot that you need to push before updating")
+        elif p_status == 4:
+            await ctx.send("Bot is up to date!")
+        elif p_status == 0:
+            await ctx.send("Update downloaded! You may need to reload the bot (or at least some cogs) for it to take effect")
+    
 
     @commands.Cog.listener()
     async def on_message(self,message):
