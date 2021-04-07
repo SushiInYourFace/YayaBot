@@ -40,8 +40,8 @@ class Utilities(commands.Cog):
 
     @commands.group(name="setup", help="setup some (or all) features of the bot", aliases=["su",])
     @commands.check_any(commands.has_permissions(administrator=True),commands.check(functions.has_adminrole))
-    async def setup(self,ctx):
-        if ctx.invoked_subcommand is None:
+    async def setup(self,ctx,subcommand=None):
+        if ctx.invoked_subcommand is None and not subcommand:
             await ctx.invoke(self.bot.get_command('setup all'),)
     
     @setup.command(help="Sets a server-specific bot prefix", name="prefix", aliases=["set_prefix",])
@@ -141,7 +141,7 @@ class Utilities(commands.Cog):
         await ctx.send(embed=response)
 
     @setup.command(name="modlogs", help="Specifies the channel to be used for modlogs, do not specify a channel to remove logs.", aliases=["logchannel", "modlog", "logs",])
-    async def setup_modlogs(self, ctx, channel:discord.TextChannel=None):
+    async def setup_modlogs(self, ctx, *, channel:discord.TextChannel=None):
         if channel:
             try:
                 await channel.send("Set up modlogs in this channel!")
@@ -163,28 +163,28 @@ class Utilities(commands.Cog):
         await ctx.send(embed=embed)
         
     @setup.command(name="mute", help="Specifies the role given to someone who is muted", aliases=["muterole", "muted", "mutedrole"])
-    async def setup_mute(self, ctx, role:discord.Role):
+    async def setup_mute(self, ctx, *, role:discord.Role):
         cursor.execute("INSERT INTO role_ids(guild, muted) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET muted=excluded.muted", (ctx.guild.id, role.id))
         connection.commit()
         embed = discord.Embed(title="Muted role set",description=role.mention)
         await ctx.send(embed=embed)
 
     @setup.command(name="moderator", help="Sets the role used to determine whether a user can use moderation commands", aliases=["mod", "modrole"])
-    async def setup_moderator(self, ctx, role:discord.Role):
+    async def setup_moderator(self, ctx, *, role:discord.Role):
         cursor.execute("INSERT INTO role_ids(guild, moderator) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET moderator=excluded.moderator", (ctx.guild.id, role.id))
         connection.commit()
         embed = discord.Embed(title="Moderator role set",description=role.mention)
         await ctx.send(embed=embed)
 
     @setup.command(name="admin", help="Sets the role used to determine whether a user can use admin commands", aliases=["adminrole"])
-    async def setup_admin(self, ctx, role:discord.Role):
+    async def setup_admin(self, ctx, *, role:discord.Role):
         cursor.execute("INSERT INTO role_ids(guild, admin) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET admin=excluded.admin", (ctx.guild.id, role.id))
         connection.commit()
         embed = discord.Embed(title="Admin role set",description=role.mention)
         await ctx.send(embed=embed)
 
     @setup.command(name="command", help="Sets the role used to determine whether a user can use commands", aliases=["commandrole"])
-    async def setup_command(self, ctx, role:discord.Role=None):
+    async def setup_command(self, ctx, *, role:discord.Role=None):
         cursor.execute("INSERT INTO role_ids(guild, command_usage) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET command_usage=excluded.command_usage", (ctx.guild.id, getattr(role,"id",0)))
         connection.commit()
         embed = discord.Embed(title="Command role set",description=getattr(role,"id","None"))
