@@ -2,7 +2,7 @@
 
 hi, this is a moderation type bot for ibxtoycat's discord server!
 
-if you want to run it:
+### How Do I Run The Bot?
 - download/clone it
 `git clone https://github.com/SushiInYourFace/YayaBot`
 - in the dir run
