@@ -3,11 +3,10 @@ import io
 import json
 import sqlite3
 import time
-
 import discord
 from discord import errors
 from discord.ext import commands, tasks
-
+from discord_slash import cog_ext, SlashContext
 import functions
 
 #sets up SQLite
@@ -46,18 +45,8 @@ class Moderation(commands.Cog):
         await ctx.channel.purge(limit=limit, check=filter_check)
 
     #ban
-    @commands.command(help="bans a user")
-    @commands.check(functions.has_modrole)
-    async def ban(self, ctx, member : discord.Member, *, reason=None):
-        if not ctx.guild.me.guild_permissions.ban_members:
-            await ctx.send("I don't have permissions to ban people.")
-            return
-        elif ctx.guild.me.top_role <= member.top_role:
-            await ctx.send("I don't have permission to ban that member.")
-            return
-        if reason is None:
-            reason = "No reason specified"
-        await ctx.guild.ban(member, reason=reason)
+
+    async def ban_command(self, ctx, member, reason):
         bantime = time.time()
         banEmbed = discord.Embed(title="You have been banned from "+ ctx.guild.name, color=0xFF0000)
         banEmbed.add_field(name="Ban reason:", value=reason)
@@ -99,9 +88,7 @@ class Moderation(commands.Cog):
         SqlCommands.new_case(member.id, ctx.guild.id, "kick", reason, kicktime, -1, str(ctx.author))
 
     #unban
-    @commands.command(help="unbans a user")
-    @commands.check(functions.has_modrole)
-    async def unban(self, ctx, user : discord.User):
+    async def unban_command(self, ctx, user):
         unbanTime = time.time()
         try:
             await ctx.guild.fetch_ban(user)
@@ -115,9 +102,7 @@ class Moderation(commands.Cog):
         SqlCommands.new_case(user.id, ctx.guild.id, "unban", "N/A", unbanTime, -1, str(ctx.author))
 
     #gravel
-    @commands.command(help="Gravels a user")
-    @commands.check(functions.has_modrole)
-    async def gravel(self, ctx, member : discord.Member, graveltime, *, reason=None):
+    async def gravel_command(self, ctx, member, graveltime, reason):
         now = time.time()    
         if graveltime[-1] == "m" or graveltime[-1] == "h" or graveltime[-1] == "d" or graveltime[-1] == "s":
             timeformat = graveltime[-1]
@@ -151,9 +136,7 @@ class Moderation(commands.Cog):
             successEmbed.set_footer(text="Failed to send a message to this user")
         await ctx.send(embed=successEmbed)
 
-    @commands.command(help="Mutes a user")
-    @commands.check(functions.has_modrole)
-    async def mute(self, ctx, member : discord.Member, mutetime, *, reason=None):
+    async def mute_command(self, ctx, member, mutetime, reason):
         now = time.time()    
         if mutetime[-1] == "m" or mutetime[-1] == "h" or mutetime[-1] == "d" or mutetime[-1] == "s":
             timeformat = mutetime[-1]
@@ -202,9 +185,7 @@ class Moderation(commands.Cog):
             failEmbed = discord.Embed(title="Could not warn user "+ str(member), color = 0x00FF00)
             await ctx.send(embed=failEmbed)
 
-    @commands.command(help="Shows a user's modlogs")
-    @commands.check(functions.has_modrole)
-    async def modlogs(self, ctx, member : discord.User):
+    async def modlog_command(self, ctx, member):
         logEmbed = discord.Embed(title = str(member) + "'s Modlogs", color=0x000080)
         logs = cursor.execute("SELECT id_in_guild, guild, user, type, reason, started, expires, moderator FROM caselog WHERE user = ? AND guild = ?", (member.id, ctx.guild.id)).fetchall()
         for log in logs:
@@ -236,10 +217,7 @@ class Moderation(commands.Cog):
         logEmbed.set_thumbnail(url=user.avatar_url)
         await ctx.send(embed = logEmbed)
 
-
-    @commands.command(help="Unmutes a User")
-    @commands.check(functions.has_modrole)
-    async def unmute(self, ctx, member : discord.Member):
+    async def unmute_command(self, ctx, member):
         mod = str(ctx.author)
         unmutetime = time.time()
         muted = SqlCommands.get_role(ctx.guild.id, "muted")
@@ -249,9 +227,7 @@ class Moderation(commands.Cog):
         await ctx.send(embed=successEmbed)
         SqlCommands.new_case(member.id, ctx.guild.id, "unmute", "N/A", unmutetime, -1, mod)
 
-    @commands.command(help="Ungravels a User")
-    @commands.check(functions.has_modrole)
-    async def ungravel(self, ctx, member : discord.Member):
+    async def ungravel_command(self, ctx, member):
         mod = str(ctx.author)
         ungraveltime = time.time()
         gravel = SqlCommands.get_role(ctx.guild.id, "gravel")
@@ -260,6 +236,76 @@ class Moderation(commands.Cog):
         successEmbed = discord.Embed(title="Removed Gravel from " + str(member), color=0x00FF00)
         await ctx.send(embed=successEmbed)
         SqlCommands.new_case(member.id, ctx.guild.id, "ungravel", "N/A", ungraveltime, -1, mod)
+
+    @commands.command(help="Gravels a user")
+    @commands.check(functions.has_modrole)
+    async def gravel(self, ctx, member: discord.Member, graveltime, *, reason):
+        await self.gravel_command(ctx, member, graveltime, reason)
+
+    @cog_ext.cog_slash(name="gravel")
+    @commands.check(functions.has_modrole)
+    async def _gravel(self, ctx :SlashContext, member: discord.Member, graveltime, *, reason):
+        await self.gravel_command(ctx, member, graveltime, reason)
+
+    @commands.command(help="Shows a user's modlogs")
+    @commands.check(functions.has_modrole)
+    async def modlogs(self, ctx, member : discord.User):
+        await self.modlog_command(ctx, member)
+
+    @cog_ext.cog_slash(name="modlogs")
+    @commands.check(functions.has_modrole)
+    async def _modlogs(self, ctx:SlashContext, member : discord.User):
+        await self.modlog_command(ctx, member)
+
+    @commands.command(help="bans a user")
+    @commands.check(functions.has_modrole)
+    async def ban(self, ctx, member: discord.Member, *, reason):
+        await self.ban_command(ctx, member, reason)
+
+    @cog_ext.cog_slash(name="ban")
+    @commands.check(functions.has_modrole)
+    async def _ban(self, ctx:SlashContext, member:discord.Member, *, reason):
+        await self.ban_command(ctx, member, reason)
+
+    @commands.command(help="unbans a user")
+    @commands.check(functions.has_modrole)
+    async def unban(self, ctx, user : discord.User):
+        await self.unban_command(ctx, user)
+
+    @cog_ext.cog_slash(name="unban")
+    @commands.check(functions.has_modrole)
+    async def _unban(self, ctx:SlashContext, user:discord.User):
+        await self.unban_command(ctx,user)
+
+    @commands.command(help="Mutes a user")
+    @commands.check(functions.has_modrole)
+    async def mute(self, ctx, member:discord.Member, mutetime, *, reason):
+        await self.mute_command(ctx, member, mutetime, reason)
+
+    @cog_ext.cog_slash(name="mute")
+    @commands.check(functions.has_modrole)
+    async def _mute(self, ctx:SlashContext, member:discord.Member, mutetime, *, reason):
+        await self.mute_command(ctx, member, mutetime, reason)
+
+    @commands.command(help="Ungravels a User")
+    @commands.check(functions.has_modrole)
+    async def ungravel(self, ctx, member:discord.Member):
+        await self.ungravel_command(ctx, member)
+
+    @cog_ext.cog_slash(name="ungravel")
+    @commands.check(functions.has_modrole)
+    async def _ungravel(self, ctx:SlashContext, member:discord.Member):
+        await self.ungravel_command(ctx, member)
+
+    @commands.command(help="Unmutes a User")
+    @commands.check(functions.has_modrole)
+    async def unmute(self, ctx, member:discord.Member):
+        await self.unmute_command(ctx, member)
+
+    @cog_ext.cog_slash(name="unmute")
+    @commands.check(functions.has_modrole)
+    async def _unmute(self, ctx:SlashContext, member:discord.Member):
+        await self.unmute_command(ctx, member)
 
     #checks if a role needs to be removed
     @tasks.loop(seconds=5.0)

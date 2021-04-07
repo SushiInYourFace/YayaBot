@@ -1,2 +1,6 @@
+
 discord.py
 pillow
+discord-py-slash-command
+
+

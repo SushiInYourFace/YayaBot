@@ -2,9 +2,10 @@ import asyncio
 import logging
 import sqlite3
 import time
-
 import discord
 from discord.ext import commands
+import discord_slash
+from discord_slash import SlashCommand
 
 # Logging config
 logging.basicConfig(format='[%(asctime)s] %(levelname)s: %(message)s', level=logging.INFO)
@@ -106,9 +107,9 @@ class NewHelp(commands.HelpCommand):
         await self.send_command_help(cog)
 
 #intents, initializing bot
-intents = discord.Intents.default()
-intents.members = True
+intents = discord.Intents.all()
 bot = commands.Bot(command_prefix=get_pre, intents=intents, help_command=NewHelp())
+slash = SlashCommand(bot,sync_commands=True)
 
 #SQLite
 con = sqlite3.connect("database.db")
@@ -161,6 +162,7 @@ default_extensions = [
     ('cogs.utilities',),
     ('cogs.owner',),
     ('cogs.automod',),
+    ('cogs.slash',),
     ('cogs.fancyEmbeds',),
 ]
 
@@ -213,5 +215,21 @@ async def on_command_error(ctx, error):
         await ctx.send("Something has gone wrong somewhere, and most likely needs to be fixed")
         raise error
 
+#slash error handling
+@bot.event
+async def on_slash_command_error(ctx, ex):
+    await ctx.send("There was an error of some sort raised involving slash commands")
+#check for mod-only commands
+def has_modrole(ctx):
+    modrole = cursor.execute("SELECT moderator FROM role_ids WHERE guild = ?", (ctx.guild.id,)).fetchone()
+    member_roles = []
+    for role in ctx.member.roles:
+        member_roles.append(role.id)
+    if modrole is None:
+        return False
+    elif (modrole in member_roles):
+        return True
+    else:
+        return False
 bot.run(Token)
 print("Bot Session Ended")

@@ -9,6 +9,7 @@ from discord.ext import commands
 
 import functions
 
+
 #sets up SQLite
 connection = sqlite3.connect("database.db")
 cursor = connection.cursor()
