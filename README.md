@@ -2,6 +2,14 @@
 
 hi, this is a moderation type bot for IBXToycat's discord server!
 
+Requirements:
+[Python 3.6+](https://www.python.org/downloads/)
+[Git](https://git-scm.com/downloads)
+Pip (for module install)
+
+Quickstart Debian/Ubuntu:
+`sudo apt install python3 git python3-pip`
+
 ### How Do I Run The Bot?
 - download/clone it
 `git clone https://github.com/SushiInYourFace/YayaBot`
