@@ -26,6 +26,11 @@ def tryMakeStorage():
     except:
         return
 
+def getBotStuffs():
+    with open("botinfo.json", "r+") as f:
+        f_ = json.load(f)
+        return f_["info"]
+
 class fancyEmbeds(commands.Cog):
     """Makes embeds look cool and fancy!"""
 
@@ -45,11 +50,12 @@ class fancyEmbeds(commands.Cog):
             f_ = json.load(f)
             return f_["styles"][style][data]
 
-    def makeEmbed(self, embTitle="", desc=None, useColor=0, force=False, forceColor=None, footer=None, nofooter=False):
+    def makeEmbed(self, embTitle="", desc=None, useColor=0, force=False, forceColor=None, footer=None, nofooter=False, b=None):
         """Build an embed based on the current embed Style.
         
         Returns a discord.Embed with a title, description (if specified), color and footer based on the active embed style values.\n
-        You can set the keyword Force to True if you wish to force a specific color onto the embed, and specify that color as forceColor. 
+        You can set the keyword Force to True if you wish to force a specific color onto the embed, and specify that color as forceColor.\n
+        To add content to the footer here, set footer, or if you want to set a footer later, set nofooter to True here and add it later through addFooter() 
         """
         with open("embeds.json", "r+") as f:
             f_ = json.load(f)
@@ -72,6 +78,9 @@ class fancyEmbeds(commands.Cog):
             emb = discord.Embed(title=embTitle, color=discord.Colour(colorType), description=desc, timestamp=datetime.datetime.utcfromtimestamp(time.time()))
 
         if nofooter == False:
+            if b != None:
+                self.bot = b
+
             if footer == None:
                 emb.set_footer(text=self.bot.user.name, icon_url=self.bot.user.avatar_url)
             else:
@@ -79,8 +88,8 @@ class fancyEmbeds(commands.Cog):
 
         return emb
 
-    def addFooter(self, embed, footer):
-        embed.set_footer(text=f"{self.bot.user.name} - {footer}", icon_url=self.bot.user.avatar_url)
+    def addFooter(self, embed, footer, bot):
+        embed.set_footer(text=f"{bot.user.name} - {footer}", icon_url=bot.user.avatar_url)
         
         return embed
 
