@@ -17,7 +17,7 @@ Quickstart Debian/Ubuntu:
 `python -m pip install -r requirements.txt`
 - get your bot's token from the [discord applications page](https://discord.com/developers/applications/) and put it in a new file named `token.txt`
 - run the bot!!
-`python bot.py`
+`python start.py`
 
 ("python" may be "py" (on windows) or "python3" (on linux if other versions are installed)) (sudo/admin may be required for downloading requirements or use `--user` to install for your user)
 
