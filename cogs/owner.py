@@ -92,7 +92,7 @@ class Owner(commands.Cog):
 
     @cog.command(aliases = ['r'])
     async def reload(self,ctx,*cogs:typing.Optional[str]):
-        """Reload cogs."""
+        """Reloads cogs."""
         allReloaded = False
         if not cogs:
             if self.bot.previousReload == None:
