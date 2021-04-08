@@ -3,6 +3,7 @@ import logging
 import sqlite3
 import time
 import sys
+import platform
 
 import discord
 from discord.ext import commands
