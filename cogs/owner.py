@@ -144,19 +144,19 @@ class Owner(commands.Cog):
     @commands.is_owner()
     async def update(self, ctx):
         """Pulls the latest commit from Github"""
-        await asyncio.create_subprocess_shell("git fetch origin", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
-        local = await asyncio.create_subprocess_shell("git log origin/update..HEAD --oneline", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+        local = await asyncio.create_subprocess_shell("git fetch origin;git diff --name-only FETCH_HEAD HEAD", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
         out, err = await local.communicate()
         if out:
             await ctx.send("You have committed changes that you have not pushed, please push them before updating")
             return
-        incoming = await asyncio.create_subprocess_shell("git log HEAD..origin/update --oneline", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+        incoming = await asyncio.create_subprocess_shell("git fetch origin;git diff --name-only HEAD FETCH_HEAD", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
         out, err = await incoming.communicate()
+        print(out.decode())
+        print(err.decode())
         if not out:
             await ctx.send("No new changes!")
             return
-        diff = await asyncio.create_subprocess_shell("git diff --name-only @ origin/HEAD", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
-        out = await diff.communicate()[0].split("\n")
+        out = out.split('\n')
         await asyncio.create_subprocess_shell("git pull", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
         await ctx.send(f"Downloaded update!\nThe following files have been changed ```{out.join(', ')}```. You may have to restart the bot, or reload some cogs for it to take effect")
 
