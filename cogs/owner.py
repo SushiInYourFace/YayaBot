@@ -157,8 +157,6 @@ class Owner(commands.Cog):
             return
         await asyncio.create_subprocess_shell("git pull", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
         await ctx.send("Downloaded update! You may have to restart the bot, or reload some cogs for it to take effect")
-        
-    
 
     @commands.Cog.listener()
     async def on_message(self,message):
