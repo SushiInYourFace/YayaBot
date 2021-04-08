@@ -1,12 +1,14 @@
+import asyncio
 import logging
 import os
 import random
 import sqlite3
-import typing
 import subprocess
+import sys
+import typing
+
 import discord
 from discord.ext import commands
-import asyncio
 
 # Logging config
 logging.basicConfig(format='[%(asctime)s] %(levelname)s: %(message)s', level=logging.INFO)
@@ -29,6 +31,14 @@ class Owner(commands.Cog):
     async def shutdown(self,ctx):
         """Shuts the bot down!"""
         await ctx.send("👋 Goodbye")
+        await self.bot.close()
+
+    @commands.command()
+    @commands.is_owner()
+    async def restart(self,ctx):
+        """Restarts the bot!"""
+        await ctx.send("🏃‍♂️ Be right back!")
+        self.bot.restart = True
         await self.bot.close()
 
     @commands.group(aliases = ['c'])

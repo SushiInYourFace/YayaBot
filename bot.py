@@ -2,6 +2,7 @@ import asyncio
 import logging
 import sqlite3
 import time
+import sys
 
 import discord
 from discord.ext import commands
@@ -128,6 +129,8 @@ con.commit()
 @bot.event
 async def on_ready():
     bot.startTime = time.time()
+    bot.restart = False
+    bot.args = sys.argv
     appinfo = await bot.application_info()
     print("")
     logging.info(f"Bot started! Hello {str(appinfo.owner)}")
@@ -214,4 +217,7 @@ async def on_command_error(ctx, error):
         raise error
 
 bot.run(Token)
-print("Bot Session Ended")
+if bot.restart:
+    sys.exit(1)
+else:
+    sys.exit(0)
