@@ -1,17 +1,25 @@
 # YayaBot
 
-hi, this is a moderation type bot for ibxtoycat's discord server!
+hi, this is a moderation type bot for IBXToycat's discord server!
+
+Requirements:
+[Python 3.6+](https://www.python.org/downloads/)
+[Git](https://git-scm.com/downloads)
+Pip (for module install)
+
+Quickstart Debian/Ubuntu:
+`sudo apt install python3 git python3-pip`
 
 ### How Do I Run The Bot?
 - download/clone it
 `git clone https://github.com/SushiInYourFace/YayaBot`
-- in the dir run
+- in the directory run
 `python -m pip install -r requirements.txt`
-- get your bot's token from the [discord applications page](https://discord.com/developers/applications/) and put it in a new file `token.txt`
+- get your bot's token from the [discord applications page](https://discord.com/developers/applications/) and put it in a new file named `token.txt`
 - run the bot!!
 `python bot.py`
 
-("python" may be "py" or "python3") (sudo/admin may be required for downloading requirements or use `--user` to install for your user)
+("python" may be "py" (on windows) or "python3" (on linux if other versions are installed)) (sudo/admin may be required for downloading requirements or use `--user` to install for your user)
 
 
 ### What Is This Bot For?
