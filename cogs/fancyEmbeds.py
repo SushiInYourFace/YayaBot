@@ -45,7 +45,7 @@ class fancyEmbeds(commands.Cog):
             f_ = json.load(f)
             return f_["styles"][style][data]
 
-    def makeEmbed(self, embTitle="", desc=None, useColor=0, force=False, forceColor=None, footer=None):
+    def makeEmbed(self, embTitle="", desc=None, useColor=0, force=False, forceColor=None, footer=None, nofooter=False):
         """Build an embed based on the current embed Style.
         
         Returns a discord.Embed with a title, description (if specified), color and footer based on the active embed style values.\n
@@ -71,12 +71,18 @@ class fancyEmbeds(commands.Cog):
         else:
             emb = discord.Embed(title=embTitle, color=discord.Colour(colorType), description=desc, timestamp=datetime.datetime.utcfromtimestamp(time.time()))
 
-        if footer == None:
-            emb.set_footer(text=self.bot.user.name, icon_url=self.bot.user.avatar_url)
-        else:
-            emb.set_footer(text=f"{self.bot.user.name} - {footer}", icon_url=self.bot.user.avatar_url)
+        if nofooter == False:
+            if footer == None:
+                emb.set_footer(text=self.bot.user.name, icon_url=self.bot.user.avatar_url)
+            else:
+                emb.set_footer(text=f"{self.bot.user.name} - {footer}", icon_url=self.bot.user.avatar_url)
 
         return emb
+
+    def addFooter(self, embed, footer):
+        embed.set_footer(text=f"{self.bot.user.name} - {footer}", icon_url=self.bot.user.avatar_url)
+        
+        return embed
 
     @commands.group(help="Manage how embeds are sent.")
     @commands.check(functions.has_modrole)
