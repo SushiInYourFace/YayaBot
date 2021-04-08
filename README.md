@@ -7,7 +7,7 @@ hi, this is a moderation type bot for ibxtoycat's discord server!
 `git clone https://github.com/SushiInYourFace/YayaBot`
 - in the directory run
 `python -m pip install -r requirements.txt`
-- get your bot's token from the [discord applications page](https://discord.com/developers/applications/) and put it in a new file `token.txt`
+- get your bot's token from the [discord applications page](https://discord.com/developers/applications/) and put it in a new file named `token.txt`
 - run the bot!!
 `python bot.py`
 
