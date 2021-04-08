@@ -155,8 +155,9 @@ class Owner(commands.Cog):
             await ctx.send("No new changes!")
             return
         out = out.decode().split('\n')
+        out.remove("")
         await asyncio.create_subprocess_shell("git pull", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
-        await ctx.send(f"Downloaded update!\nThe following files have been changed ```{', '.join(out)}```. You may have to restart the bot, or reload some cogs for it to take effect")
+        await ctx.send(f"Downloaded update!\nThe following files have been changed ```{', '.join(out)}```You may have to restart the bot, or reload some cogs for it to take effect")
 
     @commands.Cog.listener()
     async def on_message(self,message):
