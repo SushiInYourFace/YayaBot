@@ -19,7 +19,7 @@ Quickstart Debian/Ubuntu:
 - run the bot!!
 `python bot.py`
 
-("python" may be "py" or "python3") (sudo/admin may be required for downloading requirements or use `--user` to install for your user)
+("python" may be "py" (on windows) or "python3" (on linux if other versions are installed)) (sudo/admin may be required for downloading requirements or use `--user` to install for your user)
 
 
 ### What Is This Bot For?
