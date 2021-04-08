@@ -6,6 +6,7 @@ import typing
 import subprocess
 import discord
 from discord.ext import commands
+import asyncio
 
 # Logging config
 logging.basicConfig(format='[%(asctime)s] %(levelname)s: %(message)s', level=logging.INFO)
@@ -143,16 +144,19 @@ class Owner(commands.Cog):
     @commands.is_owner()
     async def update(self, ctx):
         """Pulls the latest commit from Github"""
-        p = subprocess.Popen("./update.sh", stdout=subprocess.PIPE, shell=True)
-        p_status=p.wait()
-        if p_status == 126:
-            await ctx.send("It doesn't seem like the script to execute the update has permission to run")
-        elif p_status == 3:
-            await ctx.send("It looks like you have commited changes to the bot that you need to push before updating")
-        elif p_status == 4:
-            await ctx.send("Bot is up to date!")
-        elif p_status == 0:
-            await ctx.send("Update downloaded! You may need to reload the bot (or at least some cogs) for it to take effect")
+        await asyncio.create_subprocess_shell("git fetch origin", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+        local = await asyncio.create_subprocess_shell("git log origin/update..HEAD --oneline", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+        out, err = await local.communicate()
+        if out:
+            await ctx.send("You have committed changes that you have not pushed, please push them before updating")
+            return
+        incoming = await asyncio.create_subprocess_shell("git log HEAD..origin/update --oneline", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+        incout, incerr = await incoming.communicate()
+        if not incout:
+            await ctx.send("No new changes!")
+            return
+        await asyncio.create_subprocess_shell("git pull", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+        
     
 
     @commands.Cog.listener()
