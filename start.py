@@ -12,12 +12,9 @@ while run:
     branch = b.communicate()[0].decode().replace("\n","")
     local = subprocess.Popen(["git", "log", "--name-only", f"origin/{branch}..HEAD"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = local.communicate()
-    print(out)
-    print(err)
     if not out:
         incoming = subprocess.Popen(["git", "diff", "--name-only", "HEAD", f"origin/{branch}"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         out, err = incoming.communicate()
-        print(out)
         if out:
             subprocess.run(["git", "pull"], stdout=subprocess.PIPE)
             logging.info("Updated!")
