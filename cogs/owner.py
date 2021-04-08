@@ -144,21 +144,19 @@ class Owner(commands.Cog):
     @commands.is_owner()
     async def update(self, ctx):
         """Pulls the latest commit from Github"""
-        local = await asyncio.create_subprocess_shell("git fetch origin;git diff --name-only FETCH_HEAD HEAD", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+        local = await asyncio.create_subprocess_shell("git fetch origin;git log --name-only FETCH_HEAD..HEAD", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
         out, err = await local.communicate()
         if out:
             await ctx.send("You have committed changes that you have not pushed, please push them before updating")
             return
         incoming = await asyncio.create_subprocess_shell("git fetch origin;git diff --name-only HEAD FETCH_HEAD", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
         out, err = await incoming.communicate()
-        print(out.decode())
-        print(err.decode())
         if not out:
             await ctx.send("No new changes!")
             return
-        out = out.split('\n')
+        out = out.decode().split('\n')
         await asyncio.create_subprocess_shell("git pull", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
-        await ctx.send(f"Downloaded update!\nThe following files have been changed ```{out.join(', ')}```. You may have to restart the bot, or reload some cogs for it to take effect")
+        await ctx.send(f"Downloaded update!\nThe following files have been changed ```{', '.join(out)}```. You may have to restart the bot, or reload some cogs for it to take effect")
 
     @commands.Cog.listener()
     async def on_message(self,message):
