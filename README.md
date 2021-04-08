@@ -1,6 +1,6 @@
 # YayaBot
 
-hi, this is a moderation type bot for ibxtoycat's discord server!
+hi, this is a moderation type bot for IBXToycat's discord server!
 
 ### How Do I Run The Bot?
 - download/clone it
