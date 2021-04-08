@@ -151,12 +151,14 @@ class Owner(commands.Cog):
             await ctx.send("You have committed changes that you have not pushed, please push them before updating")
             return
         incoming = await asyncio.create_subprocess_shell("git log HEAD..origin/update --oneline", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
-        incout, incerr = await incoming.communicate()
-        if not incout:
+        out, err = await incoming.communicate()
+        if not out:
             await ctx.send("No new changes!")
             return
+        diff = await asyncio.create_subprocess_shell("git diff --name-only @ origin/HEAD", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+        out = await diff.communicate()[0].split("\n")
         await asyncio.create_subprocess_shell("git pull", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
-        await ctx.send("Downloaded update! You may have to restart the bot, or reload some cogs for it to take effect")
+        await ctx.send(f"Downloaded update!\nThe following files have been changed ```{out.join(', ')}```. You may have to restart the bot, or reload some cogs for it to take effect")
 
     @commands.Cog.listener()
     async def on_message(self,message):
