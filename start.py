@@ -7,13 +7,19 @@ logging.basicConfig(format='[%(asctime)s] %(levelname)s: %(message)s', level=log
 run = True
 
 while run:
-    local = subprocess.Popen(["git", "fetch", "origin",";","git", "log", "--name-only", "FETCH_HEAD..HEAD"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    subprocess.run(["git","fetch","origin"])
+    b = subprocess.Popen(["git", "rev-parse", "--abbrev-ref", "HEAD"],stdout=subprocess.PIPE)
+    branch = b.communicate()[0].decode().replace("\n","")
+    local = subprocess.Popen(["git", "log", "--name-only", f"origin/{branch}..HEAD"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = local.communicate()
+    print(out)
+    print(err)
     if not out:
-        incoming = subprocess.Popen(["git", "fetch", "origin", ";", "git", "diff", "--name-only", "HEAD", "FETCH_HEAD"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        incoming = subprocess.Popen(["git", "diff", "--name-only", "HEAD", f"origin/{branch}"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         out, err = incoming.communicate()
+        print(out)
         if out:
-            subprocess.Popen("git pull", stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+            subprocess.run(["git", "pull"], stdout=subprocess.PIPE)
             logging.info("Updated!")
         else:
             logging.info("No Update Required.")
