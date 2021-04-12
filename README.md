@@ -3,8 +3,8 @@
 hi, this is a moderation type bot for IBXToycat's discord server!
 
 Requirements:
-[Python 3.6+](https://www.python.org/downloads/)
-[Git](https://git-scm.com/downloads)
+[Python 3.8+](https://www.python.org/downloads/), 
+[Git](https://git-scm.com/downloads), 
 Pip (for module install)
 
 Quickstart Debian/Ubuntu:
