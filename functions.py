@@ -81,12 +81,12 @@ class timeconverters:
     def fromseconds(self, seconds):
         if seconds >= 86400:
             days = seconds//86400
-            return str(days) + " Day(s)"
+            return str(days) + (" Day" if days==1 else " Days")
         elif seconds >= 3600:
             hours = seconds//3600
-            return str(hours) + " Hour(s)"
+            return str(hours) + (" Hour" if hours==1 else " Hours")
         elif seconds >= 60:
             minutes = seconds//60
-            return str(minutes) + " Minute(s)"
+            return str(minutes) + (" Minute" if minutes==1 else " Minutes")
         else:
-            return str(seconds) + " Second(s)"
+            return str(seconds) + (" Second" if seconds==1 else " Seconds")
