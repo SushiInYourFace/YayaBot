@@ -1,8 +1,11 @@
 import asyncio
+import datetime
 import logging
+import platform
 import sqlite3
 import time, datetime
 import platform
+import sys
 
 import discord
 from discord.ext import commands
@@ -131,12 +134,12 @@ con.commit()
 @bot.event
 async def on_ready():
     bot.startTime = time.time()
+    bot.restart = False
+    bot.args = sys.argv
     appinfo = await bot.application_info()
-    print("")
     logging.info(f"Bot started! Hello {str(appinfo.owner)}")
     logging.info(f"I'm connected as {str(bot.user)} - {bot.user.id}!")
     logging.info(f"In {len(bot.guilds)} guilds overlooking {len(list(bot.get_all_channels()))} channels and {len(list(bot.get_all_members()))} users.")
-    print("")
 
 @bot.command(aliases=["info","bot"])
 async def about(ctx):
@@ -190,7 +193,6 @@ if not extensions:
     con.commit()
     extensions = default_extensions
 
-print("")
 logging.info("Loading Cogs.")
 for extension in extensions:
     try:
@@ -199,7 +201,6 @@ for extension in extensions:
     except commands.ExtensionNotFound:
         logging.info(f"Could not find {extension[0]}")
 logging.info("Done.")
-print("")
         
 #error handling
 @bot.event
@@ -233,4 +234,7 @@ async def on_command_error(ctx, error):
         raise error
 
 bot.run(Token)
-print("Bot Session Ended")
+if bot.restart:
+    sys.exit(1)
+else:
+    sys.exit(0)

@@ -1,7 +1,10 @@
+import asyncio
 import logging
 import os
 import random
 import sqlite3
+import subprocess
+import sys
 import typing
 import cogs.fancyEmbeds as fEmbeds
 import discord
@@ -28,6 +31,14 @@ class Owner(commands.Cog):
     async def shutdown(self,ctx):
         """Shuts the bot down!"""
         await ctx.send("👋 Goodbye")
+        await self.bot.close()
+
+    @commands.command()
+    @commands.is_owner()
+    async def restart(self,ctx):
+        """Restarts the bot!"""
+        await ctx.send("🏃‍♂️ Be right back!")
+        self.bot.restart = True
         await self.bot.close()
 
     @commands.group(aliases = ['c'])
@@ -91,7 +102,7 @@ class Owner(commands.Cog):
 
     @cog.command(aliases = ['r'])
     async def reload(self,ctx,*cogs:typing.Optional[str]):
-        """Reload cogs."""
+        """Reloads cogs."""
         allReloaded = False
         if not cogs:
             if self.bot.previousReload == None:
@@ -150,6 +161,30 @@ class Owner(commands.Cog):
         """Reloads specified cog or previously reloaded cog."""
         command = self.bot.get_command("cog reload")
         await ctx.invoke(command,*cogs)
+
+    @commands.command()
+    @commands.is_owner()
+    async def update(self, ctx):
+        """Pulls the latest commit from Github"""
+        b = await asyncio.create_subprocess_shell("git fetch origin")
+        await b.communicate()
+        b = await asyncio.create_subprocess_shell("git rev-parse --abbrev-ref HEAD",stdout=subprocess.PIPE)
+        branch = await b.communicate()
+        branch = branch[0].decode().replace("\n","")
+        local = await asyncio.create_subprocess_shell(f"git log --name-only origin/{branch}..HEAD", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+        out, err = await local.communicate()
+        if out:
+            await ctx.send("You have committed changes that you have not pushed, please push them before updating")
+            return
+        incoming = await asyncio.create_subprocess_shell(f"git diff --name-only HEAD origin/{branch}", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+        out, err = await incoming.communicate()
+        if not out:
+            await ctx.send("No new changes!")
+            return
+        out = out.decode().split('\n')
+        out.remove("")
+        await asyncio.create_subprocess_shell("git pull", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+        await ctx.send(f"Update completed!\nThe following files have been changed\n```{', '.join(out)}```\nYou may have to restart the bot, or reload some cogs for it to take effect.")
 
     @commands.Cog.listener()
     async def on_message(self,message):
