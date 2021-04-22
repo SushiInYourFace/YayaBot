@@ -138,8 +138,8 @@ class Owner(commands.Cog):
         loaded_cogs = [cog.split(".")[1] for cog in self.bot.extensions.keys()]
         unloaded_cogs = [cog[:-3] for cog in os.listdir("cogs") if (cog[:-3] not in loaded_cogs and cog.endswith(".py"))]
         
-        style = fEmbeds.fancyEmbeds.getActiveStyle(self)
-        emoji = fEmbeds.fancyEmbeds.getStyleValue(self, style, "emoji")
+        style = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
+        emoji = fEmbeds.fancyEmbeds.getStyleValue(self, ctx.guild.id, style, "emoji")
 
         if emoji == False:
             emojia = ""
@@ -150,7 +150,7 @@ class Owner(commands.Cog):
             emojib = ":wrench: "
             emojic = ":tools: "
 
-        embed = fEmbeds.fancyEmbeds.makeEmbed(self, embTitle=f"{emojia}Cogs.", desc=None, useColor=2)
+        embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}Cogs.", desc=None, useColor=2)
         embed.add_field(name=f"{emojib}Loaded Cogs:", value=", ".join(loaded_cogs)+".", inline=False)
         embed.add_field(name=f"{emojic}Unloaded Cogs:", value=", ".join(unloaded_cogs)+".", inline=False)
         await ctx.send(embed=embed)

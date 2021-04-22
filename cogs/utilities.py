@@ -130,8 +130,8 @@ class Utilities(commands.Cog):
         cursor.execute("INSERT INTO role_ids(guild,gravel,muted,moderator,admin,modlogs,command_usage,command_cooldown) VALUES(?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(guild) DO UPDATE SET gravel=excluded.gravel, muted=excluded.muted, moderator=excluded.moderator, admin=excluded.admin, modlogs=excluded.modlogs, command_usage=excluded.command_usage, command_cooldown=excluded.command_cooldown", (guild.id, gravelRole.id, mutedRole.id, modRole.id, adminRole.id, getattr(logChannel,"id",0), getattr(commandRole,"id",0),commandCooldown))
         connection.commit()
 
-        e = fEmbeds.fancyEmbeds.getActiveStyle(self)
-        emoji = fEmbeds.fancyEmbeds.getStyleValue(self, e, "emoji")
+        e = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
+        emoji = fEmbeds.fancyEmbeds.getStyleValue(self , ctx.guild.id, e, "emoji")
         if emoji is False:
             emojia = ""
             emojib = ""
@@ -153,7 +153,7 @@ class Utilities(commands.Cog):
             emojih = ":stopwatch: "
             emojii = ":pencil2: "
 
-        response = fEmbeds.fancyEmbeds.makeEmbed(self, embTitle=f"{emojia}Server set up successfully!", useColor=0)
+        response = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}Server set up successfully!", useColor=0)
         response.add_field(name=f"{emojib}Gravel role", value=gravelRole.mention) 
         response.add_field(name=f"{emojic}Muted role", value=mutedRole.mention)
         response.add_field(name=f"{emojid}Moderator role", value=modRole.mention)
@@ -185,15 +185,15 @@ class Utilities(commands.Cog):
         cursor.execute("INSERT INTO role_ids(guild, gravel) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET gravel=excluded.gravel", (ctx.guild.id, role.id))
         connection.commit()
 
-        e = fEmbeds.fancyEmbeds.getActiveStyle(self)
-        emoji = fEmbeds.fancyEmbeds.getStyleValue(self, e, "emoji")
+        e = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
+        emoji = fEmbeds.fancyEmbeds.getStyleValue(self , ctx.guild.id, e, "emoji")
 
         if emoji is False:
             emojia = ""
         else:
             emojia = ":mute: "
 
-        embed = fEmbeds.fancyEmbeds.makeEmbed(self, embTitle=f"{emojia}Changed Gravel Role:", desc=role.mention, useColor=1)
+        embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}Changed Gravel Role:", desc=role.mention, useColor=1)
         await ctx.send(embed=embed)
         
     @setup.command(name="mute", help="Specifies the role given to someone who is muted", aliases=["muterole", "muted", "mutedrole"])
@@ -201,15 +201,15 @@ class Utilities(commands.Cog):
         cursor.execute("INSERT INTO role_ids(guild, muted) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET muted=excluded.muted", (ctx.guild.id, role.id))
         connection.commit()
 
-        e = fEmbeds.fancyEmbeds.getActiveStyle(self)
-        emoji = fEmbeds.fancyEmbeds.getStyleValue(self, e, "emoji")
+        e = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
+        emoji = fEmbeds.fancyEmbeds.getStyleValue(self , ctx.guild.id, e, "emoji")
 
         if emoji is False:
             emojia = ""
         else:
             emojia = ":mute: "
 
-        embed = fEmbeds.fancyEmbeds.makeEmbed(self, embTitle=f"{emojia}Changed Muted Role:", desc=role.mention, useColor=1)
+        embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}Changed Muted Role:", desc=role.mention, useColor=1)
         await ctx.send(embed=embed)
 
     @setup.command(name="moderator", help="Sets the role used to determine whether a user can use moderation commands", aliases=["mod", "modrole"])
@@ -217,15 +217,15 @@ class Utilities(commands.Cog):
         cursor.execute("INSERT INTO role_ids(guild, moderator) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET moderator=excluded.moderator", (ctx.guild.id, role.id))
         connection.commit()
 
-        e = fEmbeds.fancyEmbeds.getActiveStyle(self)
-        emoji = fEmbeds.fancyEmbeds.getStyleValue(self, e, "emoji")
+        e = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
+        emoji = fEmbeds.fancyEmbeds.getStyleValue(self , ctx.guild.id, e, "emoji")
 
         if emoji is False:
             emojia = ""
         else:
             emojia = ":hammer: "
 
-        embed = fEmbeds.fancyEmbeds.makeEmbed(self, embTitle=f"{emojia}Changed Moderator Role:", desc=role.mention, useColor=1)
+        embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}Changed Moderator Role:", desc=role.mention, useColor=1)
         await ctx.send(embed=embed)
 
     @setup.command(name="admin", help="Sets the role used to determine whether a user can use admin commands", aliases=["adminrole"])
@@ -233,15 +233,15 @@ class Utilities(commands.Cog):
         cursor.execute("INSERT INTO role_ids(guild, admin) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET admin=excluded.admin", (ctx.guild.id, role.id))
         connection.commit()
 
-        e = fEmbeds.fancyEmbeds.getActiveStyle(self)
-        emoji = fEmbeds.fancyEmbeds.getStyleValue(self, e, "emoji")
+        e = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
+        emoji = fEmbeds.fancyEmbeds.getStyleValue(self , ctx.guild.id, e, "emoji")
 
         if emoji is False:
             emojia = ""
         else:
             emojia = ":tools: "
 
-        embed = fEmbeds.fancyEmbeds.makeEmbed(self, embTitle=f"{emojia}Admin role set", desc=role.mention, useColor=3)
+        embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}Admin role set", desc=role.mention, useColor=3)
 
         await ctx.send(embed=embed)
 
@@ -250,15 +250,15 @@ class Utilities(commands.Cog):
         cursor.execute("INSERT INTO role_ids(guild, command_usage) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET command_usage=excluded.command_usage", (ctx.guild.id, getattr(role,"id",0)))
         connection.commit()
 
-        e = fEmbeds.fancyEmbeds.getActiveStyle(self)
-        emoji = fEmbeds.fancyEmbeds.getStyleValue(self, e, "emoji")
+        e = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
+        emoji = fEmbeds.fancyEmbeds.getStyleValue(self , ctx.guild.id, e, "emoji")
 
         if emoji is False:
             emojia = ""
         else:
             emojia = ":page_facing_up: "
 
-        embed = fEmbeds.fancyEmbeds.makeEmbed(self, embTitle=f"{emojia}Command role set", desc=role.mention, useColor=3)
+        embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}Command role set", desc=role.mention, useColor=3)
 
         await ctx.send(embed=embed)
 
@@ -267,15 +267,15 @@ class Utilities(commands.Cog):
         cursor.execute("INSERT INTO role_ids(guild, command_cooldown) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET command_cooldown=excluded.command_cooldown", (ctx.guild.id, cooldown))
         connection.commit()
 
-        e = fEmbeds.fancyEmbeds.getActiveStyle(self)
-        emoji = fEmbeds.fancyEmbeds.getStyleValue(self, e, "emoji")
+        e = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
+        emoji = fEmbeds.fancyEmbeds.getStyleValue(self , ctx.guild.id, e, "emoji")
 
         if emoji is False:
             emojia = ""
         else:
             emojia = ":stopwatch: "
 
-        embed = fEmbeds.fancyEmbeds.makeEmbed(self, embTitle=f"{emojia}Cooldown set", desc=str(cooldown)+"ms", useColor=3)
+        embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}Cooldown set", desc=str(cooldown)+"ms", useColor=3)
 
         await ctx.send(embed=embed)
 
@@ -386,15 +386,15 @@ class Utilities(commands.Cog):
         guildTags = cursor.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,)).fetchone()
         tags = json.loads(guildTags[2])
 
-        e = fEmbeds.fancyEmbeds.getActiveStyle(self)
-        emoji = fEmbeds.fancyEmbeds.getStyleValue(self, e, "emoji")
+        e = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
+        emoji = fEmbeds.fancyEmbeds.getStyleValue(self , ctx.guild.id, e, "emoji")
 
         if emoji is False:
             emojia = ""
         else:
             emojia = ":bookmark_tabs: "
         
-        embed = fEmbeds.fancyEmbeds.makeEmbed(self, embTitle=f"{emojia}Tags:", desc=", ".join(tags.keys())+f"\n\nUsable by {ctx.guild.get_role(int(guildTags[1])).mention} and above.", useColor=2)
+        embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}Tags:", desc=", ".join(tags.keys())+f"\n\nUsable by {ctx.guild.get_role(int(guildTags[1])).mention} and above.", useColor=2)
         await ctx.send(embed=embed)
 
     @tag.command(name="role")

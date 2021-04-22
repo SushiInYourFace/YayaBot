@@ -47,20 +47,20 @@ class NewHelp(commands.HelpCommand):
         pageOut = 0
         colour = discord.Colour.random()
         titleDesc = ["YayaBot Help!",f"Say `{self.clean_prefix}help <command>` for more info on a command!"]
-        page = [fEmbeds.fancyEmbeds.makeEmbed(self, embTitle=titleDesc[0], desc=titleDesc[1], useColor=0, nofooter=True)]
+        page = [fEmbeds.fancyEmbeds.makeEmbed(self, self.context.guild.id, embTitle=titleDesc[0], desc=titleDesc[1], useColor=0, nofooter=True)]
         for cog,commands in mapping.items():
             commands = await self.filter_commands(commands)
             if not commands:
                 continue
             if len(page[-1].fields) >= 24: # If no space for commands or no space at all
-                page.append(fEmbeds.fancyEmbeds.makeEmbed(self, embTitle=titleDesc[0], desc=titleDesc[1], useColor=0, nofooter=True)) # New page
+                page.append(fEmbeds.fancyEmbeds.makeEmbed(self, self.context.guild.id, embTitle=titleDesc[0], desc=titleDesc[1], useColor=0, nofooter=True)) # New page
             cogName = getattr(cog,'qualified_name','Other')
             cogDesc = '\n> '+ getattr(cog,"description",'...') if not cogName == "Other" else "> Other commands that don't fit into a category."
             page[-1].add_field(name=f"> **{cogName}**", value=cogDesc, inline=False) # Add cog field
             for command in commands:
                 page[-1] = await self.create_help_field(self.context,page[-1],command)
                 if command != commands[-1] and len(page[-1].fields) == 25: # If not the last command and new page is required
-                    page.append(fEmbeds.fancyEmbeds.makeEmbed(self, embTitle=titleDesc[0], desc=titleDesc[1], useColor=0, nofooter=True)) # New page
+                    page.append(fEmbeds.fancyEmbeds.makeEmbed(self, self.context.guild.id, embTitle=titleDesc[0], desc=titleDesc[1], useColor=0, nofooter=True)) # New page
                     page[-1].add_field(name=f"> **{cogName}**", value=cogDesc, inline=False) # Add cog field
         if pageOut + 1 > len(page):
             pageOut = len(page) - 1
@@ -92,7 +92,7 @@ class NewHelp(commands.HelpCommand):
                 await command.can_run(self.context)
             except:
                 return
-        embed = fEmbeds.fancyEmbeds.makeEmbed(self, embTitle=f"Help for {command.qualified_name}" + (" cog" if isinstance(command,commands.Cog) else ' command'), desc=(f"Aliases: {', '.join(list(command.aliases))}" if command.aliases else ""), useColor=1, b=bot)
+        embed = fEmbeds.fancyEmbeds.makeEmbed(self, self.context.guild.id, embTitle=f"Help for {command.qualified_name}" + (" cog" if isinstance(command,commands.Cog) else ' command'), desc=(f"Aliases: {', '.join(list(command.aliases))}" if command.aliases else ""), useColor=1, b=bot)
         if not isinstance(command,commands.Cog):
             embed.add_field(name="Usage",value=f"`{self.clean_prefix}{command.qualified_name}{(' ' + command.signature.replace('_',' ')    ) if command.signature else ' <subcommand>' if isinstance(command,commands.Group) else ''}`")
         embed.add_field(name="Description",value=(command.help.replace("[p]",self.clean_prefix) if command.help else '...'),inline=False)
@@ -151,8 +151,8 @@ async def about(ctx):
 
     b = bot.get_cog("fancyEmbeds")
 
-    e = fEmbeds.fancyEmbeds.getActiveStyle(b)
-    emoji = fEmbeds.fancyEmbeds.getStyleValue(b, e, "emoji")
+    e = fEmbeds.fancyEmbeds.getActiveStyle(b, ctx.guild.id)
+    emoji = fEmbeds.fancyEmbeds.getStyleValue(b, ctx.guild.id, e, "emoji")
 
     if emoji is False:
         emojia = ""
@@ -165,7 +165,7 @@ async def about(ctx):
         emojic = ":stopwatch: "
         emojid = ":desktop: "
 
-    embed = fEmbeds.fancyEmbeds.makeEmbed(b, desc="Yayabot!", useColor=0)
+    embed = fEmbeds.fancyEmbeds.makeEmbed(b, ctx.guild.id, desc="Yayabot!", useColor=0)
     embed.set_author(name="YayaBot", url="https://wwww.github.com/SushiInYourFace/YayaBot", icon_url=bot.user.avatar_url)
     embed.add_field(name=f"{emojia}Instance Owner:", value=appinfo.owner, inline=True)
     embed.add_field(name="_ _", value="_ _", inline=True)

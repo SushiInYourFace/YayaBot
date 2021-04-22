@@ -191,8 +191,8 @@ class AutoMod(commands.Cog):
         """Sends current values for the spam filters."""
         values = cursor.execute("SELECT * FROM spam_filters WHERE guild = ?",(ctx.guild.id,)).fetchone()
 
-        style = fEmbeds.fancyEmbeds.getActiveStyle(self)
-        emoji = fEmbeds.fancyEmbeds.getStyleValue(self, style, "emoji")
+        style = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
+        emoji = fEmbeds.fancyEmbeds.getStyleValue(self, ctx.guild.id, style, "emoji")
 
         if emoji == False:
             emojia = ""
@@ -208,7 +208,7 @@ class AutoMod(commands.Cog):
             emojie = ":repeat: "
 
         if values:
-            embed = fEmbeds.fancyEmbeds.makeEmbed(self, embTitle=f"{emojia}Spam Filters:", useColor=2)
+            embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}Spam Filters:", useColor=2)
             embed.add_field(name=f"{emojib}Emoji Limit:", value=(values[1] if values[1] > -1 else 'disabled'))
             embed.add_field(name=f"{emojic}Invite Filter:", value=('enabled' if values[2] == 1 else 'disabled'))
             embed.add_field(name=f"{emojid}Message Spam Limit:", value=(values[3] if values[3] > -1 else 'disabled'))
@@ -335,8 +335,8 @@ class AutoMod(commands.Cog):
         if isinstance(after.channel, discord.channel.DMChannel):
             return
 
-        style = fEmbeds.fancyEmbeds.getActiveStyle(self)
-        emoji = fEmbeds.fancyEmbeds.getStyleValue(self, style, "emoji")
+        style = fEmbeds.fancyEmbeds.getActiveStyle(self, after.guild.id)
+        emoji = fEmbeds.fancyEmbeds.getStyleValue(self, after.guild.id, style, "emoji")
 
         if emoji == False:
             emojia = ""
@@ -351,7 +351,7 @@ class AutoMod(commands.Cog):
             return
         channel = after.guild.get_channel(logID[0])
 
-        editEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, embTitle=f"{emojia}Message edited in {after.channel.name}", useColor=3)
+        editEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, after.guild.id, embTitle=f"{emojia}Message edited in {after.channel.name}", useColor=3)
         editEmbed.set_author(name=str(after.author), icon_url=after.author.avatar_url)
 
         #difference
@@ -391,8 +391,8 @@ class AutoMod(commands.Cog):
     @commands.Cog.listener()
     async def on_message_delete(self, message):
 
-        style = fEmbeds.fancyEmbeds.getActiveStyle(self)
-        emoji = fEmbeds.fancyEmbeds.getStyleValue(self, style, "emoji")
+        style = fEmbeds.fancyEmbeds.getActiveStyle(self, message.guild.id)
+        emoji = fEmbeds.fancyEmbeds.getStyleValue(self, message.guild.id, style, "emoji")
 
         if emoji == False:
             emojia = ""
@@ -406,7 +406,7 @@ class AutoMod(commands.Cog):
             if len(content) > 1024:
                 content = content[:1020] + "..."
 
-            deleteEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, embTitle=f"{emojia}Message deleted from **{message.channel.name}**", desc=content, force=True, forceColor=0xff0000)
+            deleteEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, message.guild.id, embTitle=f"{emojia}Message deleted from **{message.channel.name}**", desc=content, force=True, forceColor=0xff0000)
             deleteEmbed.set_author(name=str(message.author), icon_url=message.author.avatar_url)
 
             await channel.send(embed=deleteEmbed)
