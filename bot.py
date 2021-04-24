@@ -33,17 +33,24 @@ async def get_pre(bot, message):
 
 #Help command
 class NewHelp(commands.HelpCommand):
-    async def create_help_field(self,ctx,embed,command):
+    async def create_help_field(self,ctx,embed,command,emoji):
         if command.help:
             description = (command.help[:command.help.find("\n")+1] if '\n' in command.help else command.help)
             if len(description) > 200:
                 description = description[:197] + "..."
         else:
             description = "..."
-        embed.add_field(name=f"{command.name}", value=f"{description}", inline=True)
+        if command.brief:
+            emote = command.brief
+        else:
+            emote = ""
+        embed.add_field(name=f"{emote}{command.name}", value=f"{description}", inline=True)
         return embed
 
     async def send_bot_help(self,mapping):
+        style = fEmbeds.fancyEmbeds.getActiveStyle(self, self.context.guild.id)
+        useEmoji = fEmbeds.fancyEmbeds.getStyleValue(self, self.context.guild.id, style, "emoji")
+
         pageOut = 0
         colour = discord.Colour.random()
         titleDesc = ["YayaBot Help!",f"Say `{self.clean_prefix}help <command>` for more info on a command!"]
@@ -58,7 +65,7 @@ class NewHelp(commands.HelpCommand):
             cogDesc = '\n> '+ getattr(cog,"description",'...') if not cogName == "Other" else "> Other commands that don't fit into a category."
             page[-1].add_field(name=f"> **{cogName}**", value=cogDesc, inline=False) # Add cog field
             for command in commands:
-                page[-1] = await self.create_help_field(self.context,page[-1],command)
+                page[-1] = await self.create_help_field(self.context,page[-1],command,useEmoji)
                 if command != commands[-1] and len(page[-1].fields) == 25: # If not the last command and new page is required
                     page.append(fEmbeds.fancyEmbeds.makeEmbed(self, self.context.guild.id, embTitle=titleDesc[0], desc=titleDesc[1], useColor=0, nofooter=True)) # New page
                     page[-1].add_field(name=f"> **{cogName}**", value=cogDesc, inline=False) # Add cog field
@@ -87,6 +94,9 @@ class NewHelp(commands.HelpCommand):
             await reaction.remove(user)
 
     async def send_command_help(self,command):
+        style = fEmbeds.fancyEmbeds.getActiveStyle(self, self.context.guild.id)
+        useEmoji = fEmbeds.fancyEmbeds.getStyleValue(self, self.context.guild.id, style, "emoji")
+
         if not isinstance(command,commands.Cog):
             try:
                 await command.can_run(self.context)
@@ -99,7 +109,7 @@ class NewHelp(commands.HelpCommand):
         if isinstance(command,commands.Group) or isinstance(command,commands.Cog):
             embed.add_field(name="———————",value="**Subcommands**" if isinstance(command,commands.Group) else "**Commands**",inline=False)
             for subcommand in await self.filter_commands(command.commands, sort=True):
-                embed = await self.create_help_field(self.context,embed,subcommand)
+                embed = await self.create_help_field(self.context,embed,subcommand,useEmoji)
         await self.get_destination().send(embed=embed)
 
     async def send_group_help(self,group):
