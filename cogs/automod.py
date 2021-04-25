@@ -40,7 +40,7 @@ class AutoMod(commands.Cog):
         self._last_member = None
         self.warnCooldown = {}
 
-    @commands.group(aliases=["word_filter"])
+    @commands.group(aliases=["word_filter"], brief=":abcd: ")
     @commands.check(functions.has_modrole)
     @commands.before_invoke(word_filter_pre_invoke)
     async def wordFilter(self,ctx):
@@ -48,7 +48,7 @@ class AutoMod(commands.Cog):
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
 
-    @wordFilter.group(name="set")
+    @wordFilter.group(name="set", brief=":pencil2: ")
     async def wordFilter_set(self,ctx):
         """Sets the server message filter to the specified string or contents of a supplied text file if the desired filter is longer than 2000 characters.
         Each word/phrase to be filtered should be separated by ;
@@ -72,7 +72,7 @@ class AutoMod(commands.Cog):
             new_filter = new_filter[1:]
         return new_filter
 
-    @wordFilter_set.command(name="wild",aliases=["wildcard"])
+    @wordFilter_set.command(name="wild",aliases=["wildcard"], brief=":fountain_pen: ")
     async def wordFilter_set_wild(self,ctx,*,new_filter=None):
         """Sets the wildcard filter."""
         new_filter = await self.new_filter_format(ctx,new_filter)
@@ -80,7 +80,7 @@ class AutoMod(commands.Cog):
         connection.commit()
         await ctx.send("Filter set.")
 
-    @wordFilter_set.command(name="exact")
+    @wordFilter_set.command(name="exact", brief=":ballpoint_pen: ")
     async def wordFilter_set_exact(self,ctx,*,new_filter=None):
         """Sets the exact filter."""
         new_filter = await self.new_filter_format(ctx,new_filter)
@@ -88,7 +88,7 @@ class AutoMod(commands.Cog):
         connection.commit()
         await ctx.send("Filter set.")
 
-    @wordFilter.command(name="add")
+    @wordFilter.command(name="add", brief=":pencil: ")
     async def wordFilter_add(self,ctx,*words):
         """Adds specified words/phrases to filter.
         You can specify multiple words with spaces, to add something that includes a space you must encase it in ".
@@ -121,7 +121,7 @@ class AutoMod(commands.Cog):
         connection.commit()
         await ctx.send("Added to filter.")
 
-    @wordFilter.command(name="remove",aliases=["del","delete"])
+    @wordFilter.command(name="remove",aliases=["del","delete"], brief=":x: ")
     async def wordFilter_remove(self,ctx,*words):
         """Removes specified words/phrases from filter.
         You can specify multiple words with spaces, to remove something that includes a space you must encase it in ".
@@ -156,7 +156,7 @@ class AutoMod(commands.Cog):
         connection.commit()
         await ctx.send(f"Removed from filter. {'The following words were not found so not removed: ' if notFoundWords else ''}{' '.join(notFoundWords) if notFoundWords else ''}")
         
-    @wordFilter.command(name="get",aliases=["list"])
+    @wordFilter.command(name="get",aliases=["list"], brief=":notepad_spiral: ")
     async def wordFilter_get(self,ctx):
         """Sends the filter.
         Usually sent as a message but is sent as a text file if it's over 2000 characters"""
@@ -169,7 +169,7 @@ class AutoMod(commands.Cog):
             f = discord.File(fp,filename="filter.txt")
             await ctx.send("Filter is too large so is sent as a file:",file=f)    
 
-    @wordFilter.command(name="toggle")
+    @wordFilter.command(name="toggle", brief=":wrench: ")
     async def wordFilter_toggle(self,ctx):
         """Toggles whether the filter is on or not."""
         enabled = cursor.execute("SELECT * FROM message_filter WHERE guild = ?",(ctx.guild.id,)).fetchone()[1]
@@ -178,7 +178,7 @@ class AutoMod(commands.Cog):
         connection.commit()
         await ctx.send(f"Filter now {'enabled' if enabled == 1 else 'disabled'}.")
 
-    @commands.group(name="spamFilter",aliases=["spam_filter"])
+    @commands.group(name="spamFilter",aliases=["spam_filter"], brief=":loudspeaker:")
     @commands.check(functions.has_modrole)
     @commands.before_invoke(spam_filter_pre_invoke)
     async def spamFilter(self,ctx):
@@ -186,7 +186,7 @@ class AutoMod(commands.Cog):
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
 
-    @spamFilter.group(name="get",aliases=["list"])
+    @spamFilter.group(name="get",aliases=["list"], brief=":notepad_spiral: ")
     async def spamFilter_get(self,ctx):
         """Sends current values for the spam filters."""
         values = cursor.execute("SELECT * FROM spam_filters WHERE guild = ?",(ctx.guild.id,)).fetchone()
@@ -216,7 +216,7 @@ class AutoMod(commands.Cog):
             
             await ctx.send(embed=embed)
 
-    @spamFilter.command(name="invites")
+    @spamFilter.command(name="invites", brief=":envelope: ")
     async def spamFilter_invites(self,ctx):
         """Toggles if invites are filtered."""
         enabled = cursor.execute("SELECT invite_filter FROM spam_filters WHERE guild = ?",(ctx.guild.id,)).fetchone()[0]
@@ -225,7 +225,7 @@ class AutoMod(commands.Cog):
         connection.commit()
         await ctx.send(f"Invite filter now {'enabled' if enabled == 1 else 'disabled'}.")
 
-    @spamFilter.command(name="emoji")
+    @spamFilter.command(name="emoji", brief=":slight_smile: ")
     async def spamFilter_emoji(self,ctx,limit:int=None):
         """Sets emoji limit. To remove, don't specify a limit."""
         if not limit:
@@ -234,7 +234,7 @@ class AutoMod(commands.Cog):
         connection.commit()
         await ctx.send(f"Emoji limit now {limit if limit > -1 else 'disabled'}.")
 
-    @spamFilter.command(name="messageLimit",aliases=["message_limit"])
+    @spamFilter.command(name="messageLimit",aliases=["message_limit"], brief=":speech_balloon: ")
     async def spamFilter_messageLimit(self,ctx,limit:int=None):
         """Sets the limit for messages sent within 5 seconds. To remove, don't specify a limit."""
         if not limit:
@@ -243,7 +243,7 @@ class AutoMod(commands.Cog):
         connection.commit()
         await ctx.send(f"Message limit now {limit if limit > -1 else 'disabled'}.")
 
-    @spamFilter.command(name="repeatingLimit",aliases=["repeating_limit"])
+    @spamFilter.command(name="repeatingLimit",aliases=["repeating_limit"], brief=":repeat: ")
     async def spamFilter_repeatingLimit(self,ctx,limit:int=None):
         """Sets the limit for repeating characters in a message. To remove don't specify a limit."""
         if not limit:

@@ -97,6 +97,13 @@ class NewHelp(commands.HelpCommand):
         style = fEmbeds.fancyEmbeds.getActiveStyle(self, self.context.guild.id)
         useEmoji = fEmbeds.fancyEmbeds.getStyleValue(self, self.context.guild.id, style, "emoji")
 
+        if not useEmoji:
+            emojia = ""
+            emojib = ""
+        else:
+            emojia = ":screwdriver: "
+            emojib = ":scroll: "
+
         if not isinstance(command,commands.Cog):
             try:
                 await command.can_run(self.context)
@@ -104,8 +111,8 @@ class NewHelp(commands.HelpCommand):
                 return
         embed = fEmbeds.fancyEmbeds.makeEmbed(self, self.context.guild.id, embTitle=f"Help for {command.qualified_name}" + (" cog" if isinstance(command,commands.Cog) else ' command'), desc=(f"Aliases: {', '.join(list(command.aliases))}" if command.aliases else ""), useColor=1, b=bot)
         if not isinstance(command,commands.Cog):
-            embed.add_field(name="Usage",value=f"`{self.clean_prefix}{command.qualified_name}{(' ' + command.signature.replace('_',' ')    ) if command.signature else ' <subcommand>' if isinstance(command,commands.Group) else ''}`")
-        embed.add_field(name="Description",value=(command.help.replace("[p]",self.clean_prefix) if command.help else '...'),inline=False)
+            embed.add_field(name=f"{emojia}Usage",value=f"`{self.clean_prefix}{command.qualified_name}{(' ' + command.signature.replace('_',' ')    ) if command.signature else ' <subcommand>' if isinstance(command,commands.Group) else ''}`")
+        embed.add_field(name=f"{emojib}Description",value=(command.help.replace("[p]",self.clean_prefix) if command.help else '...'),inline=False)
         if isinstance(command,commands.Group) or isinstance(command,commands.Cog):
             embed.add_field(name="———————",value="**Subcommands**" if isinstance(command,commands.Group) else "**Commands**",inline=False)
             for subcommand in await self.filter_commands(command.commands, sort=True):
@@ -151,7 +158,7 @@ async def on_ready():
     logging.info(f"I'm connected as {str(bot.user)} - {bot.user.id}!")
     logging.info(f"In {len(bot.guilds)} guilds overlooking {len(list(bot.get_all_channels()))} channels and {len(list(bot.get_all_members()))} users.")
 
-@bot.command(aliases=["info","bot"])
+@bot.command(aliases=["info","bot"], brief=":green_book: " )
 async def about(ctx):
     """Sends some information about the bot!"""
     currentTime = time.time()

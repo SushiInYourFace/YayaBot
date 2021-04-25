@@ -13,16 +13,16 @@ class Community(commands.Cog):
         self._last_member = None
 
     #rats
-    @commands.command(help="RATS RATS RATS RATS RATS RATS RATS RATS RATS RATS RATS RATS", aliases=["rats", "RATS", "RAT"])
+    @commands.command(help="RATS RATS RATS RATS RATS RATS RATS RATS RATS RATS RATS RATS", aliases=["rats", "RATS", "RAT"], brief=":rat: ")
     async def rat(self, ctx):
         rat = random.choice(open("resources/rats.txt").readlines())
         await ctx.send(rat)
 
-    @commands.command(help="Gives you the number of people in the server")
+    @commands.command(help="Gives you the number of people in the server", brief=":slight_smile: ")
     async def membercount(self, ctx):
         await ctx.send(f"There are currently {ctx.guild.member_count} members in the server")
 
-    @commands.command(help="No")
+    @commands.command(help="No", brief=":rage: ")
     async def dyno(self, ctx):
         await ctx.send("No")
 
@@ -31,7 +31,7 @@ class Community(commands.Cog):
         if message.type == discord.MessageType.new_member:
             await message.add_reaction("🎉")
 
-    @commands.command(name="worm",aliases=["wormonastring","woas","string"])
+    @commands.command(help="worm.",name="worm",aliases=["wormonastring","woas","string"],brief=":worm: ")
     async def worm(self,ctx,*,user:discord.Member=None):
         if not user:
             user = ctx.author

@@ -26,20 +26,20 @@ class Moderation(commands.Cog):
         self.bot.pending_cooldowns = {}
         self.bot.before_invoke(self.before_invoke)
 
-    @commands.group(help="Purge command.")
+    @commands.group(help="Purge command.", brief=":x: ")
     @commands.check(functions.has_modrole)
     async def purge(self,ctx):
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
 
     #purge command
-    @purge.command(help="Purges a specified amount of messages from the chat",name="number",aliases=["n"])
+    @purge.command(help="Purges a specified amount of messages from the chat",name="number",aliases=["n"], brief=":1234: ")
     async def purge_number(self, ctx, arg:int):
         arg += 1 # adding one to ignore the command invoking message
         await ctx.channel.purge(limit=arg)
     
     #purge match command, only purges messages that contain a certain string
-    @purge.command(help="Purges messages containing a certain string", name="match", aliases=["m"])
+    @purge.command(help="Purges messages containing a certain string", name="match", aliases=["m"], brief=":abcd: ")
     async def purge_match(self, ctx, limit:int, *, filtered):
         limit += 1
         def filter_check(message):
@@ -47,7 +47,7 @@ class Moderation(commands.Cog):
         await ctx.channel.purge(limit=limit, check=filter_check)
 
     #ban
-    @commands.command(help="bans a user")
+    @commands.command(help="bans a user", brief=":hammer: ")
     @commands.check(functions.has_modrole)
 
     async def ban(self, ctx, member : discord.Member, *, reason=None):
@@ -91,7 +91,7 @@ class Moderation(commands.Cog):
 
         SqlCommands.new_case(member.id, ctx.guild.id, "ban", reason, bantime, -1, str(ctx.author))
 
-    @commands.command(help="kicks a user")
+    @commands.command(help="kicks a user", brief=":boot: ")
     @commands.check(functions.has_modrole)
     async def kick(self, ctx, member : discord.Member, *, reason=None):
         if not ctx.guild.me.guild_permissions.kick_members:
@@ -133,7 +133,7 @@ class Moderation(commands.Cog):
         SqlCommands.new_case(member.id, ctx.guild.id, "kick", reason, kicktime, -1, str(ctx.author))
 
     #unban
-    @commands.command(help="unbans a user")
+    @commands.command(help="unbans a user", brief=":key: ")
     @commands.check(functions.has_modrole)
     async def unban(self, ctx, user : discord.User):
         unbanTime = time.time()
@@ -164,7 +164,7 @@ class Moderation(commands.Cog):
         SqlCommands.new_case(user.id, ctx.guild.id, "unban", "N/A", unbanTime, -1, str(ctx.author))
 
     #gravel
-    @commands.command(help="Gravels a user")
+    @commands.command(help="Gravels a user", brief=":mute: ")
     @commands.check(functions.has_modrole)
     async def gravel(self, ctx, member : discord.Member, graveltime, *, reason=None):
         now = time.time()    
@@ -216,7 +216,7 @@ class Moderation(commands.Cog):
 
         await ctx.send(embed=successEmbed)
 
-    @commands.command(help="Mutes a user")
+    @commands.command(help="Mutes a user", brief=":mute: ")
     @commands.check(functions.has_modrole)
     async def mute(self, ctx, member : discord.Member, mutetime, *, reason=None):
         now = time.time()    
@@ -270,7 +270,7 @@ class Moderation(commands.Cog):
 
         await ctx.send(embed=successEmbed)
 
-    @commands.command(help="warns a user")
+    @commands.command(help="warns a user", brief=":warning: ")
     @commands.check(functions.has_modrole)
     async def warn(self, ctx, member : discord.Member, *, reason):
 
@@ -299,7 +299,7 @@ class Moderation(commands.Cog):
             failEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojic}Could not warn user {str(member)}", force=True, forceColor=0xff0000)
             await ctx.send(embed=failEmbed)
 
-    @commands.command(help="Shows a user's modlogs")
+    @commands.command(help="Shows a user's modlogs", brief=":file_folder: ")
     @commands.check(functions.has_modrole)
     async def modlogs(self, ctx, member : discord.User):
 
@@ -340,7 +340,7 @@ class Moderation(commands.Cog):
 
         await ctx.send(embed = logEmbed)
 
-    @commands.command(help="Shows information on a case")
+    @commands.command(help="Shows information on a case", brief=":notepad_spiral: ")
     @commands.check(functions.has_modrole)
     async def case(self, ctx, case:int):
         caseinfo = cursor.execute("SELECT id_in_guild, guild, user, type, reason, started, expires, moderator FROM caselog WHERE id = ?", (case,)).fetchone()
@@ -381,7 +381,7 @@ class Moderation(commands.Cog):
 
         await ctx.send(embed = logEmbed)
 
-    @commands.command(help="Unmutes a User")
+    @commands.command(help="Unmutes a User", brief=":sound: ")
     @commands.check(functions.has_modrole)
     async def unmute(self, ctx, member : discord.Member):
         mod = str(ctx.author)
@@ -404,7 +404,7 @@ class Moderation(commands.Cog):
 
         SqlCommands.new_case(member.id, ctx.guild.id, "unmute", "N/A", unmutetime, -1, mod)
 
-    @commands.command(help="Ungravels a User")
+    @commands.command(help="Ungravels a User", brief=":sound: ")
     @commands.check(functions.has_modrole)
     async def ungravel(self, ctx, member : discord.Member):
         mod = str(ctx.author)

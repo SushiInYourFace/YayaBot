@@ -144,14 +144,14 @@ class fancyEmbeds(commands.Cog):
         return embed
 
     #Embed command group
-    @commands.group(help="Manage how embeds are sent.")
+    @commands.group(help="Manage how embeds are sent.", brief=":page_facing_up: ")
     @commands.check(functions.has_modrole)
     async def embed(self, ctx):
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
 
     #Style Listing
-    @embed.command(help="List available embed styles.", aliases=["styles", "l"])
+    @embed.command(help="List available embed styles.", aliases=["styles", "l"], brief=":ledger: ")
     async def list(self, ctx):
         guildid = str(ctx.guild.id)
 
@@ -178,7 +178,7 @@ class fancyEmbeds(commands.Cog):
         await ctx.send(embed=emb)
 
     #Change the active embed style
-    @embed.command(help="Change the in-use embed style.", aliases=["setactive", "a"])
+    @embed.command(help="Change the in-use embed style.", aliases=["setactive", "a"], brief=":bookmark_tabs: ")
     async def active(self, ctx, new: str):
         try:
             with open("embeds.json", "r+") as f:
@@ -206,7 +206,7 @@ class fancyEmbeds(commands.Cog):
         await ctx.send(f"Changed to embed style {new} successfully!")
 
     #Create a new embed style. Could add optional ability to add colours and set time/emoji here too.
-    @embed.command(help="Create a new embed style.", aliases=["create", "add", "n"])
+    @embed.command(help="Create a new embed style.", aliases=["create", "add", "n"], brief=":pencil2: ")
     async def new(self, ctx, name: str):
         try:
             with open("embeds.json", "r+") as f:
@@ -233,7 +233,7 @@ class fancyEmbeds(commands.Cog):
         await ctx.send(f"Created a new style with the name {name}.")
 
     #Preview the values of a given embed style. Currently this is honestly useless, i'll need to add colour previews before this stops sucking and has any real value aside from testing.
-    @embed.command(help="View the properties of an embed style.", aliases=["view", "p"])
+    @embed.command(help="View the properties of an embed style.", aliases=["view", "p"], brief=":newspaper: ")
     async def preview(self, ctx, name):
         guildid = ctx.guild.id
 
@@ -277,7 +277,7 @@ class fancyEmbeds(commands.Cog):
         await ctx.send(embed=embed)
 
     #Change the colour values in an embed.
-    @embed.command(help="Change the colors of an embed style. Colors should use base16/hexcolor values. To keep a color value the same, specify `-1` for the parameter. Unspecified paramaters default to `-1`.", aliases=["c", "setcolor", "colour", "setcolour"])
+    @embed.command(help="Change the colors of an embed style, using hexcolor values.", aliases=["c", "setcolor", "colour", "setcolour"], brief=":yellow_square: ")
     async def color(self, ctx, style: str, color1: typing.Optional[str] = "-1", color2: typing.Optional[str] = "-1", color3: typing.Optional[str] = "-1", color4: typing.Optional[str] = "-1"):
         try:
             with open("embeds.json", "r+") as f:
@@ -327,7 +327,7 @@ class fancyEmbeds(commands.Cog):
         await ctx.send(f"Updated colors for style {style}.")
 
     #Toggle timestamps on/off
-    @embed.command(help="Change whether a style shows timestamps.", aliases=["time", "t", "tt"])
+    @embed.command(help="Change whether a style shows timestamps.", aliases=["time", "t", "tt"], brief=":clock3: ")
     async def toggletime(self, ctx, style):
         try:
             with open("embeds.json", "r+") as f:
@@ -364,7 +364,7 @@ class fancyEmbeds(commands.Cog):
             await ctx.send(f"Timestamps no longer show for the style {style}")
 
     #Toggle emojis on/off
-    @embed.command(help="Change whether a style shows emoji.", aliases=["emoji", "e", "te"])
+    @embed.command(help="Change whether a style shows emoji.", aliases=["emoji", "e", "te"], brief=":slight_smile: ")
     async def toggleemoji(self, ctx, style):
         try:
             with open("embeds.json", "r+") as f:

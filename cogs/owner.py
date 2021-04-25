@@ -26,14 +26,14 @@ class Owner(commands.Cog):
         self.bot = bot
         self.bot.previousReload = None
 
-    @commands.command()
+    @commands.command(brief=":sleeping: ")
     @commands.is_owner()
     async def shutdown(self,ctx):
         """Shuts the bot down!"""
         await ctx.send("👋 Goodbye")
         await self.bot.close()
 
-    @commands.command()
+    @commands.command(brief=":arrows_counterclockwise: ")
     @commands.is_owner()
     async def restart(self,ctx):
         """Restarts the bot!"""
@@ -41,14 +41,14 @@ class Owner(commands.Cog):
         self.bot.restart = True
         await self.bot.close()
 
-    @commands.group(aliases = ['c'])
+    @commands.group(aliases = ['c'], brief=":gear: ")
     @commands.is_owner()
     async def cog(self,ctx):
         """Commands to add, reload and remove cogs."""
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
 
-    @cog.command(aliases = ['l'])
+    @cog.command(aliases = ['l'], brief=":inbox_tray: ")
     async def load(self,ctx,*cogs):
         """Loads a cog."""
         for cog in cogs:
@@ -74,7 +74,7 @@ class Owner(commands.Cog):
                 connection.commit()
             await ctx.send(f"Cog `{cog}` {'loaded' if loadCog else ''}{' and ' if (loadCog and not inDb) else ''}{'added to database' if not inDb else ''}.")
 
-    @cog.command(aliases = ['u'])
+    @cog.command(aliases = ['u'], brief=":outbox_tray: ")
     async def unload(self,ctx,*cogs):
         """Unloads a cog."""
         for cog in cogs:
@@ -100,7 +100,7 @@ class Owner(commands.Cog):
                 connection.commit()
             await ctx.send(f"Cog {cog} {'unloaded' if unloadCog else ''}{' and ' if (unloadCog and inDb) else ''}{'removed from database' if inDb else ''}.")
 
-    @cog.command(aliases = ['r'])
+    @cog.command(aliases = ['r'], brief=":arrows_counterclockwise: ")
     async def reload(self,ctx,*cogs:typing.Optional[str]):
         """Reloads cogs."""
         allReloaded = False
@@ -132,7 +132,7 @@ class Owner(commands.Cog):
         else:
             self.bot.previousReload = loaded
 
-    @cog.command(name="list",aliases=["ls"])
+    @cog.command(name="list",aliases=["ls"], brief=":gear: ")
     async def cogs_list(self,ctx):
         """Lists loaded and unloaded cogs."""
         loaded_cogs = [cog.split(".")[1] for cog in self.bot.extensions.keys()]
@@ -155,14 +155,14 @@ class Owner(commands.Cog):
         embed.add_field(name=f"{emojic}Unloaded Cogs:", value=", ".join(unloaded_cogs)+".", inline=False)
         await ctx.send(embed=embed)
 
-    @commands.command(name="reload")
+    @commands.command(name="reload", brief=":arrows_counterclockwise: ")
     @commands.is_owner()
     async def reload_alias(self,ctx,*cogs:typing.Optional[str]):
         """Reloads specified cog or previously reloaded cog."""
         command = self.bot.get_command("cog reload")
         await ctx.invoke(command,*cogs)
 
-    @commands.command()
+    @commands.command(brief=":wrench: ")
     @commands.is_owner()
     async def update(self, ctx):
         """Pulls the latest commit from Github"""

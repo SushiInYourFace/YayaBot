@@ -39,20 +39,20 @@ class Utilities(commands.Cog):
         self.bot = bot
         self._last_member = None
 
-    @commands.group(name="setup", help="setup some (or all) features of the bot", aliases=["su",])
+    @commands.group(name="setup", help="setup some (or all) features of the bot", aliases=["su",], brief=":wrench: ")
     @commands.check_any(commands.has_permissions(administrator=True),commands.check(functions.has_adminrole))
     async def setup(self,ctx,subcommand=None):
         if ctx.invoked_subcommand is None and not subcommand:
             await ctx.invoke(self.bot.get_command('setup all'),)
     
-    @setup.command(help="Sets a server-specific bot prefix", name="prefix", aliases=["set_prefix",])
+    @setup.command(help="Sets a server-specific bot prefix", name="prefix", aliases=["set_prefix",], brief=":pencil2: ")
     async def setup_prefix(self, ctx, prefix):
         cursor.execute("INSERT INTO guild_prefixes(guild,prefix) VALUES(?, ?) ON CONFLICT(guild) DO UPDATE SET prefix=excluded.prefix", (ctx.guild.id, prefix))
         connection.commit()
         await ctx.send("Your new server-specific prefix is " + prefix)
 
     #all, chonky function
-    @setup.command(help="Sets up all the bot's features", name="all")
+    @setup.command(help="Sets up all the bot's features", name="all", brief=":wrench: ")
     async def setup_all(self, ctx):
         guild = ctx.guild
         await ctx.send("Beginning server set-up")
@@ -165,7 +165,7 @@ class Utilities(commands.Cog):
 
         await ctx.send(embed=response)
 
-    @setup.command(name="modlogs", help="Specifies the channel to be used for modlogs, do not specify a channel to remove logs.", aliases=["logchannel", "modlog", "logs",])
+    @setup.command(name="modlogs", help="Specifies the channel to be used for modlogs, do not specify a channel to remove logs.", aliases=["logchannel", "modlog", "logs",], brief=":file_folder: ")
     async def setup_modlogs(self, ctx, *, channel:discord.TextChannel=None):
         if channel:
             try:
@@ -180,7 +180,7 @@ class Utilities(commands.Cog):
             await ctx.send("Turned off modlogs")
         connection.commit()
 
-    @setup.command(name="gravel", help="Specifies the role given to someone who is graveled", aliases=["gravelrole",])
+    @setup.command(name="gravel", help="Specifies the role given to someone who is graveled", aliases=["gravelrole",], brief=":mute: ")
     async def setup_gravel(self, ctx, role:discord.Role):
         cursor.execute("INSERT INTO role_ids(guild, gravel) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET gravel=excluded.gravel", (ctx.guild.id, role.id))
         connection.commit()
@@ -196,7 +196,7 @@ class Utilities(commands.Cog):
         embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}Changed Gravel Role:", desc=role.mention, useColor=1)
         await ctx.send(embed=embed)
         
-    @setup.command(name="mute", help="Specifies the role given to someone who is muted", aliases=["muterole", "muted", "mutedrole"])
+    @setup.command(name="mute", help="Specifies the role given to someone who is muted", aliases=["muterole", "muted", "mutedrole"], brief=":mute: ")
     async def setup_mute(self, ctx, *, role:discord.Role):
         cursor.execute("INSERT INTO role_ids(guild, muted) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET muted=excluded.muted", (ctx.guild.id, role.id))
         connection.commit()
@@ -212,7 +212,7 @@ class Utilities(commands.Cog):
         embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}Changed Muted Role:", desc=role.mention, useColor=1)
         await ctx.send(embed=embed)
 
-    @setup.command(name="moderator", help="Sets the role used to determine whether a user can use moderation commands", aliases=["mod", "modrole"])
+    @setup.command(name="moderator", help="Sets the role used to determine whether a user can use moderation commands", aliases=["mod", "modrole"], brief=":hammer: ")
     async def setup_moderator(self, ctx, *, role:discord.Role):
         cursor.execute("INSERT INTO role_ids(guild, moderator) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET moderator=excluded.moderator", (ctx.guild.id, role.id))
         connection.commit()
@@ -228,7 +228,7 @@ class Utilities(commands.Cog):
         embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}Changed Moderator Role:", desc=role.mention, useColor=1)
         await ctx.send(embed=embed)
 
-    @setup.command(name="admin", help="Sets the role used to determine whether a user can use admin commands", aliases=["adminrole"])
+    @setup.command(name="admin", help="Sets the role used to determine whether a user can use admin commands", aliases=["adminrole"], brief=":tools:")
     async def setup_admin(self, ctx, *, role:discord.Role):
         cursor.execute("INSERT INTO role_ids(guild, admin) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET admin=excluded.admin", (ctx.guild.id, role.id))
         connection.commit()
@@ -245,7 +245,7 @@ class Utilities(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @setup.command(name="command", help="Sets the role used to determine whether a user can use commands", aliases=["commandrole"])
+    @setup.command(name="command", help="Sets the role used to determine whether a user can use commands", aliases=["commandrole"], brief=":page_facing_up: ")
     async def setup_command(self, ctx, *, role:discord.Role=None):
         cursor.execute("INSERT INTO role_ids(guild, command_usage) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET command_usage=excluded.command_usage", (ctx.guild.id, getattr(role,"id",0)))
         connection.commit()
@@ -262,7 +262,7 @@ class Utilities(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @setup.command(name="cooldown", help="Sets the cooldown (in ms) between command uses", aliases=["commandCooldown","command_cooldown"])
+    @setup.command(name="cooldown", help="Sets the cooldown (in ms) between command uses", aliases=["commandCooldown","command_cooldown"], brief=":stopwatch: ")
     async def setup_cooldown(self, ctx, cooldown:int=0):
         cursor.execute("INSERT INTO role_ids(guild, command_cooldown) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET command_cooldown=excluded.command_cooldown", (ctx.guild.id, cooldown))
         connection.commit()
@@ -279,7 +279,7 @@ class Utilities(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @commands.group(aliases=["t"])
+    @commands.group(aliases=["t"], brief=":label: ")
     @commands.check(tag_check)
     async def tag(self,ctx):
         """Predefined messages which can be triggered by commands."""
@@ -302,19 +302,19 @@ class Utilities(commands.Cog):
             except KeyError:
                 pass
 
-    @tag.command(name="(tag name)")
+    @tag.command(name="(tag name)", brief=":placard: ")
     async def tag_tagname(self,ctx):
         """Sends the text assosiated to your tag."""
         return
 
-    @tag.group(name="add",aliases=["new","set"])
+    @tag.group(name="add",aliases=["new","set"], brief=":memo: ")
     @commands.check(functions.has_modrole)
     async def tag_add(self,ctx):
         """Sets a tags text assosiation."""
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
 
-    @tag_add.command(name="text",aliases=["t"])
+    @tag_add.command(name="text",aliases=["t"], brief=":placard: ")
     async def tag_add_text(self,ctx,tag,*,text):
         """Sets a tags text assosiation."""
         guildTags = cursor.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,)).fetchone()
@@ -324,7 +324,7 @@ class Utilities(commands.Cog):
         connection.commit()
         await ctx.send("Tag updated.")
 
-    @tag_add.command(name="simpleEmbed",aliases=["se","simpleembed","simple_embed"])
+    @tag_add.command(name="simpleEmbed",aliases=["se","simpleembed","simple_embed"], brief=":bookmark_tabs: ")
     async def tag_add_simpleEmbed(self,ctx,tag,title,*,description=None):
         """Creates a simple embed with only a title and description.
         Title must be in "s and has a character limit of 256.."""
@@ -335,7 +335,7 @@ class Utilities(commands.Cog):
         connection.commit()
         await ctx.send("Tag updated.")
 
-    @tag_add.command(name="embed",aliases=["e"])
+    @tag_add.command(name="embed",aliases=["e"], brief=":newspaper: ")
     async def tag_add_embed(self,ctx,tag,*,embed=None):
         """Creates an embed tag from the dictionary given,
         create an embed at [https://leovoel.github.io/embed-visualizer/](https://leovoel.github.io/embed-visualizer/) and copy the JSON over.
@@ -369,7 +369,7 @@ class Utilities(commands.Cog):
         connection.commit()
         await ctx.send("Tag updated.")
 
-    @tag.command(name="remove",aliases=["delete","del"])
+    @tag.command(name="remove",aliases=["delete","del"], brief=":scissors: ")
     @commands.check(functions.has_modrole)
     async def tag_remove(self,ctx,tag):
         """Removes a tag text assosiation."""
@@ -380,7 +380,7 @@ class Utilities(commands.Cog):
         connection.commit()
         await ctx.send("Tag updated.")
 
-    @tag.command(name="list",aliases=["get"])
+    @tag.command(name="list",aliases=["get"], brief=":file_cabinet: ")
     async def tag_list(self,ctx):
         """Lists tags and their text assosiation."""
         guildTags = cursor.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,)).fetchone()
@@ -397,7 +397,7 @@ class Utilities(commands.Cog):
         embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}Tags:", desc=", ".join(tags.keys())+f"\n\nUsable by {ctx.guild.get_role(int(guildTags[1])).mention} and above.", useColor=2)
         await ctx.send(embed=embed)
 
-    @tag.command(name="role")
+    @tag.command(name="role", brief=":page_facing_up: ")
     @commands.check(functions.has_modrole)
     async def tag_role(self,ctx,*,role:discord.Role=None):
         """Sets the lowest role to be able to use tags."""
