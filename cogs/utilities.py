@@ -40,10 +40,10 @@ class Utilities(commands.Cog):
 
     @commands.group(name="setup", help="setup some (or all) features of the bot", aliases=["su",])
     @commands.check_any(commands.has_permissions(administrator=True),commands.check(functions.has_adminrole))
-    async def setup(self,ctx,subcommand=None):
-        if ctx.invoked_subcommand is None and not subcommand:
-            await ctx.invoke(self.bot.get_command('setup all'),)
-    
+    async def setup(self,ctx):
+        if ctx.invoked_subcommand is None:
+            await ctx.invoke(self.bot.get_command('setup all'))
+
     @setup.command(help="Sets a server-specific bot prefix", name="prefix", aliases=["set_prefix",])
     async def setup_prefix(self, ctx, prefix):
         cursor.execute("INSERT INTO guild_prefixes(guild,prefix) VALUES(?, ?) ON CONFLICT(guild) DO UPDATE SET prefix=excluded.prefix", (ctx.guild.id, prefix))

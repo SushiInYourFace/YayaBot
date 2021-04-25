@@ -22,6 +22,8 @@ while run:
             logging.info("No Update Required.")
     else:
         logging.info("Committed changes, not updating.")
-    code = subprocess.run([sys.executable,"bot.py"],stdout=subprocess.PIPE)
+    code = subprocess.run([sys.executable,"bot.py"],stdout=subprocess.PIPE).returncode
     if code == 0:
         run = False
+
+logging.info("Shutting Down")
