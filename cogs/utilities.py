@@ -2,7 +2,7 @@ import asyncio
 import json
 import random
 import sqlite3
-
+import io
 import aiohttp
 import discord
 from discord.ext import commands
@@ -317,6 +317,8 @@ class Utilities(commands.Cog):
         cursor.execute("UPDATE tags SET role=? WHERE guild=?",(role.id,ctx.guild.id))
         connection.commit()
         await ctx.send(f"Tag role set to {role.name}.")
+
+
 
 def setup(bot):
     bot.add_cog(Utilities(bot))

@@ -199,7 +199,8 @@ class Moderation(commands.Cog):
             successEmbed = discord.Embed(title="Successfully warned "+ str(member), color = 0x00FF00)
             await ctx.send(embed=successEmbed)
         except errors.HTTPException:
-            failEmbed = discord.Embed(title="Could not warn user "+ str(member), color = 0x00FF00)
+            failEmbed = discord.Embed(title="Logged a warning for user "+ str(member), color = 0x00FF00)
+            failEmbed.set_footer(text="I couldn't send a message to them")
             await ctx.send(embed=failEmbed)
 
     @commands.command(help="Shows a user's modlogs")

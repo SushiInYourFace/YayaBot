@@ -6,8 +6,14 @@ import sqlite3
 import subprocess
 import sys
 import typing
-
+import io
+import functions
+import gzip
+import shutil
 import discord
+from pathlib import Path
+import tempfile
+from datetime import datetime
 from discord.ext import commands
 
 # Logging config
@@ -173,6 +179,52 @@ class Owner(commands.Cog):
         out.remove("")
         await asyncio.create_subprocess_shell("git pull", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
         await ctx.send(f"Update completed!\nThe following files have been changed\n```{', '.join(out)}```\nYou may have to restart the bot, or reload some cogs for it to take effect.")
+
+
+    @commands.group(aliases = ['bu'])
+    @commands.is_owner()
+    async def backup(self,ctx):
+        """Commands to add, reload and remove cogs."""
+        if ctx.invoked_subcommand is None:
+            await ctx.send_help(ctx.command)
+
+    @backup.command(aliases=["make",])
+    async def create(self, ctx):
+        """Creates a backup of the current database"""
+        with tempfile.NamedTemporaryFile(suffix='.db') as tempBackup: #creates temp file
+            backup = sqlite3.connect(tempBackup.name)
+            with backup:
+                connection.backup(backup, pages=1) #actual backup happens here
+            backup.close()
+            timestamp = datetime.now().strftime('%m_%d_%Y-%H:%M:%S')
+            fname = f'resources/backups/{timestamp}.db.gz'
+            with gzip.open(fname, 'wb') as f_out:
+                shutil.copyfileobj(tempBackup, f_out)
+        root_directory = Path('resources/backups')
+        #functions in f-string gets size, count of everything in "backups" folder
+        await ctx.send(f"Sounds good! I made a backup of your database. Currently, your {len(os.listdir('resources/backups'))} backup(s) take up {round((sum(f.stat().st_size for f in root_directory.glob('**/*') if f.is_file())/1000),2)} kilobytes of space")
+
+    @backup.command(name="list")
+    async def list_backups(self, ctx):
+        """Lists all your current backups"""
+        files = [f[:-3] for f in os.listdir('resources/backups') if os.path.isfile(os.path.join('resources/backups',f))]
+        #functions in fstring go brrrr
+        message = f"```{os.linesep.join(sorted(files))}```\n**{len(os.listdir('resources/backups'))} total backup(s)**" if len(os.listdir('resources/backups')) != 0 else "You currently have no backups"
+        await ctx.send(message)
+
+    @backup.command()
+    async def delete(self, ctx, amount:int):
+        """Deletes a specified number of backups"""
+        files = [f for f in os.listdir('resources/backups') if os.path.isfile(os.path.join('resources/backups',f))]
+        if len(files) < amount:
+            await ctx.send("You don't have that many backups to delete!")
+            return
+        to_delete = sorted(files)[:amount]
+        for f in to_delete:
+            os.remove(f"resources/backups/{f}")
+        await ctx.send(f"Deleted {amount} backup(s), you now have {len(os.listdir('resources/backups'))}")
+
+        
 
     @commands.Cog.listener()
     async def on_message(self,message):
