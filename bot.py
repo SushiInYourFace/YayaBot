@@ -5,15 +5,41 @@ import platform
 import sqlite3
 import sys
 import time
+import os
 import discord
 from discord.ext import commands
+import configparser
+
 
 # Logging config
 logging.basicConfig(format='[%(asctime)s] %(levelname)s: %(message)s', level=logging.INFO)
 
-#Open txt files
-with open("token.txt") as f:
-    Token = f.read()
+#setup config parser
+config = configparser.ConfigParser()
+config.read('resources/config.ini')
+#make sure config is set up correctly
+if 'DATA' not in config:
+    print("You don't seem to have your config file set up correctly! Please make sure it is formatted the same way as the empty file on Github, and try to run the bot again")
+    exit()
+config_data = config["DATA"]
+if 'Token' not in config_data:
+    print("You don't seem to have your config file set up correctly! Please make sure it is formatted the same way as the empty file on Github, and try to run the bot again")
+    exit()
+if config_data['Token'] == "Put Your Token Here!":
+
+    #remove in future commit, this code allows for seamless transition from old method using token.txt
+    if os.path.exists('token.txt'):
+        with open("token.txt") as f:
+            config_data['Token'] = f.read()
+            with open('resources/config.ini', 'w') as g:
+                config.write(g)
+        os.remove("token.txt")
+        found_token = True
+        
+    if not found_token:
+        print("It seems you haven't enterd your token into the config file! Please paste your bot token into config.ini")
+        exit()
+Token = config_data['Token']
 
 #Guild-Specific prefixes
 async def get_pre(bot, message):

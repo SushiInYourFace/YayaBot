@@ -5,4 +5,4 @@ database.db
 token.txt
 embeds.json
 /resources/backups/*
-
+/resources/*.ini
