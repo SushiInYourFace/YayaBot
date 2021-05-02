@@ -4,3 +4,5 @@ database.db
 **/__pycache__/
 token.txt
 embeds.json
+/resources/backups/*
+/resources/*.ini

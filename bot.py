@@ -1,10 +1,8 @@
 import asyncio
-import datetime
 import logging
 import platform
 import sqlite3
 import time, datetime
-import platform
 import sys
 
 import discord
@@ -144,7 +142,6 @@ cursor.execute("CREATE TABLE IF NOT EXISTS extensions (extension TEXT PRIMARY KE
 cursor.execute("CREATE TABLE IF NOT EXISTS message_filter (guild INTEGER PRIMARY KEY, enabled INTEGER NOT NULL, filterWildCard TEXT NOT NULL, filterExact TEXT NOT NULL)")
 cursor.execute("CREATE TABLE IF NOT EXISTS spam_filters (guild INTEGER PRIMARY KEY, emoji_limit INTEGER, invite_filter INTEGER, message_spam_limit INTEGER, character_repeat_limit INTEGER)")
 cursor.execute("CREATE TABLE IF NOT EXISTS tags (guild INTEGER PRIMARY KEY, role INTEGER, tags TEXT NOT NULL)")
-cursor.execute("CREATE TABLE IF NOT EXISTS modlog_channels (guild INTEGER PRIMARY KEY, channel INTEGER)")
 con.commit()
 
 #startup
@@ -246,6 +243,9 @@ async def on_command_error(ctx, error):
         await ctx.send("You have inputted arguments incorrectly, you may have forgotten a closing \" or put one in by accident.")
     elif isinstance(error, commands.RoleNotFound):
         await ctx.send("That role could not be found.")
+    elif isinstance(error, sqlite3.OperationalError):
+        await ctx.send("Something went wrong while trying to access the SQL database. You may need to resore to a backup")
+        raise error
     else:
         await ctx.send("Something has gone wrong somewhere, and most likely needs to be fixed")
         raise error

@@ -284,7 +284,7 @@ class Moderation(commands.Cog):
         else:
             emojia = ":exclamation: "
             emojib = ":white_check_mark: "
-            emojic = ":x: "
+            emojic = ":notepad_spiral: "
 
         warnEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}You have been warned in {ctx.guild.name}", force=True, forceColor=0xff0000)
         warnEmbed.add_field(name="Reason:", value=reason)
@@ -296,7 +296,7 @@ class Moderation(commands.Cog):
             successEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojib}Successfully warned {str(member)}", force=True, forceColor=0x00ff00)
             await ctx.send(embed=successEmbed)
         except errors.HTTPException:
-            failEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojic}Could not warn user {str(member)}", force=True, forceColor=0xff0000)
+            failEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojic}Logged a warning for user {str(member)}", desc="Failed to send a message to the user.", force=True, forceColor=0x00ff00)
             await ctx.send(embed=failEmbed)
 
     @commands.command(help="Shows a user's modlogs", brief=":file_folder: ")
