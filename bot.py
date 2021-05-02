@@ -209,7 +209,7 @@ async def on_command_error(ctx, error):
     elif isinstance(error, commands.RoleNotFound):
         await ctx.send("That role could not be found.")
     elif isinstance(error, sqlite3.OperationalError):
-        await ctx.send("Something went wrong while trying to access the SQL database. You may need to resore to a backup")
+        await ctx.send("Something went wrong while trying to access the SQL database. You may need to restore to a backup")
         raise error
     else:
         await ctx.send("Something has gone wrong somewhere, and most likely needs to be fixed")
