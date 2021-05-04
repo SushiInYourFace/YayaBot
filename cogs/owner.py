@@ -197,7 +197,7 @@ class Owner(commands.Cog):
         with backup:
             connection.backup(backup, pages=1) #actual backup happens here
         backup.close()
-        timestamp = datetime.now().strftime('%m_%d_%Y-%H:%M:%S')
+        timestamp = datetime.now().strftime('%m_%d_%Y-%H_%M_%S')
         fname = f'resources/backups/{timestamp}.db.gz'
         with gzip.open(fname, 'wb') as f_out:
             with open("resources/backups/tempbackupfile.db", "rb") as f_in:
