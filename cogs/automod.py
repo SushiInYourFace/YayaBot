@@ -374,23 +374,54 @@ class AutoMod(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
+
+        #Role Persists
         cases = cursor.execute("SELECT id, type FROM caselog WHERE guild = ? AND user = ? AND expires >= ?", (member.guild.id, member.id, time.time(),)).fetchall()
+        persists = ""
         if cases is not None:
             #iterate through cases in case the user is both muted and graveled
             for case in cases:
                 if case[1] == "mute":
                     casetype = "muted"
+                    persists = persists + "m"
                 elif case[1] == "gravel":
                     casetype = "gravel"
+                    persists = persists + "g"
                 else:
                     #sanity check
                     return
-                role = functions.Sql.get_role(member.guild.id, casetype)
+                role = functions.Sql.get_role(self, member.guild.id, casetype)
                 try:
                     role = member.guild.get_role(role)
                     await member.add_roles(role)
                 except:
                     pass
+
+        #Join Logging
+        logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(member.guild.id,)).fetchone()
+        
+        if logID and logID != 0:
+
+            channel = member.guild.get_channel(logID[0])
+            created = member.created_at
+            timestamp = created.strftime("%Y-%m-%d, %H:%M:%S")
+            url = member.avatar_url
+
+            title=f"User Joined: {member.name}"
+            desc=f"Account created: {timestamp}"
+
+            if len(persists) > 0:
+                if len(persists) == 2:
+                    desc=f"{desc}\nThis member was previously **muted** and **graveled**, so these roles have been reapplied."
+                elif persists == "m":
+                    desc=f"{desc}\nThis member was previously **muted**, so their mute has been reapplied."
+                elif persists == "g":
+                    desc=f"{desc}\nThis member was previously **graveled**, so their gravel has been reapplied."
+
+            embed = discord.Embed(title=title, description=desc, color=0x00ff00, timestamp=datetime.datetime.utcfromtimestamp(time.time()))
+            embed.set_thumbnail(url=url)
+
+            await channel.send(embed=embed)
                 
 def setup(bot):
     bot.add_cog(AutoMod(bot))
