@@ -422,6 +422,22 @@ class AutoMod(commands.Cog):
             embed.set_thumbnail(url=url)
 
             await channel.send(embed=embed)
-                
+
+    @commands.Cog.listener()
+    async def on_member_leave(self, member):
+        
+        #Leave Logging
+        logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(member.guild.id,)).fetchone()
+        
+        if logID and logID != 0:
+
+            channel = member.guild.get_channel(logID[0])
+            url = member.avatar_url
+
+            embed = discord.Embed(title=f"User Left: {member.name}", color=0xff0000, timestamp=datetime.datetime.utcfromtimestamp(time.time()))
+            embed.set_thumbnail(url=url)
+
+            await channel.send(embed=embed)
+
 def setup(bot):
     bot.add_cog(AutoMod(bot))
