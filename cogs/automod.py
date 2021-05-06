@@ -374,7 +374,12 @@ class AutoMod(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
-
+        #checks if username is appropriate
+        if functions.filter_check(member.display_name, member.guild.id):
+            try:
+                await member.edit(nick="I had a bad nickname")
+            except discord.errors.Forbidden:
+                pass
         #Role Persists
         cases = cursor.execute("SELECT id, type FROM caselog WHERE guild = ? AND user = ? AND expires >= ?", (member.guild.id, member.id, time.time(),)).fetchall()
         persists = ""
@@ -389,7 +394,7 @@ class AutoMod(commands.Cog):
                     persists = persists + "g"
                 else:
                     #sanity check
-                    return
+                    continue
                 role = functions.Sql.get_role(self, member.guild.id, casetype)
                 try:
                     role = member.guild.get_role(role)
@@ -438,6 +443,27 @@ class AutoMod(commands.Cog):
             embed.set_thumbnail(url=url)
 
             await channel.send(embed=embed)
+
+    @commands.Cog.listener()
+    #TODO: #42 Allow guild-specific default nicks
+    async def on_member_update(self, before, after):
+        #Checks if member has an appropriate nick when they update it
+        if functions.filter_check(after.display_name, after.guild.id):
+            try:
+                await after.edit(nick="I had a bad nickname")
+            except discord.errors.Forbidden:
+                pass
+    
+    @commands.Cog.listener()
+    async def on_user_update(self, before, after):
+        #fires when someone updates their username, and makes sure it's appropriate
+        for guild in after.mutual_guilds:
+            member = guild.get_member(after.id)
+            if not member.nick and functions.filter_check(member.display_name, member.guild.id):
+                try:
+                    await member.edit(nick="I had a bad username")
+                except discord.errors.Forbidden:
+                    pass
 
 def setup(bot):
     bot.add_cog(AutoMod(bot))
