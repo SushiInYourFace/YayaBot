@@ -1,5 +1,6 @@
 import sqlite3
 import time
+import re
 
 con = sqlite3.connect("database.db")
 cursor = con.cursor()
@@ -21,6 +22,31 @@ def has_adminrole(ctx):
         return False
     elif (adminrole[0] in member_roles):
         return True
+    else:
+        return False
+
+def filter_check(message, guildID: int):
+    #returns a boolean depending on whether a message should be filtered according to the rules of a guild
+    guildFilter = cursor.execute("SELECT * FROM message_filter WHERE guild = ?",(guildID,)).fetchone() # Bad words.
+    if not guildFilter:
+        return False
+    if guildFilter[1] == 1:
+        bannedWilds = guildFilter[2].split(";")
+        bannedExacts = guildFilter[3].split(";")
+        formatted_content = re.sub("[^\w ]|_", "", message)
+        spaceless_content = re.sub("[^\w]|_", "", message)
+        if "" in bannedWilds:
+            bannedWilds.remove("")
+        if "" in bannedExacts:
+            bannedExacts.remove("")
+        if " " in formatted_content.lower():
+            words = formatted_content.split(" ")
+        else:
+            words = [formatted_content]
+        if (any(bannedWord in spaceless_content.lower() for bannedWord in bannedWilds) or any(bannedWord in words for bannedWord in bannedExacts)):
+            return True
+        else:
+            return False
     else:
         return False
 
@@ -90,3 +116,4 @@ class timeconverters:
             return str(minutes) + (" Minute" if minutes==1 else " Minutes")
         else:
             return str(seconds) + (" Second" if seconds==1 else " Seconds")
+
