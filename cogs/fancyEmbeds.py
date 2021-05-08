@@ -1,10 +1,12 @@
-import discord
-from discord.ext import commands
 import typing
 import json
 import time, datetime
-import functions
 import logging
+
+import discord
+from discord.ext import commands
+
+import functions
 
 #Add cog to the bot
 def setup(bot):

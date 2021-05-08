@@ -1,5 +1,7 @@
+import re
 import sqlite3
 import time
+from collections import namedtuple
 
 con = sqlite3.connect("database.db")
 cursor = con.cursor()
@@ -24,6 +26,56 @@ def has_adminrole(ctx):
     else:
         return False
 
+#TODO: Update this to new filter methods
+def filter_check(message, guildID: int):
+    #returns a boolean depending on whether a message should be filtered according to the rules of a guild
+    guildFilter = cursor.execute("SELECT * FROM message_filter WHERE guild = ?",(guildID,)).fetchone() # Bad words.
+    if not guildFilter:
+        return False
+    if guildFilter[1] == 1:
+        bannedWilds = guildFilter[2].split(";")
+        bannedExacts = guildFilter[3].split(";")
+        formatted_content = re.sub("[^\w ]|_", "", message)
+        spaceless_content = re.sub("[^\w]|_", "", message)
+        if "" in bannedWilds:
+            bannedWilds.remove("")
+        if "" in bannedExacts:
+            bannedExacts.remove("")
+        if " " in formatted_content.lower():
+            words = formatted_content.split(" ")
+        else:
+            words = [formatted_content]
+        if (any(bannedWord in spaceless_content.lower() for bannedWord in bannedWilds) or any(bannedWord in words for bannedWord in bannedExacts)):
+            return True
+        else:
+            return False
+    else:
+        return False
+
+#adds a guild's up-to-date regexes to the bot
+def update_filter(bot, guild_filter):
+    filter_tuple = namedtuple("filter_tuple", ["enabled", "wildcard", "exact"])
+    enabled = True if guild_filter[1] == 1 else False
+    #getting lists
+    bannedWilds = guild_filter[2].split(";")
+    bannedExacts = guild_filter[3].split(";")
+    if "" in bannedWilds:
+        bannedWilds.remove("")
+    if "" in bannedExacts:
+        bannedExacts.remove("")
+    #creating regexes
+    if bannedWilds:
+        wilds_pattern = "|".join(bannedWilds)
+        wilds_re = re.compile(wilds_pattern)
+    else:
+        wilds_re = None
+    if bannedExacts:
+        exacts_pattern = "|".join(bannedExacts)
+        exacts_re = re.compile(r"\b(?:%s)\b" % exacts_pattern)
+    else:
+        exacts_re = None
+    guild_tuple = filter_tuple(enabled=enabled, wildcard=wilds_re, exact=exacts_re)
+    bot.guild_filters[guild_filter[0]] = guild_tuple
 
 class Sql:
     def newest_case(self):
@@ -90,3 +142,4 @@ class timeconverters:
             return str(minutes) + (" Minute" if minutes==1 else " Minutes")
         else:
             return str(seconds) + (" Second" if seconds==1 else " Seconds")
+

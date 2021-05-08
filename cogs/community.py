@@ -22,10 +22,6 @@ class Community(commands.Cog):
     async def membercount(self, ctx):
         await ctx.send(f"There are currently {ctx.guild.member_count} members in the server")
 
-    @commands.command(help="No", brief=":rage: ")
-    async def dyno(self, ctx):
-        await ctx.send("No")
-
     @commands.Cog.listener()
     async def on_message(self,message):
         if message.type == discord.MessageType.new_member:

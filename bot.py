@@ -4,10 +4,12 @@ import platform
 import sqlite3
 import time, datetime
 import sys
+from collections import namedtuple
 
 import discord
 from discord.ext import commands
 
+import functions
 import cogs.fancyEmbeds as fEmbeds
 
 # Logging config
@@ -144,6 +146,15 @@ cursor.execute("CREATE TABLE IF NOT EXISTS spam_filters (guild INTEGER PRIMARY K
 cursor.execute("CREATE TABLE IF NOT EXISTS tags (guild INTEGER PRIMARY KEY, role INTEGER, tags TEXT NOT NULL)")
 con.commit()
 
+#load filters into bot variable
+bot.guild_filters = {}
+filters = cursor.execute("SELECT * FROM message_filter").fetchall()
+
+filter_tuple = namedtuple("filter_tuple", ["enabled", "wildcard", "exact"])
+for guild_filter in filters:
+    functions.update_filter(bot, guild_filter)
+
+
 #startup
 @bot.event
 async def on_ready():
@@ -244,7 +255,7 @@ async def on_command_error(ctx, error):
     elif isinstance(error, commands.RoleNotFound):
         await ctx.send("That role could not be found.")
     elif isinstance(error, sqlite3.OperationalError):
-        await ctx.send("Something went wrong while trying to access the SQL database. You may need to resore to a backup")
+        await ctx.send("Something went wrong while trying to access the SQL database. You may need to restore to a backup")
         raise error
     else:
         await ctx.send("Something has gone wrong somewhere, and most likely needs to be fixed")

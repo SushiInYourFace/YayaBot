@@ -1,11 +1,11 @@
-import datetime
+import collections
+import time, datetime
 import difflib
 import io
 import re
 import sqlite3
-import time
-
 import aiohttp
+
 import discord
 from discord.ext import commands, tasks
 
@@ -79,6 +79,8 @@ class AutoMod(commands.Cog):
         cursor.execute("UPDATE message_filter SET filterWildCard=? WHERE guild=?",(new_filter,ctx.guild.id))
         connection.commit()
         await ctx.send("Filter set.")
+        current_filter = cursor.execute("SELECT * from message_filter WHERE guild=?",(ctx.guild.id,)).fetchone() 
+        functions.update_filter(self.bot, current_filter)
 
     @wordFilter_set.command(name="exact", brief=":ballpoint_pen: ")
     async def wordFilter_set_exact(self,ctx,*,new_filter=None):
@@ -87,6 +89,8 @@ class AutoMod(commands.Cog):
         cursor.execute("UPDATE message_filter SET filterExact=? WHERE guild=?",(new_filter.replace(" ",""),ctx.guild.id))
         connection.commit()
         await ctx.send("Filter set.")
+        current_filter = cursor.execute("SELECT * from message_filter WHERE guild=?",(ctx.guild.id,)).fetchone() 
+        functions.update_filter(self.bot, current_filter)
 
     @wordFilter.command(name="add", brief=":pencil: ")
     async def wordFilter_add(self,ctx,*words):
@@ -119,6 +123,8 @@ class AutoMod(commands.Cog):
         exactFilter = ";".join(exactFilter)
         cursor.execute("UPDATE message_filter SET filterWildCard=?, filterExact=? WHERE guild=?",(wildFilter,exactFilter,ctx.guild.id))
         connection.commit()
+        current_filter = cursor.execute("SELECT * from message_filter WHERE guild=?",(ctx.guild.id,)).fetchone() 
+        functions.update_filter(self.bot, current_filter)
         await ctx.send("Added to filter.")
 
     @wordFilter.command(name="remove",aliases=["del","delete"], brief=":x: ")
@@ -154,6 +160,8 @@ class AutoMod(commands.Cog):
         exactFilter = ";".join(exactFilter)
         cursor.execute("UPDATE message_filter SET filterWildCard=?, filterExact=? WHERE guild=?",(wildFilter,exactFilter,ctx.guild.id))
         connection.commit()
+        current_filter = cursor.execute("SELECT * from message_filter WHERE guild=?",(ctx.guild.id,)).fetchone() 
+        functions.update_filter(self.bot, current_filter)
         await ctx.send(f"Removed from filter. {'The following words were not found so not removed: ' if notFoundWords else ''}{' '.join(notFoundWords) if notFoundWords else ''}")
         
     @wordFilter.command(name="get",aliases=["list"], brief=":notepad_spiral: ")
@@ -176,6 +184,8 @@ class AutoMod(commands.Cog):
         enabled = 1 if enabled == 0 else 0
         cursor.execute("UPDATE message_filter SET enabled=? WHERE guild=?",(enabled,ctx.guild.id))
         connection.commit()
+        current_filter = cursor.execute("SELECT * from message_filter WHERE guild=?",(ctx.guild.id,)).fetchone() 
+        functions.update_filter(self.bot, current_filter)
         await ctx.send(f"Filter now {'enabled' if enabled == 1 else 'disabled'}.")
 
     @commands.group(name="spamFilter",aliases=["spam_filter"], brief=":loudspeaker:")
@@ -261,29 +271,27 @@ class AutoMod(commands.Cog):
             return
         if functions.has_modrole(message) or functions.has_adminrole(message):
             return
-        guildFilter = cursor.execute("SELECT * FROM message_filter WHERE guild = ?",(message.guild.id,)).fetchone() # Bad words.
-        if not guildFilter:
+        if message.guild.id not in self.bot.guild_filters:
             return
-        if guildFilter[1] == 1:
-            bannedWilds = guildFilter[2].split(";")
-            bannedExacts = guildFilter[3].split(";")
-            formatted_content = re.sub("[^\w ]|_", "", message.content)
-            spaceless_content = re.sub("[^\w]|_", "", message.content)
-            if "" in bannedWilds:
-                bannedWilds.remove("")
-            if "" in bannedExacts:
-                bannedExacts.remove("")
-            if " " in formatted_content.lower():
-                words = formatted_content.split(" ")
-            else:
-                words = [formatted_content]
-            if (any(bannedWord in spaceless_content.lower() for bannedWord in bannedWilds) or any(bannedWord in words for bannedWord in bannedExacts)):
-                await message.delete()
-                if message.channel.id not in self.warnCooldown:
-                    self.warnCooldown[message.channel.id] = 0
-                if self.warnCooldown[message.channel.id] < time.time():
-                    await message.channel.send(f"Watch your language {message.author.mention}",delete_after=2)
-                self.warnCooldown[message.channel.id] = time.time()+2
+        if not self.bot.guild_filters[message.guild.id].enabled:
+            return
+        should_delete = False
+        guild_filter = self.bot.guild_filters[message.guild.id]
+        formatted_content = re.sub("[^\w ]|_", "", message.content).lower()
+        spaceless_content = re.sub("[^\w]|_", "", message.content)
+        if guild_filter.wildcard:
+            if guild_filter.wildcard.search(spaceless_content):
+                should_delete = True
+        if guild_filter.exact:
+            if guild_filter.exact.search(formatted_content):
+                should_delete = True
+        if (should_delete):
+            await message.delete()
+            if message.channel.id not in self.warnCooldown:
+                self.warnCooldown[message.channel.id] = 0
+            if self.warnCooldown[message.channel.id] < time.time():
+                await message.channel.send(f"Watch your language {message.author.mention}",delete_after=2)
+            self.warnCooldown[message.channel.id] = time.time()+2
         spamFilters = cursor.execute("SELECT * FROM spam_filters WHERE guild = ?",(message.guild.id,)).fetchone()
         if spamFilters:
             if spamFilters[1] > -1: # emoji limit enabled
@@ -324,6 +332,7 @@ class AutoMod(commands.Cog):
                     if self.warnCooldown[message.channel.id] < time.time():
                         await message.channel.send(f"No spamming {message.author.mention}",delete_after=2)
                     self.warnCooldown[message.channel.id] = time.time()+2
+
 
     @commands.Cog.listener()
     async def on_message(self,message):
@@ -413,23 +422,96 @@ class AutoMod(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
+        #checks if username is appropriate
+        if functions.filter_check(member.display_name, member.guild.id):
+            try:
+                await member.edit(nick="I had a bad nickname")
+            except discord.errors.Forbidden:
+                pass
+        #Role Persists
         cases = cursor.execute("SELECT id, type FROM caselog WHERE guild = ? AND user = ? AND expires >= ?", (member.guild.id, member.id, time.time(),)).fetchall()
+        persists = ""
         if cases is not None:
             #iterate through cases in case the user is both muted and graveled
             for case in cases:
                 if case[1] == "mute":
                     casetype = "muted"
+                    persists = persists + "m"
                 elif case[1] == "gravel":
                     casetype = "gravel"
+                    persists = persists + "g"
                 else:
                     #sanity check
-                    return
-                role = functions.Sql.get_role(member.guild.id, casetype)
+                    continue
+                role = functions.Sql.get_role(self, member.guild.id, casetype)
                 try:
                     role = member.guild.get_role(role)
                     await member.add_roles(role)
                 except:
                     pass
-                
+
+        #Join Logging
+        logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(member.guild.id,)).fetchone()
+        
+        if logID and logID != 0:
+
+            channel = member.guild.get_channel(logID[0])
+            created = member.created_at
+            timestamp = created.strftime("%Y-%m-%d, %H:%M:%S")
+            url = member.avatar_url
+
+            title=f"User Joined: {member.name}"
+            desc=f"Account created: {timestamp}"
+
+            if len(persists) > 0:
+                if len(persists) == 2:
+                    desc=f"{desc}\nThis member was previously **muted** and **graveled**, so these roles have been reapplied."
+                elif persists == "m":
+                    desc=f"{desc}\nThis member was previously **muted**, so their mute has been reapplied."
+                elif persists == "g":
+                    desc=f"{desc}\nThis member was previously **graveled**, so their gravel has been reapplied."
+
+            embed = discord.Embed(title=title, description=desc, color=0x00ff00, timestamp=datetime.datetime.utcfromtimestamp(time.time()))
+            embed.set_thumbnail(url=url)
+
+            await channel.send(embed=embed)
+
+    @commands.Cog.listener()
+    async def on_member_leave(self, member):
+        
+        #Leave Logging
+        logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(member.guild.id,)).fetchone()
+        
+        if logID and logID != 0:
+
+            channel = member.guild.get_channel(logID[0])
+            url = member.avatar_url
+
+            embed = discord.Embed(title=f"User Left: {member.name}", color=0xff0000, timestamp=datetime.datetime.utcfromtimestamp(time.time()))
+            embed.set_thumbnail(url=url)
+
+            await channel.send(embed=embed)
+
+    @commands.Cog.listener()
+    #TODO: #42 Allow guild-specific default nicks
+    async def on_member_update(self, before, after):
+        #Checks if member has an appropriate nick when they update it
+        if functions.filter_check(after.display_name, after.guild.id):
+            try:
+                await after.edit(nick="I had a bad nickname")
+            except discord.errors.Forbidden:
+                pass
+    
+    @commands.Cog.listener()
+    async def on_user_update(self, before, after):
+        #fires when someone updates their username, and makes sure it's appropriate
+        for guild in after.mutual_guilds:
+            member = guild.get_member(after.id)
+            if not member.nick and functions.filter_check(member.display_name, member.guild.id):
+                try:
+                    await member.edit(nick="I had a bad username")
+                except discord.errors.Forbidden:
+                    pass
+
 def setup(bot):
     bot.add_cog(AutoMod(bot))

@@ -10,7 +10,6 @@ import io
 import gzip
 import shutil
 from pathlib import Path
-import tempfile
 from datetime import datetime
 
 import cogs.fancyEmbeds as fEmbeds
@@ -206,25 +205,29 @@ class Owner(commands.Cog):
     @backup.command(aliases=["make",])
     async def create(self, ctx):
         """Creates a backup of the current database"""
-        with tempfile.NamedTemporaryFile(suffix='.db') as tempBackup: #creates temp file
-            backup = sqlite3.connect(tempBackup.name)
-            with backup:
-                connection.backup(backup, pages=1) #actual backup happens here
-            backup.close()
-            timestamp = datetime.now().strftime('%m_%d_%Y-%H:%M:%S')
-            fname = f'resources/backups/{timestamp}.db.gz'
-            with gzip.open(fname, 'wb') as f_out:
-                shutil.copyfileobj(tempBackup, f_out)
+        if os.path.isfile("resources/backups/tempbackupfile.db"):
+            await ctx.send("A backup is already in the process of being made! Please wait a moment before trying this again")
+            return()
+        backup = sqlite3.connect("resources/backups/tempbackupfile.db")
+        with backup:
+            connection.backup(backup, pages=1) #actual backup happens here
+        backup.close()
+        timestamp = datetime.now().strftime('%m_%d_%Y-%H_%M_%S')
+        fname = f'resources/backups/{timestamp}.db.gz'
+        with gzip.open(fname, 'wb') as f_out:
+            with open("resources/backups/tempbackupfile.db", "rb") as f_in:
+                shutil.copyfileobj(f_in, f_out)
+        os.remove("resources/backups/tempbackupfile.db")
         root_directory = Path('resources/backups')
-        #functions in f-string gets size, count of everything in "backups" folder
-        await ctx.send(f"Sounds good! I made a backup of your database. Currently, your {len(os.listdir('resources/backups'))} backup(s) take up {round((sum(f.stat().st_size for f in root_directory.glob('**/*') if f.is_file())/1000),2)} kilobytes of space")
+        #functions in f-string gets size, count of everything in "backups" folder, 1 is subtracted from count because of gitkeep
+        await ctx.send(f"Sounds good! I made a backup of your database. Currently, your {(len(os.listdir('resources/backups')))-1} backup(s) take up {round((sum(f.stat().st_size for f in root_directory.glob('**/*') if f.is_file())/1000),2)} kilobytes of space")
 
     @backup.command(name="list")
     async def list_backups(self, ctx):
         """Lists all your current backups"""
-        files = [f[:-3] for f in os.listdir('resources/backups') if os.path.isfile(os.path.join('resources/backups',f))]
+        files = [f[:-6] for f in os.listdir('resources/backups') if os.path.isfile(os.path.join('resources/backups',f)) and f != ".gitkeep"]
         #functions in fstring go brrrr
-        message = f"```{os.linesep.join(sorted(files))}```\n**{len(os.listdir('resources/backups'))} total backup(s)**" if len(os.listdir('resources/backups')) != 0 else "You currently have no backups"
+        message = f"```{os.linesep.join(sorted(files))}```\n**{(len(os.listdir('resources/backups')))-1} total backup(s)**" if len(os.listdir('resources/backups')) != 1 else "You currently have no backups"
         await ctx.send(message)
 
     @backup.command()
