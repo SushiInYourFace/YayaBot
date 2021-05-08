@@ -1,3 +1,4 @@
+import collections
 import datetime
 import difflib
 import io
@@ -7,9 +8,8 @@ import time
 
 import aiohttp
 import discord
-from discord.ext import commands, tasks
-
 import functions
+from discord.ext import commands, tasks
 
 #sets up SQLite
 connection = sqlite3.connect("database.db")
@@ -78,6 +78,8 @@ class AutoMod(commands.Cog):
         cursor.execute("UPDATE message_filter SET filterWildCard=? WHERE guild=?",(new_filter,ctx.guild.id))
         connection.commit()
         await ctx.send("Filter set.")
+        current_filter = cursor.execute("SELECT * from message_filter WHERE guild=?",(ctx.guild.id,)).fetchone() 
+        functions.update_filter(self.bot, current_filter)
 
     @wordFilter_set.command(name="exact")
     async def wordFilter_set_exact(self,ctx,*,new_filter=None):
@@ -86,6 +88,8 @@ class AutoMod(commands.Cog):
         cursor.execute("UPDATE message_filter SET filterExact=? WHERE guild=?",(new_filter.replace(" ",""),ctx.guild.id))
         connection.commit()
         await ctx.send("Filter set.")
+        current_filter = cursor.execute("SELECT * from message_filter WHERE guild=?",(ctx.guild.id,)).fetchone() 
+        functions.update_filter(self.bot, current_filter)
 
     @wordFilter.command(name="add")
     async def wordFilter_add(self,ctx,*words):
@@ -118,6 +122,8 @@ class AutoMod(commands.Cog):
         exactFilter = ";".join(exactFilter)
         cursor.execute("UPDATE message_filter SET filterWildCard=?, filterExact=? WHERE guild=?",(wildFilter,exactFilter,ctx.guild.id))
         connection.commit()
+        current_filter = cursor.execute("SELECT * from message_filter WHERE guild=?",(ctx.guild.id,)).fetchone() 
+        functions.update_filter(self.bot, current_filter)
         await ctx.send("Added to filter.")
 
     @wordFilter.command(name="remove",aliases=["del","delete"])
@@ -153,6 +159,8 @@ class AutoMod(commands.Cog):
         exactFilter = ";".join(exactFilter)
         cursor.execute("UPDATE message_filter SET filterWildCard=?, filterExact=? WHERE guild=?",(wildFilter,exactFilter,ctx.guild.id))
         connection.commit()
+        current_filter = cursor.execute("SELECT * from message_filter WHERE guild=?",(ctx.guild.id,)).fetchone() 
+        functions.update_filter(self.bot, current_filter)
         await ctx.send(f"Removed from filter. {'The following words were not found so not removed: ' if notFoundWords else ''}{' '.join(notFoundWords) if notFoundWords else ''}")
         
     @wordFilter.command(name="get",aliases=["list"])
@@ -175,6 +183,8 @@ class AutoMod(commands.Cog):
         enabled = 1 if enabled == 0 else 0
         cursor.execute("UPDATE message_filter SET enabled=? WHERE guild=?",(enabled,ctx.guild.id))
         connection.commit()
+        current_filter = cursor.execute("SELECT * from message_filter WHERE guild=?",(ctx.guild.id,)).fetchone() 
+        functions.update_filter(self.bot, current_filter)
         await ctx.send(f"Filter now {'enabled' if enabled == 1 else 'disabled'}.")
 
     @commands.group(name="spamFilter",aliases=["spam_filter"])
@@ -243,29 +253,27 @@ class AutoMod(commands.Cog):
             return
         if functions.has_modrole(message) or functions.has_adminrole(message):
             return
-        guildFilter = cursor.execute("SELECT * FROM message_filter WHERE guild = ?",(message.guild.id,)).fetchone() # Bad words.
-        if not guildFilter:
+        if message.guild.id not in self.bot.guild_filters:
             return
-        if guildFilter[1] == 1:
-            bannedWilds = guildFilter[2].split(";")
-            bannedExacts = guildFilter[3].split(";")
-            formatted_content = re.sub("[^\w ]|_", "", message.content)
-            spaceless_content = re.sub("[^\w]|_", "", message.content)
-            if "" in bannedWilds:
-                bannedWilds.remove("")
-            if "" in bannedExacts:
-                bannedExacts.remove("")
-            if " " in formatted_content.lower():
-                words = formatted_content.split(" ")
-            else:
-                words = [formatted_content]
-            if (any(bannedWord in spaceless_content.lower() for bannedWord in bannedWilds) or any(bannedWord in words for bannedWord in bannedExacts)):
-                await message.delete()
-                if message.channel.id not in self.warnCooldown:
-                    self.warnCooldown[message.channel.id] = 0
-                if self.warnCooldown[message.channel.id] < time.time():
-                    await message.channel.send(f"Watch your language {message.author.mention}",delete_after=2)
-                self.warnCooldown[message.channel.id] = time.time()+2
+        if not self.bot.guild_filters[message.guild.id].enabled:
+            return
+        should_delete = False
+        guild_filter = self.bot.guild_filters[message.guild.id]
+        formatted_content = re.sub("[^\w ]|_", "", message.content).lower()
+        spaceless_content = re.sub("[^\w]|_", "", message.content)
+        if guild_filter.wildcard:
+            if guild_filter.wildcard.search(spaceless_content):
+                should_delete = True
+        if guild_filter.exact:
+            if guild_filter.exact.search(formatted_content):
+                should_delete = True
+        if (should_delete):
+            await message.delete()
+            if message.channel.id not in self.warnCooldown:
+                self.warnCooldown[message.channel.id] = 0
+            if self.warnCooldown[message.channel.id] < time.time():
+                await message.channel.send(f"Watch your language {message.author.mention}",delete_after=2)
+            self.warnCooldown[message.channel.id] = time.time()+2
         spamFilters = cursor.execute("SELECT * FROM spam_filters WHERE guild = ?",(message.guild.id,)).fetchone()
         if spamFilters:
             if spamFilters[1] > -1: # emoji limit enabled
@@ -306,6 +314,7 @@ class AutoMod(commands.Cog):
                     if self.warnCooldown[message.channel.id] < time.time():
                         await message.channel.send(f"No spamming {message.author.mention}",delete_after=2)
                     self.warnCooldown[message.channel.id] = time.time()+2
+
 
     @commands.Cog.listener()
     async def on_message(self,message):

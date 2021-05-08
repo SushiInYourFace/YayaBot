@@ -1,8 +1,11 @@
+import datetime
+import json
+import sqlite3
+import time
+
 import discord
-from discord.ext import commands
-import sqlite3, json
-import time, datetime
 import functions
+from discord.ext import commands
 
 connection = sqlite3.connect("database.db")
 c = connection.cursor()
