@@ -457,18 +457,19 @@ class AutoMod(commands.Cog):
     #TODO: #42 Allow guild-specific default nicks
     async def on_member_update(self, before, after):
         #Checks if member has an appropriate nick when they update it
-        if functions.filter_check(after.display_name, after.guild.id):
+        if functions.filter_check(self.bot, after.display_name, after.guild.id):
             try:
                 await after.edit(nick="I had a bad nickname")
             except discord.errors.Forbidden:
                 pass
+            
     
     @commands.Cog.listener()
     async def on_user_update(self, before, after):
         #fires when someone updates their username, and makes sure it's appropriate
         for guild in after.mutual_guilds:
             member = guild.get_member(after.id)
-            if not member.nick and functions.filter_check(member.display_name, member.guild.id):
+            if not member.nick and functions.filter_check(self.bot, member.display_name, member.guild.id):
                 try:
                     await member.edit(nick="I had a bad username")
                 except discord.errors.Forbidden:
