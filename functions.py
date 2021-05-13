@@ -26,31 +26,19 @@ def has_adminrole(ctx):
     else:
         return False
 
-#TODO: Update this to new filter methods
-def filter_check(message, guildID: int):
+def filter_check(bot, message, guildID: int):
     #returns a boolean depending on whether a message should be filtered according to the rules of a guild
-    guildFilter = cursor.execute("SELECT * FROM message_filter WHERE guild = ?",(guildID,)).fetchone() # Bad words.
-    if not guildFilter:
-        return False
-    if guildFilter[1] == 1:
-        bannedWilds = guildFilter[2].split(";")
-        bannedExacts = guildFilter[3].split(";")
-        formatted_content = re.sub("[^\w ]|_", "", message)
-        spaceless_content = re.sub("[^\w]|_", "", message)
-        if "" in bannedWilds:
-            bannedWilds.remove("")
-        if "" in bannedExacts:
-            bannedExacts.remove("")
-        if " " in formatted_content.lower():
-            words = formatted_content.split(" ")
-        else:
-            words = [formatted_content]
-        if (any(bannedWord in spaceless_content.lower() for bannedWord in bannedWilds) or any(bannedWord in words for bannedWord in bannedExacts)):
-            return True
-        else:
-            return False
-    else:
-        return False
+    should_delete = False
+    guild_filter = bot.guild_filters[guildID]
+    formatted_content = re.sub("[^\w ]|_", "", message).lower()
+    spaceless_content = re.sub("[^\w]|_", "", message)
+    if guild_filter.wildcard:
+        if guild_filter.wildcard.search(spaceless_content):
+            should_filter = True
+    if guild_filter.exact:
+        if guild_filter.exact.search(formatted_content):
+            should_filter = True
+    return should_filter
 
 #adds a guild's up-to-date regexes to the bot
 def update_filter(bot, guild_filter):
