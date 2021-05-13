@@ -264,7 +264,7 @@ class fancyEmbeds(commands.Cog):
             emojid = ":paintbrush:"
 
         embed = fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}Embed style properties for {name}:", desc=None, useColor=1)
-        embed.add_field(name=f"{emojid}Colors", value=f"This style uses the following color values:\n{col[0]}, {col[1]}, {col[2]}, and {col[3]}", inline=False)
+        embed.add_field(name=f"{emojid}Colors", value=f"This style uses the following color values:\n{hex(col[0])}, {hex(col[1])}, {hex(col[2])}, and {hex(col[3])}", inline=False)
 
         if time is True:
             embed.add_field(name=f"{emojib}Timestamp", value="This style shows timestamps.")
