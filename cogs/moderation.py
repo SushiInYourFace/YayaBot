@@ -68,14 +68,18 @@ class Moderation(commands.Cog):
         if emoji == False:
             emojia = ""
             emojib = ""
+            emojic = ""
+            emojid = ""
         else:
             emojia = ":no_entry_sign: "
             emojib = ":hammer: "
+            emojic = ":cop: "
+            emojid = ":scroll: "
 
         bantime = time.time()
         
         banEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}You have been banned from "+ ctx.guild.name, force=True, forceColor=0xff0000)
-        banEmbed.add_field(name="Ban reason:", value=reason)
+        banEmbed.add_field(name="Ban reason: ", value=reason)
         try:
             await member.send(embed=banEmbed)
             unsent = False
@@ -90,6 +94,21 @@ class Moderation(commands.Cog):
         await ctx.send(embed=successEmbed)
 
         SqlCommands.new_case(member.id, ctx.guild.id, "ban", reason, bantime, -1, str(ctx.author))
+
+        logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(member.guild.id,)).fetchone()
+        
+        if logID and logID != 0:
+
+            channel = member.guild.get_channel(logID[0])
+
+            title = f"{emojib}User Banned: {member.name}"
+            desc = f"{emojic}Responsible Moderator: {ctx.author.name}\n{emojid}Reason: {reason}"
+            url = member.avatar_url
+
+            embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=title, desc=desc, useColor=2)
+            embed.set_thumbnail(url=url)
+
+            await channel.send(embed=embed)
 
     @commands.command(help="kicks a user", brief=":boot: ")
     @commands.check(functions.has_modrole)
@@ -108,9 +127,13 @@ class Moderation(commands.Cog):
 
         if emoji == False:
             emojia = ""
+            emojib = ""
+            emojic = ""
         else:
             emojia = ":boot: "
-
+            emojib = ":cop: "
+            emojic = ":scroll: "
+            
         kicktime = time.time()
 
         kickEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}You have been kicked from "+ ctx.guild.name, force=True, forceColor=0xff0000)
@@ -132,6 +155,21 @@ class Moderation(commands.Cog):
 
         SqlCommands.new_case(member.id, ctx.guild.id, "kick", reason, kicktime, -1, str(ctx.author))
 
+        logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(member.guild.id,)).fetchone()
+        
+        if logID and logID != 0:
+
+            channel = member.guild.get_channel(logID[0])
+
+            title = f"{emojia}User Kicked: {member.name}"
+            desc = f"{emojib}Responsible Moderator: {ctx.author.name}\n{emojic}Reason: {reason}"
+            url = member.avatar_url
+
+            embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=title, desc=desc, useColor=2)
+            embed.set_thumbnail(url=url)
+
+            await channel.send(embed=embed)
+
     #unban
     @commands.command(help="unbans a user", brief=":key: ")
     @commands.check(functions.has_modrole)
@@ -144,9 +182,11 @@ class Moderation(commands.Cog):
         if emoji == False:
             emojia = ""
             emojib = ""
+            emojic = ""
         else:
             emojia = ":x: "
             emojib = ":white_check_mark: "
+            emojic = ":cop: "
 
         try:
             await ctx.guild.fetch_ban(user)
@@ -162,6 +202,21 @@ class Moderation(commands.Cog):
         await ctx.send(embed=successEmbed)
 
         SqlCommands.new_case(user.id, ctx.guild.id, "unban", "N/A", unbanTime, -1, str(ctx.author))
+
+        logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(member.guild.id,)).fetchone()
+
+        if logID and logID != 0:
+
+            channel = member.guild.get_channel(logID[0])
+
+            title = f"{emojia}User Unbanned: {member.name}"
+            desc = f"{emojic}Responsible Moderator: {ctx.author.name}"
+            url = member.avatar_url
+
+            embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=title, desc=desc, useColor=1)
+            embed.set_thumbnail(url=url)
+
+            await channel.send(embed=embed)
 
     #gravel
     @commands.command(help="Gravels a user", brief=":mute: ")
@@ -194,9 +249,13 @@ class Moderation(commands.Cog):
         if emoji == False:
             emojia = ""
             emojib = ""
+            emojic = ""
+            emojid = ""
         else:
             emojia = ":mute: "
             emojib = ":white_check_mark: "
+            emojic = ":cop: "
+            emojid = ":scroll: "
 
         gravelEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}You have been graveled in {ctx.guild.name} for {TimeConversions.fromseconds(totalsecs)}", force=True, forceColor=0xff0000)
         gravelEmbed.add_field(name="Reason:", value=reason)
@@ -215,6 +274,21 @@ class Moderation(commands.Cog):
             successEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle="Gravelled " + str(member), useColor=1)
 
         await ctx.send(embed=successEmbed)
+
+        logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(member.guild.id,)).fetchone()
+
+        if logID and logID != 0:
+
+            channel = member.guild.get_channel(logID[0])
+
+            title = f"{emojia}User Gravelled: {member.name}"
+            desc = f"{emojic}Responsible Moderator: {ctx.author.name}\n{emojid}Reason: {reason}"
+            url = member.avatar_url
+
+            embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=title, desc=desc, useColor=2)
+            embed.set_thumbnail(url=url)
+
+            await channel.send(embed=embed)
 
     @commands.command(help="Mutes a user", brief=":mute: ")
     @commands.check(functions.has_modrole)
@@ -247,9 +321,11 @@ class Moderation(commands.Cog):
         if emoji == False:
             emojia = ""
             emojib = ""
+            emojic = ""
         else:
             emojia = ":mute: "
             emojib = ":white_check_mark: "
+            emojic = ":cop: "
 
         muteEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}You have been muted in {ctx.guild.name} for {TimeConversions.fromseconds(totalsecs)}.", force=True, forceColor=0xFF0000)
 
@@ -270,6 +346,21 @@ class Moderation(commands.Cog):
 
         await ctx.send(embed=successEmbed)
 
+        logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(member.guild.id,)).fetchone()
+
+        if logID and logID != 0:
+
+            channel = member.guild.get_channel(logID[0])
+
+            title = f"{emojia}User Muted: {member.name}"
+            desc = f"{emojic}Responsible Moderator: {ctx.author.name}\nReason: {reason}"
+            url = member.avatar_url
+
+            embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=title, desc=desc, useColor=2)
+            embed.set_thumbnail(url=url)
+
+            await channel.send(embed=embed)
+
     @commands.command(help="warns a user", brief=":warning: ")
     @commands.check(functions.has_modrole)
     async def warn(self, ctx, member : discord.Member, *, reason):
@@ -281,10 +372,14 @@ class Moderation(commands.Cog):
             emojia = ""
             emojib = ""
             emojic = ""
+            emojid = ""
+            emojie = ""
         else:
             emojia = ":exclamation: "
             emojib = ":white_check_mark: "
             emojic = ":notepad_spiral: "
+            emojid = ":cop: "
+            emojie = ":scroll: "
 
         warnEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}You have been warned in {ctx.guild.name}", force=True, forceColor=0xff0000)
         warnEmbed.add_field(name="Reason:", value=reason)
@@ -298,6 +393,21 @@ class Moderation(commands.Cog):
         except errors.HTTPException:
             failEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojic}Logged a warning for user {str(member)}", desc="Failed to send a message to the user.", force=True, forceColor=0x00ff00)
             await ctx.send(embed=failEmbed)
+
+        logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(member.guild.id,)).fetchone()
+        
+        if logID and logID != 0:
+
+            channel = member.guild.get_channel(logID[0])
+
+            title = f"{emojia}User Warned: {member.name}"
+            desc = f"{emojid}Responsible Moderator: {ctx.author.name}\n{emojie}Reason: {reason}"
+            url = member.avatar_url
+
+            embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=title, desc=desc, useColor=2)
+            embed.set_thumbnail(url=url)
+
+            await channel.send(embed=embed)
 
     @commands.command(help="Shows a user's modlogs", brief=":file_folder: ")
     @commands.check(functions.has_modrole)
@@ -395,14 +505,31 @@ class Moderation(commands.Cog):
 
         if emoji == False:
             emojia = ""
+            emojib = ""
         else:
             emojia = ":sound: "
+            emojib = ":cop: "
 
         successEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}Unmuted {str(member)}", force=True, forceColor=0x00ff00)
 
         await ctx.send(embed=successEmbed)
 
         SqlCommands.new_case(member.id, ctx.guild.id, "unmute", "N/A", unmutetime, -1, mod)
+
+        logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(member.guild.id,)).fetchone()
+        
+        if logID and logID != 0:
+
+            channel = member.guild.get_channel(logID[0])
+
+            title = f"{emojia}User Unmuted: {member.name}"
+            desc = f"{emojib}Responsible Moderator: {ctx.author.name}"
+            url = member.avatar_url
+
+            embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=title, desc=desc, useColor=1)
+            embed.set_thumbnail(url=url)
+
+            await channel.send(embed=embed)
 
     @commands.command(help="Ungravels a User", brief=":sound: ")
     @commands.check(functions.has_modrole)
@@ -418,14 +545,31 @@ class Moderation(commands.Cog):
 
         if emoji == False:
             emojia = ""
+            emojib = ""
         else:
-            emojia = ":white_check_mark: "
+            emojia = ":sound: "
+            emojib = ":cop: "
 
         successEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}Removed gravel from {str(member)}", force=True, forceColor=0x00ff00)
 
         await ctx.send(embed=successEmbed)
 
         SqlCommands.new_case(member.id, ctx.guild.id, "ungravel", "N/A", ungraveltime, -1, mod)
+
+        logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(member.guild.id,)).fetchone()
+        
+        if logID and logID != 0:
+
+            channel = member.guild.get_channel(logID[0])
+
+            title = f"{emojia}User Ungraveled: {member.name}"
+            desc = f"{emojib}Responsible Moderator: {ctx.author.name}"
+            url = member.avatar_url
+
+            embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=title, desc=desc, useColor=1)
+            embed.set_thumbnail(url=url)
+
+            await channel.send(embed=embed)
 
     #checks if a role needs to be removed
     @tasks.loop(seconds=5.0)

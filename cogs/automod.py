@@ -428,6 +428,7 @@ class AutoMod(commands.Cog):
                 await member.edit(nick="I had a bad nickname")
             except discord.errors.Forbidden:
                 pass
+
         #Role Persists
         cases = cursor.execute("SELECT id, type FROM caselog WHERE guild = ? AND user = ? AND expires >= ?", (member.guild.id, member.id, time.time(),)).fetchall()
         persists = ""
@@ -471,7 +472,7 @@ class AutoMod(commands.Cog):
                 elif persists == "g":
                     desc=f"{desc}\nThis member was previously **graveled**, so their gravel has been reapplied."
 
-            embed = discord.Embed(title=title, description=desc, color=0x00ff00, timestamp=datetime.datetime.utcfromtimestamp(time.time()))
+            embed = fEmbeds.fancyEmbeds.makeEmbed(embTitle=title, desc=desc, force=True, forceColor=0x00ff00)
             embed.set_thumbnail(url=url)
 
             await channel.send(embed=embed)
@@ -487,7 +488,7 @@ class AutoMod(commands.Cog):
             channel = member.guild.get_channel(logID[0])
             url = member.avatar_url
 
-            embed = discord.Embed(title=f"User Left: {member.name}", color=0xff0000, timestamp=datetime.datetime.utcfromtimestamp(time.time()))
+            embed = fEmbeds.fancyEmbeds.makeEmbed(embTitle=f"User Left: {member.name}", force=True, forceColor=0xff0000)
             embed.set_thumbnail(url=url)
 
             await channel.send(embed=embed)
@@ -499,6 +500,23 @@ class AutoMod(commands.Cog):
         if functions.filter_check(self.bot, after.display_name, after.guild.id):
             try:
                 await after.edit(nick="I had a bad nickname")
+
+                member = guild.get_member(after.id)
+
+                logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(member.guild.id,)).fetchone()
+        
+                if logID and logID != 0:
+
+                    channel = member.guild.get_channel(logID[0])
+                    title = f"Member Renamed: {member.name}"
+                    desc = f"Reason: Inappropriate nickname - Automod"
+                    url = member.avatar_url
+
+                    embed = fEmbeds.fancyEmbeds.makeEmbed(embTitle=title, desc=desc, useColor=1)
+                    embed.set_thumbnail(url=url)
+
+                    await channel.send(embed=embed)
+
             except discord.errors.Forbidden:
                 pass
             
@@ -511,6 +529,21 @@ class AutoMod(commands.Cog):
             if not member.nick and functions.filter_check(self.bot, member.display_name, member.guild.id):
                 try:
                     await member.edit(nick="I had a bad username")
+
+                    logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(member.guild.id,)).fetchone()
+        
+                    if logID and logID != 0:
+
+                        channel = member.guild.get_channel(logID[0])
+                        title = f"Member Renamed: {member.name}"
+                        desc = f"Reason: Inappropriate username - Automod"
+                        url = member.avatar_url
+
+                        embed = fEmbeds.fancyEmbeds.makeEmbed(embTitle=title, desc=desc, useColor=1)
+                        embed.set_thumbnail(url=url)
+
+                        await channel.send(embed=embed)
+
                 except discord.errors.Forbidden:
                     pass
 
