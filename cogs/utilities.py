@@ -408,9 +408,10 @@ class Utilities(commands.Cog):
         connection.commit()
         await ctx.send(f"Tag role set to {role.name}.")
 
-    @commands.command()
+    @commands.command(brief=":ping_pong: ")
     @commands.check(functions.has_modrole)
     async def ping(self, ctx):
+        """Pong!"""
         await ctx.send(f"Pong! {round((self.bot.latency*1000),4)} ms")
 
 

@@ -195,14 +195,14 @@ class Owner(commands.Cog):
         await ctx.send(f"Update completed!\nThe following files have been changed\n```{', '.join(out)}```\nYou may have to restart the bot, or reload some cogs for it to take effect.")
 
 
-    @commands.group(aliases = ['bu'])
+    @commands.group(aliases = ['bu'], brief=":recycle: ")
     @commands.is_owner()
     async def backup(self,ctx):
-        """Commands to add, reload and remove cogs."""
+        """Create and manage backups of the bot database."""
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
 
-    @backup.command(aliases=["make",])
+    @backup.command(aliases=["make",], brief=":pencil2: ")
     async def create(self, ctx):
         """Creates a backup of the current database"""
         if os.path.isfile("resources/backups/tempbackupfile.db"):
@@ -222,7 +222,7 @@ class Owner(commands.Cog):
         #functions in f-string gets size, count of everything in "backups" folder, 1 is subtracted from count because of gitkeep
         await ctx.send(f"Sounds good! I made a backup of your database. Currently, your {(len(os.listdir('resources/backups')))-1} backup(s) take up {round((sum(f.stat().st_size for f in root_directory.glob('**/*') if f.is_file())/1000),2)} kilobytes of space")
 
-    @backup.command(name="list")
+    @backup.command(name="list", brief=":card_box: ")
     async def list_backups(self, ctx):
         """Lists all your current backups"""
         files = [f[:-6] for f in os.listdir('resources/backups') if os.path.isfile(os.path.join('resources/backups',f)) and f != ".gitkeep"]
@@ -230,7 +230,7 @@ class Owner(commands.Cog):
         message = f"```{os.linesep.join(sorted(files))}```\n**{(len(os.listdir('resources/backups')))-1} total backup(s)**" if len(os.listdir('resources/backups')) != 1 else "You currently have no backups"
         await ctx.send(message)
 
-    @backup.command()
+    @backup.command(brief=":wastebasket: ")
     async def delete(self, ctx, amount:int):
         """Deletes a specified number of backups"""
         files = [f for f in os.listdir('resources/backups') if os.path.isfile(os.path.join('resources/backups',f))]

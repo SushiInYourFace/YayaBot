@@ -188,7 +188,7 @@ class AutoMod(commands.Cog):
         functions.update_filter(self.bot, current_filter)
         await ctx.send(f"Filter now {'enabled' if enabled == 1 else 'disabled'}.")
 
-    @commands.group(name="spamFilter",aliases=["spam_filter"], brief=":loudspeaker:")
+    @commands.group(name="spamFilter",aliases=["spam_filter"], brief=":loudspeaker: ")
     @commands.check(functions.has_modrole)
     @commands.before_invoke(spam_filter_pre_invoke)
     async def spamFilter(self,ctx):
