@@ -1,15 +1,16 @@
 import collections
-import datetime
+import time, datetime
 import difflib
 import io
 import re
 import sqlite3
-import time
-
 import aiohttp
+
 import discord
-import functions
 from discord.ext import commands, tasks
+
+import functions
+import cogs.fancyEmbeds as fEmbeds
 
 #sets up SQLite
 connection = sqlite3.connect("database.db")
@@ -39,7 +40,7 @@ class AutoMod(commands.Cog):
         self._last_member = None
         self.warnCooldown = {}
 
-    @commands.group(aliases=["word_filter"])
+    @commands.group(aliases=["word_filter"], brief=":abcd: ")
     @commands.check(functions.has_modrole)
     @commands.before_invoke(word_filter_pre_invoke)
     async def wordFilter(self,ctx):
@@ -47,7 +48,7 @@ class AutoMod(commands.Cog):
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
 
-    @wordFilter.group(name="set")
+    @wordFilter.group(name="set", brief=":pencil2: ")
     async def wordFilter_set(self,ctx):
         """Sets the server message filter to the specified string or contents of a supplied text file if the desired filter is longer than 2000 characters.
         Each word/phrase to be filtered should be separated by ;
@@ -71,7 +72,7 @@ class AutoMod(commands.Cog):
             new_filter = new_filter[1:]
         return new_filter
 
-    @wordFilter_set.command(name="wild",aliases=["wildcard"])
+    @wordFilter_set.command(name="wild",aliases=["wildcard"], brief=":fountain_pen: ")
     async def wordFilter_set_wild(self,ctx,*,new_filter=None):
         """Sets the wildcard filter."""
         new_filter = await self.new_filter_format(ctx,new_filter)
@@ -81,7 +82,7 @@ class AutoMod(commands.Cog):
         current_filter = cursor.execute("SELECT * from message_filter WHERE guild=?",(ctx.guild.id,)).fetchone() 
         functions.update_filter(self.bot, current_filter)
 
-    @wordFilter_set.command(name="exact")
+    @wordFilter_set.command(name="exact", brief=":ballpoint_pen: ")
     async def wordFilter_set_exact(self,ctx,*,new_filter=None):
         """Sets the exact filter."""
         new_filter = await self.new_filter_format(ctx,new_filter)
@@ -91,7 +92,7 @@ class AutoMod(commands.Cog):
         current_filter = cursor.execute("SELECT * from message_filter WHERE guild=?",(ctx.guild.id,)).fetchone() 
         functions.update_filter(self.bot, current_filter)
 
-    @wordFilter.command(name="add")
+    @wordFilter.command(name="add", brief=":pencil: ")
     async def wordFilter_add(self,ctx,*words):
         """Adds specified words/phrases to filter.
         You can specify multiple words with spaces, to add something that includes a space you must encase it in ".
@@ -126,7 +127,7 @@ class AutoMod(commands.Cog):
         functions.update_filter(self.bot, current_filter)
         await ctx.send("Added to filter.")
 
-    @wordFilter.command(name="remove",aliases=["del","delete"])
+    @wordFilter.command(name="remove",aliases=["del","delete"], brief=":x: ")
     async def wordFilter_remove(self,ctx,*words):
         """Removes specified words/phrases from filter.
         You can specify multiple words with spaces, to remove something that includes a space you must encase it in ".
@@ -163,7 +164,7 @@ class AutoMod(commands.Cog):
         functions.update_filter(self.bot, current_filter)
         await ctx.send(f"Removed from filter. {'The following words were not found so not removed: ' if notFoundWords else ''}{' '.join(notFoundWords) if notFoundWords else ''}")
         
-    @wordFilter.command(name="get",aliases=["list"])
+    @wordFilter.command(name="get",aliases=["list"], brief=":notepad_spiral: ")
     async def wordFilter_get(self,ctx):
         """Sends the filter.
         Usually sent as a message but is sent as a text file if it's over 2000 characters"""
@@ -176,7 +177,7 @@ class AutoMod(commands.Cog):
             f = discord.File(fp,filename="filter.txt")
             await ctx.send("Filter is too large so is sent as a file:",file=f)    
 
-    @wordFilter.command(name="toggle")
+    @wordFilter.command(name="toggle", brief=":wrench: ")
     async def wordFilter_toggle(self,ctx):
         """Toggles whether the filter is on or not."""
         enabled = cursor.execute("SELECT * FROM message_filter WHERE guild = ?",(ctx.guild.id,)).fetchone()[1]
@@ -187,7 +188,7 @@ class AutoMod(commands.Cog):
         functions.update_filter(self.bot, current_filter)
         await ctx.send(f"Filter now {'enabled' if enabled == 1 else 'disabled'}.")
 
-    @commands.group(name="spamFilter",aliases=["spam_filter"])
+    @commands.group(name="spamFilter",aliases=["spam_filter"], brief=":loudspeaker:")
     @commands.check(functions.has_modrole)
     @commands.before_invoke(spam_filter_pre_invoke)
     async def spamFilter(self,ctx):
@@ -195,20 +196,37 @@ class AutoMod(commands.Cog):
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
 
-    @spamFilter.group(name="get",aliases=["list"])
+    @spamFilter.group(name="get",aliases=["list"], brief=":notepad_spiral: ")
     async def spamFilter_get(self,ctx):
         """Sends current values for the spam filters."""
         values = cursor.execute("SELECT * FROM spam_filters WHERE guild = ?",(ctx.guild.id,)).fetchone()
+
+        style = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
+        emoji = fEmbeds.fancyEmbeds.getStyleValue(self, ctx.guild.id, style, "emoji")
+
+        if emoji == False:
+            emojia = ""
+            emojib = ""
+            emojic = ""
+            emojid = ""
+            emojie = ""
+        else:
+            emojia = ":x: "
+            emojib = ":joy: "
+            emojic = ":envelope: "
+            emojid = ":speech_balloon: "
+            emojie = ":repeat: "
+
         if values:
-            embed = discord.Embed(colour=discord.Colour.random(),title="Spam Filters:")
-            embed.set_footer(text=ctx.author.name, icon_url=ctx.author.avatar_url)
-            embed.add_field(name="Emoji Limit:", value=(values[1] if values[1] > -1 else 'disabled'))
-            embed.add_field(name="Invite Filter:", value=('enabled' if values[2] == 1 else 'disabled'))
-            embed.add_field(name="Message Spam Limit:", value=(values[3] if values[3] > -1 else 'disabled'))
-            embed.add_field(name="Character Repeat Limit:", value=(values[4] if values[4] > -1 else 'disabled'))
+            embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}Spam Filters:", useColor=2)
+            embed.add_field(name=f"{emojib}Emoji Limit:", value=(values[1] if values[1] > -1 else 'disabled'))
+            embed.add_field(name=f"{emojic}Invite Filter:", value=('enabled' if values[2] == 1 else 'disabled'))
+            embed.add_field(name=f"{emojid}Message Spam Limit:", value=(values[3] if values[3] > -1 else 'disabled'))
+            embed.add_field(name=f"{emojie}Character Repeat Limit:", value=(values[4] if values[4] > -1 else 'disabled'))
+            
             await ctx.send(embed=embed)
 
-    @spamFilter.command(name="invites")
+    @spamFilter.command(name="invites", brief=":envelope: ")
     async def spamFilter_invites(self,ctx):
         """Toggles if invites are filtered."""
         enabled = cursor.execute("SELECT invite_filter FROM spam_filters WHERE guild = ?",(ctx.guild.id,)).fetchone()[0]
@@ -217,7 +235,7 @@ class AutoMod(commands.Cog):
         connection.commit()
         await ctx.send(f"Invite filter now {'enabled' if enabled == 1 else 'disabled'}.")
 
-    @spamFilter.command(name="emoji")
+    @spamFilter.command(name="emoji", brief=":slight_smile: ")
     async def spamFilter_emoji(self,ctx,limit:int=None):
         """Sets emoji limit. To remove, don't specify a limit."""
         if not limit:
@@ -226,7 +244,7 @@ class AutoMod(commands.Cog):
         connection.commit()
         await ctx.send(f"Emoji limit now {limit if limit > -1 else 'disabled'}.")
 
-    @spamFilter.command(name="messageLimit",aliases=["message_limit"])
+    @spamFilter.command(name="messageLimit",aliases=["message_limit"], brief=":speech_balloon: ")
     async def spamFilter_messageLimit(self,ctx,limit:int=None):
         """Sets the limit for messages sent within 5 seconds. To remove, don't specify a limit."""
         if not limit:
@@ -235,7 +253,7 @@ class AutoMod(commands.Cog):
         connection.commit()
         await ctx.send(f"Message limit now {limit if limit > -1 else 'disabled'}.")
 
-    @spamFilter.command(name="repeatingLimit",aliases=["repeating_limit"])
+    @spamFilter.command(name="repeatingLimit",aliases=["repeating_limit"], brief=":repeat: ")
     async def spamFilter_repeatingLimit(self,ctx,limit:int=None):
         """Sets the limit for repeating characters in a message. To remove don't specify a limit."""
         if not limit:
@@ -325,22 +343,35 @@ class AutoMod(commands.Cog):
         await self.check_message(after)
         if isinstance(after.channel, discord.channel.DMChannel):
             return
+
+        style = fEmbeds.fancyEmbeds.getActiveStyle(self, after.guild.id)
+        emoji = fEmbeds.fancyEmbeds.getStyleValue(self, after.guild.id, style, "emoji")
+
+        if emoji == False:
+            emojia = ""
+        else:
+            emojia = ":memo: "
+
         logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(after.guild.id,)).fetchone()
+
         if after.author.bot:
             return
         if not logID[0]:
             return
         channel = after.guild.get_channel(logID[0])
-        editEmbed = discord.Embed(title=f"Message edited in {after.channel.name}", color=0xFFFF00)
+
+        editEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, after.guild.id, embTitle=f"{emojia}Message edited in {after.channel.name}", useColor=3)
         editEmbed.set_author(name=str(after.author), icon_url=after.author.avatar_url)
-        now = datetime.datetime.now()
+
         #difference
         d = difflib.Differ()
         beforecontent = discord.utils.escape_markdown(before.content)
         aftercontent = discord.utils.escape_markdown(after.content)
         result = list(d.compare(beforecontent.split(), aftercontent.split()))
+
         start = []
         end = []
+
         for i in range(len(result)):
             if result[i].startswith("- "):
                 start.append("~~" + result[i][2:] + "~~")
@@ -351,6 +382,7 @@ class AutoMod(commands.Cog):
             else:
                 start.append(result[i].strip(" "))
                 end.append(result[i].strip(" "))
+
         #formats strikethroughs pretty
         for i in range(len(start)):
             try:
@@ -359,26 +391,33 @@ class AutoMod(commands.Cog):
                     start[i+1] = start[i+1][2:]
             except IndexError:
                 pass
+
         editEmbed.add_field(name="Before", value=" ".join(start))
         editEmbed.add_field(name="After", value=" ".join(end))
-        date = now.strftime("%Y-%m-%d, %H:%M:%S")
-        editEmbed.set_footer(text=f"edited at {date}")
+        
         await channel.send(embed=editEmbed)
 
     @commands.Cog.listener()
     async def on_message_delete(self, message):
+
+        style = fEmbeds.fancyEmbeds.getActiveStyle(self, message.guild.id)
+        emoji = fEmbeds.fancyEmbeds.getStyleValue(self, message.guild.id, style, "emoji")
+
+        if emoji == False:
+            emojia = ""
+        else:
+            emojia = ":wastebasket: "
+
         logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(message.guild.id,)).fetchone()
         if logID and logID != 0 and not message.author.bot:
             channel = message.guild.get_channel(logID[0])
-            deleteEmbed = discord.Embed(color=0xFF0000)
-            deleteEmbed.set_author(name=str(message.author), icon_url=message.author.avatar_url)
-            now = datetime.datetime.now()
             content = message.content
             if len(content) > 1024:
                 content = content[:1020] + "..."
-            deleteEmbed.add_field(name=f"Message deleted from **{message.channel.name}**", value=content)
-            date = now.strftime("%Y-%m-%d, %H:%M:%S")
-            deleteEmbed.set_footer(text=f"deleted at {date}")
+
+            deleteEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, message.guild.id, embTitle=f"{emojia}Message deleted from **{message.channel.name}**", desc=content, force=True, forceColor=0xff0000)
+            deleteEmbed.set_author(name=str(message.author), icon_url=message.author.avatar_url)
+
             await channel.send(embed=deleteEmbed)
 
     @commands.Cog.listener()

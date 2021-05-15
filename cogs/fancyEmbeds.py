@@ -1,72 +1,121 @@
-import datetime
+import typing
 import json
-import sqlite3
-import time
+import time, datetime
+import logging
 
 import discord
-import functions
 from discord.ext import commands
 
-connection = sqlite3.connect("database.db")
-c = connection.cursor()
+import functions
 
+#Add cog to the bot
 def setup(bot):
     bot.add_cog(fancyEmbeds(bot))
 
-def tryMakeStorage():
+#Attempts to make a storage for the given guild id. Called by many of the embed commands andfunctions when they throw KeyErrors.
+def tryMakeStorage(guildid):
     try:
+        #Check to see if the storage exists, if not, create it and dump a json object for the guild id into it.
         with open("embeds.json", "x") as f:
             json.dump(
                 {
-                    "active": "default",
-                    "styles": {
-                        "default": {"colors": [0xef7d0d, 0xc51111, 0xb33e15, 0xc28722], "time": True, "emoji": True}
-                    },
-                }, 
-                f, 
+                    guildid: {
+                        "active": "shinyamber",
+                        "styles": {
+                            "shinyamber": {"colors": [0xFF8F00, 0xFFB300, 0xFFAB40, 0xFFE082], "time": True, "emoji": True},
+                            "electricblue": {"colors":[0x03A9F4, 0x0288D1, 0x4FC3F7, 0x80D8FF], "time": True, "emoji": True},
+                            "lushgreen": {"colors":[0x64DD17, 0x388E3C, 0x8BC34A, 0xA5D6A7], "time": True, "emoji": True},
+                            "royalpurple": {"colors":[0xE040FB, 0xD500F9, 0xEA80FC, 0xB388FF], "time": True, "emoji": True},
+                            "colorful": {"colors":[0x2196F3, 0xFFC107, 0xF44336, 0x76FF03], "time": True, "emoji": True}
+                        },
+                    }
+                },
+                f,
                 indent=4
             )
+        logging.info(f"Created new storage and added object for guild with id {guildid}")
     except:
-        return
+        #If the storage exists, read and load the file to a variable to add to.
+        with open("embeds.json", "r+") as f:
+            f_ = json.load(f)
+            try:
+                #This should throw a KeyError
+                test = f_[guildid]["active"]
+                #This shouldn't happen, if it does, then i probably overlooked something somewhere. This only appears when tryMakeStorage() is called when the given guildid already has a storage.
+                logging.error("If you see this, then you found something that shouldn't happen! If this problem persists, you should report it.")
+            except KeyError:
+                #Add the new object into the storage with the default data.
+                f_[guildid] = {
+                    "active": "shinyamber",
+                    "styles": {
+                        "shinyamber": {"colors": [0xFF8F00, 0xFFB300, 0xFFAB40, 0xFFE082], "time": True, "emoji": True},
+                        "electricblue": {"colors":[0x03A9F4, 0x0288D1, 0x4FC3F7, 0x80D8FF], "time": True, "emoji": True},
+                        "lushgreen": {"colors":[0x64DD17, 0x388E3C, 0x8BC34A, 0xA5D6A7], "time": True, "emoji": True},
+                        "royalpurple": {"colors":[0xE040FB, 0xD500F9, 0xEA80FC, 0xB388FF], "time": True, "emoji": True},
+                        "colorful": {"colors":[0x2196F3, 0xFFC107, 0xF44336, 0x76FF03], "time": True, "emoji": True}
+                    },
+                }
+                logging.info(f"Created storage object for guild with id {guildid}")
+        #Dump the new storage into embedss.json.
+        with open("embeds.json", "w") as f:
+            json.dump(f_, f, indent=4)
 
 class fancyEmbeds(commands.Cog):
     """Makes embeds look cool and fancy!"""
 
     def __init__(self, bot):
         self.bot = bot
-        tryMakeStorage()
 
-    def getActiveStyle(self):
+    def getActiveStyle(self, guildid):
         """Returns the active embed style."""
-        with open("embeds.json", "r+") as f:
-            f_ = json.load(f)
-            return f_["active"]
+        guildid = str(guildid)
+        try:
+            with open("embeds.json", "r+") as f:
+                f_ = json.load(f)
+                return f_[guildid]["active"]
+        except:
+            tryMakeStorage(guildid)
+            with open("embeds.json", "r+") as f:
+                f_ = json.load(f)
+                return f_[guildid]["active"]
 
-    def getStyleValue(self, style, data):
+    def getStyleValue(self, guildid, style, data):
         """Returns a value from the specified style. To get the active style, use fancyEmbeds.getActiveStyle()."""
-        with open("embeds.json", "r+") as f:
-            f_ = json.load(f)
-            return f_["styles"][style][data]
+        guildid = str(guildid)
+        try:
+            with open("embeds.json", "r+") as f:
+                f_ = json.load(f)
+                return f_[guildid]["styles"][style][data]
+        except:
+            tryMakeStorage(guildid)
+            with open("embeds.json", "r+") as f:
+                f_ = json.load(f)
+                return f_[guildid]["styles"][style][data]
 
-    def makeEmbed(self, embTitle="", desc=None, useColor=0, force=False, forceColor=None):
+    #This should always be used instead of discord.Embed() when you want to make an embed in the bot. Hopefully this accounts for your embed needs.
+    #Fields can still be created in the normal way.
+    def makeEmbed(self, guildid, embTitle="", desc=None, useColor=0, force=False, forceColor=None, footer=None, nofooter=False, b=None):
         """Build an embed based on the current embed Style.
         
         Returns a discord.Embed with a title, description (if specified), color and footer based on the active embed style values.\n
-        You can set the keyword Force to True if you wish to force a specific color onto the embed, and specify that color as forceColor. 
+        You can set the keyword Force to True if you wish to force a specific color onto the embed, and specify that color as forceColor.\n
+        To add content to the footer here, set footer, or if you want to set a footer later, set nofooter to True here and add it later through addFooter() 
         """
-        with open("embeds.json", "r+") as f:
-            f_ = json.load(f)
-            style = f_["active"]
-            colorType = f_["styles"][style]["colors"][int(useColor)]
-            timestamps = f_["styles"][style]["time"]
+        #Get all the required embed style data from storage
+        style = fancyEmbeds.getActiveStyle(self, guildid)
+        col = fancyEmbeds.getStyleValue(self, guildid, style, "colors")
+        colorType = col[int(useColor)]
+        timestamps = fancyEmbeds.getStyleValue(self, guildid, style, "time")
 
+        #Color override
         if force is True:
             if forceColor is None:
                 raise TypeError
             colorType = int(forceColor)
 
+        #Create the embed, this little block handles the four scenarios which change the values which should be passed.
         if desc == None and timestamps == False:
-            emb = discord.Embed(title=embTitle, color=discord.Colour(int(colorType)))
+            emb = discord.Embed(title=embTitle, color=discord.Colour(colorType))
         elif desc == None:
             emb = discord.Embed(title=embTitle, color=discord.Colour(colorType), timestamp=datetime.datetime.utcfromtimestamp(time.time()))
         elif timestamps == False:
@@ -74,82 +123,134 @@ class fancyEmbeds(commands.Cog):
         else:
             emb = discord.Embed(title=embTitle, color=discord.Colour(colorType), description=desc, timestamp=datetime.datetime.utcfromtimestamp(time.time()))
 
-        emb.set_footer(text=self.bot.user.name, icon_url=self.bot.user.avatar_url)
+        #Check to see whether the footer should be added and if so, add it.
+        if nofooter == False:
+            #This might not be necessary, could be removed soon.
+            if b != None:
+                self.bot = b
 
+            #Create footer with bot icon, name, and, if specified, extra footer content.
+            if footer == None:
+                emb.set_footer(text=self.bot.user.name, icon_url=self.bot.user.avatar_url)
+            else:
+                emb.set_footer(text=f"{self.bot.user.name} - {footer}", icon_url=self.bot.user.avatar_url)
+        
+        #finally, return the embed.
         return emb
 
-    @commands.group(help="Manage how embeds are sent.")
+    #For adding footers at a later point, in scenarios where you can't know what you'll need as extra content until after the intial embed creation.
+    def addFooter(self, embed, footer, bot):
+        """"Add a footer to an embed with fancy embeds formatting. Only necessary when you make an embed with nofooter set to True, otherwise makeEmbed() will create this for you."""
+        embed.set_footer(text=f"{bot.user.name} - {footer}", icon_url=bot.user.avatar_url)
+        
+        return embed
+
+    #Embed command group
+    @commands.group(help="Manage how embeds are sent.", brief=":page_facing_up: ")
     @commands.check(functions.has_modrole)
     async def embed(self, ctx):
         if ctx.invoked_subcommand is None:
-            await self.bot.send_help(ctx)
+            await ctx.send_help(ctx.command)
 
-    @embed.group(help="Manage your embed styles.")
-    async def style(self, ctx):
-        if ctx.invoked_subcommand is None:
-            await self.bot.send_help(ctx)
-
-    @style.command(help="List available embed styles.")
+    #Style Listing
+    @embed.command(help="List available embed styles.", aliases=["styles", "l"], brief=":ledger: ")
     async def list(self, ctx):
-        s = fancyEmbeds.getActiveStyle(self)
-        if fancyEmbeds.getStyleValue(self, s, "emoji") is False:
+        guildid = str(ctx.guild.id)
+
+        s = fancyEmbeds.getActiveStyle(self, guildid)
+
+        if fancyEmbeds.getStyleValue(self, guildid, s, "emoji") is False:
             emojia = ""
             emojib = ""
             emojic = ""
         else:
-            emojia = ":ledger:"
-            emojib = ":clock3:"
-            emojic = ":slight_smile:"
+            emojia = ":ledger: "
+            emojib = ":clock3: "
+            emojic = ":slight_smile: "
 
-        emb = fancyEmbeds.makeEmbed(self, embTitle=f"{emojia}Embed Styles", desc="Currently available embed styles:", useColor=0)
+        emb = fancyEmbeds.makeEmbed(self, guildid, embTitle=f"{emojia}Embed Styles", desc="Currently available embed styles:", useColor=0)
 
         with open("embeds.json", "r+") as f:
             f_ = json.load(f)
-            for s in f_["styles"].keys():
-                ts = fancyEmbeds.getStyleValue(self, s, "time")
-                emoji = fancyEmbeds.getStyleValue(self, s, "emoji")
-                emb.add_field(name=s, value=f"{emojib}Uses Timestamps: {ts}\n{emojic}Uses Emoji: {emoji}")
+            for s in f_[guildid]["styles"].keys():
+                ts = fancyEmbeds.getStyleValue(self, guildid, s, "time")
+                emoji = fancyEmbeds.getStyleValue(self, guildid, s, "emoji")
+                emb.add_field(name=s, value=f"{emojib}Timestamps: {ts}\n{emojic}Emoji: {emoji}")
 
         await ctx.send(embed=emb)
 
-    @style.command(help="Change the in-use embed style.")
-    async def set(self, ctx, new: str):
-        with open("embeds.json", "r+") as f:
-            f_ = json.load(f)
-            try:
-                test = f_["styles"][new]
-            except KeyError:
-                await ctx.send("Sorry, that style does not exist!")
-                return
+    #Change the active embed style
+    @embed.command(help="Change the in-use embed style.", aliases=["setactive", "a"], brief=":bookmark_tabs: ")
+    async def active(self, ctx, new: str):
+        try:
+            with open("embeds.json", "r+") as f:
+                f_ = json.load(f)
+                try:
+                    test = f_[str(ctx.guild.id)]["styles"][new]
+                except KeyError:
+                    await ctx.send("Sorry, that style does not exist!")
+                    return
+        except:
+            tryMakeStorage(ctx.guild.id)
+            with open("embeds.json", "r+") as f:
+                f_ = json.load(f)
+                try:
+                    test = f_[str(ctx.guild.id)]["styles"][new]
+                except KeyError:
+                    await ctx.send("Sorry, that style does not exist!")
+                    return
             
-            f_["active"] = new
-
-            with open("embeds.json", "w") as f:
-                json.dump(f_, f, indent=4)
-
-            await ctx.send(f"Changed to embed style {new} successfully!")
-
-    @style.command(help="Create a new embed style.")
-    async def new(self, ctx, name: str):
-        with open("embeds.json", "r+") as f:
-            f_ = json.load(f)
-            f_["styles"][name] = {}
-            f_["styles"][name]["colors"] = [0x000000, 0x000000, 0x000000, 0x000000]
-            f_["styles"][name]["time"] = True
-            f_["styles"][name]["emoji"] = True
+        f_[str(ctx.guild.id)]["active"] = new
 
         with open("embeds.json", "w") as f:
             json.dump(f_, f, indent=4)
 
+        await ctx.send(f"Changed to embed style {new} successfully!")
+
+    #Create a new embed style. Could add optional ability to add colours and set time/emoji here too.
+    @embed.command(help="Create a new embed style.", aliases=["create", "add", "n"], brief=":pencil2: ")
+    async def new(self, ctx, name: str):
+        try:
+            with open("embeds.json", "r+") as f:
+                f_ = json.load(f)
+                f_[str(ctx.guild.id)]["styles"][name] = {}
+                f_[str(ctx.guild.id)]["styles"][name]["colors"] = [0x000000, 0x000000, 0x000000, 0x000000]
+                f_[str(ctx.guild.id)]["styles"][name]["time"] = True
+                f_[str(ctx.guild.id)]["styles"][name]["emoji"] = True
+
+            with open("embeds.json", "w") as f:
+                json.dump(f_, f, indent=4)
+        except:
+            tryMakeStorage(ctx.guild.id)
+            with open("embeds.json", "r+") as f:
+                f_ = json.load(f)
+                f_[str(ctx.guild.id)]["styles"][name] = {}
+                f_[str(ctx.guild.id)]["styles"][name]["colors"] = [0x000000, 0x000000, 0x000000, 0x000000]
+                f_[str(ctx.guild.id)]["styles"][name]["time"] = True
+                f_[str(ctx.guild.id)]["styles"][name]["emoji"] = True
+
+            with open("embeds.json", "w") as f:
+                json.dump(f_, f, indent=4)
+
         await ctx.send(f"Created a new style with the name {name}.")
 
-    @style.command(help="View the properties of an embed style.")
-    async def preview(self, ctx, name:str):
-        with open("embeds.json", "r+") as f:
-            f_ = json.load(f)
-            col = f_["styles"][name]["colors"]
-            time = f_["styles"][name]["time"]
-            emoji = f_["styles"][name]["emoji"]
+    #Preview the values of a given embed style. Currently this is honestly useless, i'll need to add colour previews before this stops sucking and has any real value aside from testing.
+    @embed.command(help="View the properties of an embed style.", aliases=["view", "p"], brief=":newspaper: ")
+    async def preview(self, ctx, name):
+        guildid = ctx.guild.id
+
+        #Check that the style exists first. Throws a false error later if the style doesn't exist.
+        try:
+            with open("embeds.json", "r+") as f:
+                f_ = json.load(f)
+            test = f_[str(guildid)]["styles"][name]
+        except:
+            await ctx.send("That style does not exist!")
+            return
+
+        col = fancyEmbeds.getStyleValue(self, guildid, name, "colors")
+        time = fancyEmbeds.getStyleValue(self, guildid, name, "time")
+        emoji = fancyEmbeds.getStyleValue(self, guildid, name, "emoji")
 
         if emoji is False:
             emojia = ""
@@ -162,131 +263,141 @@ class fancyEmbeds(commands.Cog):
             emojic = ":slight_smile:"
             emojid = ":paintbrush:"
 
-        embed = fancyEmbeds.makeEmbed(self, embTitle=f"{emojia}Embed style properties for {name}:", desc=None, useColor=1)
-        embed.add_field(name=f"{emojid}Colors", value=f"This style uses the following color values:\n{col[0]}, {col[1]}, {col[2]}, and {col[3]}", inline=False)
+        embed = fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}Embed style properties for {name}:", desc=None, useColor=1)
+        embed.add_field(name=f"{emojid}Colors", value=f"This style uses the following color values:\n{hex(col[0])}, {hex(col[1])}, {hex(col[2])}, and {hex(col[3])}", inline=False)
 
         if time is True:
-            embed.add_field(name=f"{emojib}Timestamp", value="This style will show timestamps.")
+            embed.add_field(name=f"{emojib}Timestamp", value="This style shows timestamps.")
         else:
-            embed.add_field(name=f"{emojib}Timestamp", value="This style will not show timestamps.")
+            embed.add_field(name=f"{emojib}Timestamp", value="This style does not show timestamps.")
 
         if emoji is True:
-            embed.add_field(name=f"{emojic}Emoji", value="This style will use emoji.")
+            embed.add_field(name=f"{emojic}Emoji", value="This style uses emoji.")
         else:
-            embed.add_field(name=f"{emojic}Emoji", value="This style will not use emoji.")
+            embed.add_field(name=f"{emojic}Emoji", value="This style does not use emoji.")
 
         await ctx.send(embed=embed)
 
-    @style.group(help="Customize the properties of an embed style.")
-    async def customize(self, ctx):
-        if ctx.invoked_subcommand is None:
-            await self.bot.send_help(ctx)
+    #Change the colour values in an embed.
+    @embed.command(help="Change the colors of an embed style, using hexcolor values.", aliases=["c", "setcolor", "colour", "setcolour"], brief=":yellow_square: ")
+    async def color(self, ctx, style: str, color1: typing.Optional[str] = "-1", color2: typing.Optional[str] = "-1", color3: typing.Optional[str] = "-1", color4: typing.Optional[str] = "-1"):
+        try:
+            with open("embeds.json", "r+") as f:
+                f_ = json.load(f)
+                try:
+                    test = f_[str(ctx.guild.id)]["styles"][style]
+                except KeyError:
+                    test = f_[str(ctx.guild.id)]
+                    await ctx.send(f"The style {style} does not exist!")
+                    return
+            f__ = f_[str(ctx.guild.id)]["styles"][style]["colors"]
+        except:
+            tryMakeStorage(guildid)
+            with open("embeds.json", "r+") as f:
+                f_ = json.load(f)
+                try:
+                    test = f_[str(ctx.guild.id)]["styles"][style]
+                except KeyError:
+                    await ctx.send(f"The style {style} does not exist!")
+                    return
+            f__ = f_[str(ctx.guild.id)]["styles"][style]["colors"]
 
-    @customize.command(help="Change the colors of an embed style.\nColors should use base16/hexcolor values.")
-    async def color(self, ctx, style: str, color1, color2, color3, color4):
-        with open("embeds.json", "r+") as f:
-            f_ = json.load(f)
-            try:
-                test = f_["styles"][style]
-            except KeyError:
-                await ctx.send(f"The style {style} does not exist!")
-                return
-
-            f__ = f_["styles"][style]["colors"]
-
-        #this may be unoptimized, but it works for now!
-
+        oldCol = [color1, color2, color3, color4]
         newCol = []
+        i = 0
 
-        if len(color1) > 6:
-            await ctx.send("That is not a valid color!")
-            return
-        if len(color2) > 6:
-            await ctx.send("That is not a valid color!")
-            return
-        if len(color3) > 6:
-            await ctx.send("That is not a valid color!")
-            return
-        if len(color4) > 6:
-            await ctx.send("That is not a valid color!")
-            return
+        for color in oldCol:
+            if len(color) > 6:
+                await ctx.send("That is not a valid color!")
+                return
+            try:
+                color = int(color, 16)
+            except:
+                await ctx.send("That is not a valid color!")
+                return
+            if color == -1:
+                newCol.append(f__[i])
+            else:
+                newCol.append(color)
+            i = i + 1
 
-        color1 = int(color1, 16)
-        color2 = int(color2, 16)
-        color3 = int(color3, 16)
-        color4 = int(color4, 16)
-
-        if color1 == 0:
-            newCol.append(f__[0])
-        else:
-            newCol.append(color1)
-
-        if color2 == 0:
-            newCol.append(f__[1])
-        else:
-            newCol.append(color2)
-
-        if color3 == 0:
-            newCol.append(f__[2])
-        else:
-            newCol.append(color3)
-
-        if color4 == 0:
-            newCol.append(f__[3])
-        else:
-            newCol.append(color4)
-            
-        f_["styles"][style]["colors"] = newCol
+        f_[str(ctx.guild.id)]["styles"][style]["colors"] = newCol
 
         with open("embeds.json", "w") as f:
             json.dump(f_, f, indent=4)
 
-        await ctx.send(f"Updated colors for style {style}")
+        await ctx.send(f"Updated colors for style {style}.")
 
-    @customize.command(help="Change whether a style shows timestamps.")
+    #Toggle timestamps on/off
+    @embed.command(help="Change whether a style shows timestamps.", aliases=["time", "t", "tt"], brief=":clock3: ")
     async def toggletime(self, ctx, style):
-        with open("embeds.json", "r+") as f:
-            f_ = json.load(f)
-            try:
-                test = f_["styles"][style]
-            except KeyError:
-                await ctx.send(f"The style {style} does not exist!")
-                return
+        try:
+            with open("embeds.json", "r+") as f:
+                f_ = json.load(f)
+                try:
+                    test = f_[str(ctx.guild.id)]["styles"][style]
+                except KeyError:
+                    test = f_[str(ctx.guild.id)]
+                    await ctx.send(f"The style {style} does not exist!")
+                    return
+        except:
+            tryMakeStorage(ctx.guild.id)
+            with open("embeds.json", "r+") as f:
+                f_ = json.load(f)
+                try:
+                    test = f_[str(ctx.guild.id)]["styles"][style]
+                except KeyError:
+                    await ctx.send(f"The style {style} does not exist!")
+                    return
 
-            f__ = f_["styles"][style]["time"]
+        f__ = f_[str(ctx.guild.id)]["styles"][style]["time"]
 
-            if f__ is False:
-                f_["styles"][style]["time"] = True
-                new = True
-            else:
-                f_["styles"][style]["time"] = False
-                new = False
+        if f__ is False:
+            f_[str(ctx.guild.id)]["styles"][style]["time"] = True
+        else:
+            f_[str(ctx.guild.id)]["styles"][style]["time"] = False
 
         with open("embeds.json", "w") as f:
             json.dump(f_, f, indent=4)
 
-        await ctx.send(f"Set showing timestamps to {new} for style {style}.")
+        if f__ is False:
+            await ctx.send(f"Timestamps now show for the style {style}.")
+        else:
+            await ctx.send(f"Timestamps no longer show for the style {style}")
 
-    @customize.command(help="Change whether a style shows emoji.")
+    #Toggle emojis on/off
+    @embed.command(help="Change whether a style shows emoji.", aliases=["emoji", "e", "te"], brief=":slight_smile: ")
     async def toggleemoji(self, ctx, style):
-        with open("embeds.json", "r+") as f:
-            f_ = json.load(f)
-            try:
-                test = f_["styles"][style]
-            except KeyError:
-                await ctx.send(f"The style {style} does not exist!")
-                return
+        try:
+            with open("embeds.json", "r+") as f:
+                f_ = json.load(f)
+                try:
+                    test = f_[str(ctx.guild.id)]["styles"][style]
+                except KeyError:
+                    test = f_[str(ctx.guild.id)]
+                    await ctx.send(f"The style {style} does not exist!")
+                    return
+        except:
+            tryMakeStorage(ctx.guild.id)
+            with open("embeds.json", "r+") as f:
+                f_ = json.load(f)
+                try:
+                    test = f_[str(ctx.guild.id)]["styles"][style]
+                except KeyError:
+                    await ctx.send(f"The style {style} does not exist!")
+                    return
 
-            f__ = f_["styles"][style]["emoji"]
+        f__ = f_[str(ctx.guild.id)]["styles"][style]["emoji"]
 
-            if f__ is False:
-                f_["styles"][style]["emoji"] = True
-                new = True
-            else:
-                f_["styles"][style]["emoji"] = False
-                new = False
+        if f__ is False:
+            f_[str(ctx.guild.id)]["styles"][style]["emoji"] = True
+        else:
+            f_[str(ctx.guild.id)]["styles"][style]["emoji"] = False
 
         with open("embeds.json", "w") as f:
             json.dump(f_, f, indent=4)
 
-        await ctx.send(f"Set showing emoji to {new} for style {style}.")
+        if f__ is False:
+            await ctx.send(f"Emoji now show for the style {style}.")
+        else:
+            await ctx.send(f"Emoji no longer show for the style {style}")

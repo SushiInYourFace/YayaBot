@@ -1,16 +1,16 @@
 import asyncio
-import datetime
 import logging
 import platform
 import sqlite3
+import time, datetime
 import sys
-import time
 from collections import namedtuple
 
 import discord
 from discord.ext import commands
 
 import functions
+import cogs.fancyEmbeds as fEmbeds
 
 # Logging config
 logging.basicConfig(format='[%(asctime)s] %(levelname)s: %(message)s', level=logging.INFO)
@@ -33,38 +33,45 @@ async def get_pre(bot, message):
 
 #Help command
 class NewHelp(commands.HelpCommand):
-    async def create_help_field(self,ctx,embed,command):
+    async def create_help_field(self,ctx,embed,command,emoji):
         if command.help:
             description = (command.help[:command.help.find("\n")+1] if '\n' in command.help else command.help)
             if len(description) > 200:
                 description = description[:197] + "..."
         else:
             description = "..."
-        embed.add_field(name=f"{command.name}", value=f"{description}", inline=True)
+        if command.brief:
+            emote = command.brief
+        else:
+            emote = ""
+        embed.add_field(name=f"{emote}{command.name}", value=f"{description}", inline=True)
         return embed
 
     async def send_bot_help(self,mapping):
+        style = fEmbeds.fancyEmbeds.getActiveStyle(self, self.context.guild.id)
+        useEmoji = fEmbeds.fancyEmbeds.getStyleValue(self, self.context.guild.id, style, "emoji")
+
         pageOut = 0
         colour = discord.Colour.random()
-        titleDesc = ["YayaBot Help!",f"Say `{self.clean_prefix}help <command>` for more info on a command!"] 
-        page = [discord.Embed(colour=colour,title=titleDesc[0],description=titleDesc[1])]
+        titleDesc = ["YayaBot Help!",f"Say `{self.clean_prefix}help <command>` for more info on a command!"]
+        page = [fEmbeds.fancyEmbeds.makeEmbed(self, self.context.guild.id, embTitle=titleDesc[0], desc=titleDesc[1], useColor=0, nofooter=True)]
         for cog,commands in mapping.items():
             commands = await self.filter_commands(commands)
             if not commands:
                 continue
             if len(page[-1].fields) >= 24: # If no space for commands or no space at all
-                page.append(discord.Embed(colour=colour,title=titleDesc[0],description=titleDesc[1])) # New page
+                page.append(fEmbeds.fancyEmbeds.makeEmbed(self, self.context.guild.id, embTitle=titleDesc[0], desc=titleDesc[1], useColor=0, nofooter=True)) # New page
             cogName = getattr(cog,'qualified_name','Other')
             cogDesc = '\n> '+ getattr(cog,"description",'...') if not cogName == "Other" else "> Other commands that don't fit into a category."
             page[-1].add_field(name=f"> **{cogName}**", value=cogDesc, inline=False) # Add cog field
             for command in commands:
-                page[-1] = await self.create_help_field(self.context,page[-1],command)
+                page[-1] = await self.create_help_field(self.context,page[-1],command,useEmoji)
                 if command != commands[-1] and len(page[-1].fields) == 25: # If not the last command and new page is required
-                    page.append(discord.Embed(colour=colour,title=titleDesc[0],description=titleDesc[1])) # New page
+                    page.append(fEmbeds.fancyEmbeds.makeEmbed(self, self.context.guild.id, embTitle=titleDesc[0], desc=titleDesc[1], useColor=0, nofooter=True)) # New page
                     page[-1].add_field(name=f"> **{cogName}**", value=cogDesc, inline=False) # Add cog field
         if pageOut + 1 > len(page):
             pageOut = len(page) - 1
-        page[pageOut].set_footer(text=f"Page {pageOut+1} of {len(page)}") # Add footer now (didn't know how many pages previously)
+        page[pageOut] = fEmbeds.fancyEmbeds.addFooter(self, page[pageOut], f"Page {pageOut+1} of {len(page)}", bot) # Add footer now (didn't know how many pages previously)
         msg = await self.get_destination().send(embed=page[pageOut])
         if len(page) == 1: # If only one page no turning is required
             return
@@ -82,24 +89,34 @@ class NewHelp(commands.HelpCommand):
                 await self.context.channel.delete_messages([self.context.message,msg])
                 return
             pageOut = {"⏪":0,"◀️":(pageOut-1) if pageOut-1 >= 0 else pageOut,"▶️":(pageOut+1) if pageOut+1 < len(page) else pageOut,"⏩":len(page)-1}[str(reaction.emoji)]
-            page[pageOut].set_footer(text=f"{pageOut+1} of {len(page)}")
+            page[pageOut] = fEmbeds.fancyEmbeds.addFooter(self, page[pageOut], f"Page {pageOut+1} of {len(page)}", bot)
             await msg.edit(embed=page[pageOut])
             await reaction.remove(user)
 
     async def send_command_help(self,command):
+        style = fEmbeds.fancyEmbeds.getActiveStyle(self, self.context.guild.id)
+        useEmoji = fEmbeds.fancyEmbeds.getStyleValue(self, self.context.guild.id, style, "emoji")
+
+        if not useEmoji:
+            emojia = ""
+            emojib = ""
+        else:
+            emojia = ":screwdriver: "
+            emojib = ":scroll: "
+
         if not isinstance(command,commands.Cog):
             try:
                 await command.can_run(self.context)
             except:
                 return
-        embed = discord.Embed(colour=discord.Colour.random(seed=command.qualified_name),title=f"Help for {command.qualified_name}" + (" cog" if isinstance(command,commands.Cog) else ' command'),description=(f"Aliases: {', '.join(list(command.aliases))}" if command.aliases else ""))
+        embed = fEmbeds.fancyEmbeds.makeEmbed(self, self.context.guild.id, embTitle=f"Help for {command.qualified_name}" + (" cog" if isinstance(command,commands.Cog) else ' command'), desc=(f"Aliases: {', '.join(list(command.aliases))}" if command.aliases else ""), useColor=1, b=bot)
         if not isinstance(command,commands.Cog):
-            embed.add_field(name="Usage",value=f"`{self.clean_prefix}{command.qualified_name}{(' ' + command.signature.replace('_',' ')    ) if command.signature else ' <subcommand>' if isinstance(command,commands.Group) else ''}`")
-        embed.add_field(name="Description",value=(command.help.replace("[p]",self.clean_prefix) if command.help else '...'),inline=False)
+            embed.add_field(name=f"{emojia}Usage",value=f"`{self.clean_prefix}{command.qualified_name}{(' ' + command.signature.replace('_',' ')    ) if command.signature else ' <subcommand>' if isinstance(command,commands.Group) else ''}`")
+        embed.add_field(name=f"{emojib}Description",value=(command.help.replace("[p]",self.clean_prefix) if command.help else '...'),inline=False)
         if isinstance(command,commands.Group) or isinstance(command,commands.Cog):
             embed.add_field(name="———————",value="**Subcommands**" if isinstance(command,commands.Group) else "**Commands**",inline=False)
             for subcommand in await self.filter_commands(command.commands, sort=True):
-                embed = await self.create_help_field(self.context,embed,subcommand)
+                embed = await self.create_help_field(self.context,embed,subcommand,useEmoji)
         await self.get_destination().send(embed=embed)
 
     async def send_group_help(self,group):
@@ -149,22 +166,38 @@ async def on_ready():
     logging.info(f"I'm connected as {str(bot.user)} - {bot.user.id}!")
     logging.info(f"In {len(bot.guilds)} guilds overlooking {len(list(bot.get_all_channels()))} channels and {len(list(bot.get_all_members()))} users.")
 
-@bot.command(aliases=["info","bot"])
+@bot.command(aliases=["info","bot"], brief=":green_book: " )
 async def about(ctx):
     """Sends some information about the bot!"""
     currentTime = time.time()
     uptime = int(round(currentTime - bot.startTime))
     uptime = str(datetime.timedelta(seconds=uptime))
     appinfo = await bot.application_info()
-    embed = discord.Embed(colour=discord.Colour.random(),description="YayaBot!")
+
+    b = bot.get_cog("fancyEmbeds")
+
+    e = fEmbeds.fancyEmbeds.getActiveStyle(b, ctx.guild.id)
+    emoji = fEmbeds.fancyEmbeds.getStyleValue(b, ctx.guild.id, e, "emoji")
+
+    if emoji is False:
+        emojia = ""
+        emojib = ""
+        emojic = ""
+        emojid = ""
+    else:
+        emojia = ":slight_smile: "
+        emojib = ":snake: "
+        emojic = ":stopwatch: "
+        emojid = ":desktop: "
+
+    embed = fEmbeds.fancyEmbeds.makeEmbed(b, ctx.guild.id, desc="Yayabot!", useColor=0)
     embed.set_author(name="YayaBot", url="https://wwww.github.com/SushiInYourFace/YayaBot", icon_url=bot.user.avatar_url)
-    embed.set_footer(text=ctx.author.name, icon_url=ctx.author.avatar_url)
-    embed.add_field(name="Instance Owner:", value=appinfo.owner, inline=True)
+    embed.add_field(name=f"{emojia}Instance Owner:", value=appinfo.owner, inline=True)
     embed.add_field(name="_ _", value="_ _", inline=True)
-    embed.add_field(name="Python Version:", value=f"[{platform.python_version()}](https://www.python.org)", inline=True)
-    embed.add_field(name="Bot Uptime:", value=f"{uptime}", inline=True)
+    embed.add_field(name=f"{emojib}Python Version:", value=f"[{platform.python_version()}](https://www.python.org)", inline=True)
+    embed.add_field(name=f"{emojic}Bot Uptime:", value=f"{uptime}", inline=True)
     embed.add_field(name="_ _", value="_ _", inline=True)
-    embed.add_field(name="Discord.py Version:", value=f"[{discord.__version__}](https://github.com/Rapptz/discord.py)", inline=True)
+    embed.add_field(name=f"{emojid}Discord.py Version:", value=f"[{discord.__version__}](https://github.com/Rapptz/discord.py)", inline=True)
     await ctx.send(embed=embed)
 
 
