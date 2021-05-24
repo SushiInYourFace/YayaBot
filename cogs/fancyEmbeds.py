@@ -104,24 +104,31 @@ class fancyEmbeds(commands.Cog):
         #Get all the required embed style data from storage
         style = fancyEmbeds.getActiveStyle(self, guildid)
         col = fancyEmbeds.getStyleValue(self, guildid, style, "colors")
-        colorType = col[int(useColor)]
+        colorType = discord.Colour(col[int(useColor)])
         timestamps = fancyEmbeds.getStyleValue(self, guildid, style, "time")
 
         #Color override
         if force is True:
             if forceColor is None:
                 raise TypeError
-            colorType = int(forceColor)
+            if type(forceColor) == tuple:
+                red = int(forceColor[0])
+                green = int(forceColor[1])
+                blue = int(forceColor[2])
+
+                colorType = discord.Colour.from_rgb(red, green, blue)
+            else:
+                colorType = discord.Colour(int(forceColor))
 
         #Create the embed, this little block handles the four scenarios which change the values which should be passed.
         if desc == None and timestamps == False:
-            emb = discord.Embed(title=embTitle, color=discord.Colour(colorType))
+            emb = discord.Embed(title=embTitle, color=colorType)
         elif desc == None:
-            emb = discord.Embed(title=embTitle, color=discord.Colour(colorType), timestamp=datetime.datetime.utcfromtimestamp(time.time()))
+            emb = discord.Embed(title=embTitle, color=colorType, timestamp=datetime.datetime.utcfromtimestamp(time.time()))
         elif timestamps == False:
-            emb = discord.Embed(title=embTitle, color=discord.Colour(colorType), description=desc)
+            emb = discord.Embed(title=embTitle, color=colorType, description=desc)
         else:
-            emb = discord.Embed(title=embTitle, color=discord.Colour(colorType), description=desc, timestamp=datetime.datetime.utcfromtimestamp(time.time()))
+            emb = discord.Embed(title=embTitle, color=colorType, description=desc, timestamp=datetime.datetime.utcfromtimestamp(time.time()))
 
         #Check to see whether the footer should be added and if so, add it.
         if nofooter == False:

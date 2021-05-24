@@ -16,9 +16,31 @@ def has_modrole(ctx):
     else:
         return False
 
+#For when you can't use context
+def has_modrole_no_ctx(member):
+    modrole = cursor.execute("SELECT moderator FROM role_ids WHERE guild = ?", (member.guild.id,)).fetchone()
+    member_roles = [role.id for role in member.roles]
+    if modrole is None:
+        return False
+    elif (modrole[0] in member_roles):
+        return True
+    else:
+        return False
+
 def has_adminrole(ctx):
     adminrole = cursor.execute("SELECT admin FROM role_ids WHERE guild = ?", (ctx.guild.id,)).fetchone()
     member_roles = [role.id for role in ctx.author.roles]
+    if adminrole is None:
+        return False
+    elif (adminrole[0] in member_roles):
+        return True
+    else:
+        return False
+
+#For when you can't use context
+def has_adminrole_no_ctx(member):
+    adminrole = cursor.execute("SELECT admin FROM role_ids WHERE guild = ?", (member.guild.id,)).fetchone()
+    member_roles = [role.id for role in member.roles]
     if adminrole is None:
         return False
     elif (adminrole[0] in member_roles):
