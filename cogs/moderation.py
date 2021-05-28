@@ -572,7 +572,7 @@ class Moderation(commands.Cog):
 
             await channel.send(embed=embed)
 
-    @commands.command(aliases=["whois"])
+    @commands.command(aliases=["whois"], brief=":mag: ")
     async def memberinfo(self, ctx, member: discord.Member):
         """Shows information about a given user."""
 
