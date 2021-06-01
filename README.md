@@ -34,4 +34,4 @@ Because the bot is designed for ToyChat specifically, in order to use it you wil
 - A moderator role with limited powers, as well as an administrator role with greater permissions
 - A modlog channel, where the bot can store edited and deleted messages.
 
-**PLEASE NOTE:** This bot is still very much a work in progress, so it is not recomended to use it in its current state.
+**PLEASE NOTE:** This bot is still very much a work in progress, so it is not recommended to use it in its current state.
