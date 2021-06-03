@@ -204,15 +204,15 @@ class Moderation(commands.Cog):
 
         SqlCommands.new_case(user.id, ctx.guild.id, "unban", "N/A", unbanTime, -1, str(ctx.author))
 
-        logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(member.guild.id,)).fetchone()
+        logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(ctx.guild.id,)).fetchone()
 
         if logID and logID != 0:
 
-            channel = member.guild.get_channel(logID[0])
+            channel = ctx.guild.get_channel(logID[0])
 
-            title = f"{emojia}User Unbanned: {member.name}"
+            title = f"{emojia}User Unbanned: {user.name}"
             desc = f"{emojic}Responsible Moderator: {ctx.author.name}"
-            url = member.avatar_url
+            url = user.avatar_url
 
             embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=title, desc=desc, useColor=1)
             embed.set_thumbnail(url=url)

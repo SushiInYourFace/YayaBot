@@ -132,6 +132,17 @@ class Sql:
             roleid = cursor.execute("SELECT muted FROM role_ids WHERE guild = ?", (guild,)).fetchone()
         return roleid[0]
 
+    def namefilter_enabled(self, guild):
+        #checks if filter is enabled
+        filter_status = cursor.execute("SELECT enabled FROM name_filtering WHERE guild = ?",(guild,)).fetchone()
+        if filter_status is not None:
+            return bool(filter_status[0]) #casts the 0 or 1 stored to a boolean
+        else: 
+            #guild hasn't set up name filtering, create a row in the table for them and disable the filter
+            cursor.execute("INSERT INTO name_filtering(guild, enabled) VALUES(?,?)",(guild, 0))
+            con.commit()
+            return False
+
 class timeconverters:
     def secondsconverter(self, value, startType):
         if startType == "s":

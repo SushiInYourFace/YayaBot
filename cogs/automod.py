@@ -262,6 +262,31 @@ class AutoMod(commands.Cog):
         connection.commit()
         await ctx.send(f"Character repeat limit now {limit if limit > -1 else 'disabled'}.")
 
+    @commands.group(aliases=["name_filter"], brief=":name_badge: ")
+    @commands.check(functions.has_modrole)
+    async def nameFilter(self,ctx):
+        """Modifies the name filter."""
+        if ctx.invoked_subcommand is None:
+            await ctx.send_help(ctx.command)
+
+    @nameFilter.command(name="toggle", brief=":wrench: ")
+    async def nameFilter_toggle(self, ctx):
+        "Toggles whether the name filter is enabled"
+        style = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
+        emoji = fEmbeds.fancyEmbeds.getStyleValue(self, ctx.guild.id, style, "emoji")
+        prev_state = SqlCommands.namefilter_enabled(ctx.guild.id)
+        if prev_state == False:
+            cursor.execute("UPDATE name_filtering SET enabled= ? WHERE guild= ?",(1, ctx.guild.id))
+            emojiA = ":white_check_mark:" if emoji else ""
+            embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojiA}Name filtering enabled")
+        elif prev_state == True:
+            cursor.execute("UPDATE name_filtering SET enabled= ? WHERE guild= ?",(1, ctx.guild.id))
+            emojiA = ":regional_indicator_x:" if emoji else ""
+            embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojiA}Name filtering disabled")
+        await ctx.send(embed=embed)
+        connection.commit()
+
+
     async def check_message(self,message):
         if message.author.bot:
             return
@@ -423,6 +448,8 @@ class AutoMod(commands.Cog):
     @commands.Cog.listener()
     async def on_member_join(self, member):
         #checks if username is appropriate
+        if not SqlCommands.namefilter_enabled(member.guild.id):
+            return
         if functions.filter_check(self.bot, member.display_name, member.guild.id):
             try:
                 await member.edit(nick="I had a bad nickname")
@@ -497,6 +524,8 @@ class AutoMod(commands.Cog):
     #TODO: #42 Allow guild-specific default nicks
     async def on_member_update(self, before, after):
         #Checks if member has an appropriate nick when they update it
+        if not SqlCommands.namefilter_enabled(after.guild.id):
+            return
         if functions.filter_check(self.bot, after.display_name, after.guild.id):
             try:
                 await after.edit(nick="I had a bad nickname")
@@ -526,6 +555,8 @@ class AutoMod(commands.Cog):
         #fires when someone updates their username, and makes sure it's appropriate
         for guild in after.mutual_guilds:
             member = guild.get_member(after.id)
+            if not SqlCommands.namefilter_enabled(guild.id):
+                continue
             if not member.nick and functions.filter_check(self.bot, member.display_name, member.guild.id):
                 try:
                     await member.edit(nick="I had a bad username")
@@ -546,6 +577,8 @@ class AutoMod(commands.Cog):
 
                 except discord.errors.Forbidden:
                     pass
+
+SqlCommands = functions.Sql()
 
 def setup(bot):
     bot.add_cog(AutoMod(bot))
