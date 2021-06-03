@@ -472,7 +472,7 @@ class AutoMod(commands.Cog):
                 elif persists == "g":
                     desc=f"{desc}\nThis member was previously **graveled**, so their gravel has been reapplied."
 
-            embed = fEmbeds.fancyEmbeds.makeEmbed(embTitle=title, desc=desc, force=True, forceColor=0x00ff00)
+            embed = fEmbeds.fancyEmbeds.makeEmbed(self, member.guild.id, embTitle=title, desc=desc, force=True, forceColor=0x00ff00)
             embed.set_thumbnail(url=url)
 
             await channel.send(embed=embed)
@@ -488,7 +488,7 @@ class AutoMod(commands.Cog):
             channel = member.guild.get_channel(logID[0])
             url = member.avatar_url
 
-            embed = fEmbeds.fancyEmbeds.makeEmbed(embTitle=f"User Left: {member.name}", force=True, forceColor=0xff0000)
+            embed = fEmbeds.fancyEmbeds.makeEmbed(self, member.guild.id, embTitle=f"User Left: {member.name}", force=True, forceColor=0xff0000)
             embed.set_thumbnail(url=url)
 
             await channel.send(embed=embed)
@@ -512,7 +512,7 @@ class AutoMod(commands.Cog):
                     desc = f"Reason: Inappropriate nickname - Automod"
                     url = member.avatar_url
 
-                    embed = fEmbeds.fancyEmbeds.makeEmbed(embTitle=title, desc=desc, useColor=1)
+                    embed = fEmbeds.fancyEmbeds.makeEmbed(self, after.guild.id, embTitle=title, desc=desc, useColor=1)
                     embed.set_thumbnail(url=url)
 
                     await channel.send(embed=embed)
@@ -539,7 +539,7 @@ class AutoMod(commands.Cog):
                         desc = f"Reason: Inappropriate username - Automod"
                         url = member.avatar_url
 
-                        embed = fEmbeds.fancyEmbeds.makeEmbed(embTitle=title, desc=desc, useColor=1)
+                        embed = fEmbeds.fancyEmbeds.makeEmbed(self, member.guild.id, embTitle=title, desc=desc, useColor=1)
                         embed.set_thumbnail(url=url)
 
                         await channel.send(embed=embed)
