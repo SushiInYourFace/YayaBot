@@ -423,7 +423,7 @@ class AutoMod(commands.Cog):
     @commands.Cog.listener()
     async def on_member_join(self, member):
         #checks if username is appropriate
-        if functions.filter_check(member.display_name, member.guild.id):
+        if functions.filter_check(self.bot, member.display_name, member.guild.id):
             try:
                 await member.edit(nick="I had a bad nickname")
             except discord.errors.Forbidden:
@@ -501,7 +501,7 @@ class AutoMod(commands.Cog):
             try:
                 await after.edit(nick="I had a bad nickname")
 
-                member = guild.get_member(after.id)
+                member = after
 
                 logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(member.guild.id,)).fetchone()
         

@@ -50,8 +50,12 @@ def has_adminrole_no_ctx(member):
 
 def filter_check(bot, message, guildID: int):
     #returns a boolean depending on whether a message should be filtered according to the rules of a guild
-    should_delete = False
-    guild_filter = bot.guild_filters[guildID]
+    should_filter = False
+    try:
+        guild_filter = bot.guild_filters[guildID]
+    except KeyError:
+        print("The bot tried to reference filters for a guild it does not have stored in memory. Please contact SushiInYourFace if this problem persists")
+        return False
     formatted_content = re.sub("[^\w ]|_", "", message).lower()
     spaceless_content = re.sub("[^\w]|_", "", message)
     if guild_filter.wildcard:
