@@ -50,8 +50,12 @@ def has_adminrole_no_ctx(member):
 
 def filter_check(bot, message, guildID: int):
     #returns a boolean depending on whether a message should be filtered according to the rules of a guild
-    should_delete = False
-    guild_filter = bot.guild_filters[guildID]
+    should_filter = False
+    try:
+        guild_filter = bot.guild_filters[guildID]
+    except KeyError:
+        print("The bot tried to reference filters for a guild it does not have stored in memory. Please contact SushiInYourFace if this problem persists")
+        return False
     formatted_content = re.sub("[^\w ]|_", "", message).lower()
     spaceless_content = re.sub("[^\w]|_", "", message)
     if guild_filter.wildcard:
@@ -127,6 +131,17 @@ class Sql:
         elif role == "muted":
             roleid = cursor.execute("SELECT muted FROM role_ids WHERE guild = ?", (guild,)).fetchone()
         return roleid[0]
+
+    def namefilter_enabled(self, guild):
+        #checks if filter is enabled
+        filter_status = cursor.execute("SELECT enabled FROM name_filtering WHERE guild = ?",(guild,)).fetchone()
+        if filter_status is not None:
+            return bool(filter_status[0]) #casts the 0 or 1 stored to a boolean
+        else: 
+            #guild hasn't set up name filtering, create a row in the table for them and disable the filter
+            cursor.execute("INSERT INTO name_filtering(guild, enabled) VALUES(?,?)",(guild, 0))
+            con.commit()
+            return False
 
 class timeconverters:
     def secondsconverter(self, value, startType):
