@@ -718,6 +718,164 @@ class Moderation(commands.Cog):
 
         await ctx.send(embed=embed)
 
+    @commands.command(aliases=["serverstats"], brief=":books: ")
+    async def serverinfo(self, ctx):
+        """Show an overview of this server's information."""
+
+        #Initial Embed Setup
+
+        style = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
+        emoji = fEmbeds.fancyEmbeds.getStyleValue(self, ctx.guild.id, style, "emoji")
+
+        if emoji is False:
+            emojia = ""
+            emojib = ""
+            emojic = ""
+            emojid = ""
+            emojie = ""
+            emojif = ""
+            emojig = ""
+            emojih = ""
+            emojii = ""
+            emojij = ""
+            emojik = ""
+            emojil = ""
+            emojim = ""
+            emojin = ""
+            emojio = ""
+            emojip = ""
+        else:
+            emojia = ":books: "
+            emojib = ":crown: "
+            emojic = ":keyboard: "
+            emojid = ":sound: "
+            emojie = ":card_box: "
+            emojif = ":slight_smile: "
+            emojig = ":earth_africa: "
+            emojih = ":dollar: "
+            emojii = ":page_facing_up: "
+            emojij = ":innocent: "
+            emojik = ":magic_wand: "
+            emojil = ":frame_photo: "
+            emojim = ":triangular_flag_on_post: "
+            emojin = ":pencil2: "
+            emojio = ":dividers: "
+            emojip = ":books: "
+
+        #Setting Variables
+
+        guild = ctx.guild
+
+        owner = guild.owner.name + "#" + guild.owner.discriminator
+        created_at = guild.created_at
+        region = guild.region
+        roles = guild.roles
+        channels = len(guild.text_channels)
+        voice = len(guild.voice_channels)
+        boost = guild.premium_tier
+        boosters = guild.premium_subscription_count
+        name = guild.name
+        guildid = guild.id
+        members = guild.member_count
+        categories = len(guild.categories)
+        allchannels = guild.channels
+        icon = guild.icon_url
+        desc = guild.description
+        banner = guild.banner_url
+        maxemoji = guild.emoji_limit
+        emoji = len(guild.emojis)
+        maxfilesize = guild.filesize_limit
+        features = guild.features
+
+        #Creating and sending an embed
+
+        boostcolors = [0x2c2f33, 0x7289DA, 0xcc76fc, 0xfd73fa]
+        boostcol = boostcolors[boost]
+
+        n = 0
+        rolelist = ""
+        for role in roles:
+            if not role.is_default():
+                rolelist = rolelist + f"{role.mention}, "
+                n = n + 1
+
+        rolelist = rolelist[0:len(rolelist) - 2]
+
+        customurl = "Locked"
+        invsplash = "Locked"
+        verified = "No"
+        partner = "No"
+        discoverable = "Off"
+        featurable = "Off"
+        community = False
+        canbanner = "Locked"
+        animicon = "Locked"
+        welcomescr = "Off"
+        vergate = "Off"
+        for feature in features:
+            if feature == "VANITY_URL":
+                customurl = "Unlocked"
+            if feature == "INVITE_SPLASH":
+                invsplash = "Unlocked"
+            if feature == "VERIFIED":
+                verified = "Yes"
+            if feature == "PARTNERED":
+                partner = "Yes"
+            if feature == "DISCOVERABLE":
+                discoverable = "On"
+            if feature == "FEATURABLE":
+                featurable = "On"
+            if feature == "COMMUNITY":
+                community = True
+            if feature == "BANNER":
+                canbanner = "Unlocked"
+            if feature == "ANIMATED_ICON":
+                animicon = "Unlocked"
+            if feature == "WELCOME_SCREEN_ENABLED":
+                welcomescr = "On"
+            if feature == "MEMBER_VERIFICATION_GATE_ENABLED":
+                vergate = "On"
+
+        if customurl == "Unlocked":
+            try:
+                invite = await guild.vanity_invite().url
+            except:
+                invite = await guild.invites()
+                invite = invites[0].url
+        else:
+            invites = await guild.invites()
+            invite = invites[0].url
+
+        title = f"{emojia}Server Statistics"
+        if desc is not None:
+            description = f"Server Invite: {invite}\nID: {guildid}\nServer Description: {desc}"
+        else:
+            description = f"Server Invite: {invite}\nID: {guildid}"
+
+        embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=title, desc=description, force=True, forceColor=boostcol, footer=f"Server Created At {created_at.strftime('%Y-%m-%d %H:%M:%S')}")
+        embed.add_field(name=f"{emojib}Owner", value=owner)
+        embed.add_field(name=f"{emojic}Text Channels", value=channels)
+        embed.add_field(name=f"{emojid}Voice Channels", value=voice)
+        embed.add_field(name=f"{emojie}Channel Categories", value=categories)
+        embed.add_field(name=f"{emojif}Members", value=members)
+        embed.add_field(name=f"{emojig}Region", value=region)
+        embed.add_field(name=f"{emojih}Boost Status - Tier: {boost} ({boosters} boosters)", value="_ _", inline=False)
+        embed.add_field(name=f"{emojii}Filesize Limit", value=f"{maxfilesize / 1024 ** 2}MB")
+        embed.add_field(name=f"{emojij}Emojis", value=f"{emoji}/{maxemoji} slots used.")
+        embed.add_field(name=f"{emojik}Animated Icon", value=animicon)
+        embed.add_field(name=f"{emojil}Invite Splash", value=invsplash)
+        embed.add_field(name=f"{emojim}Banner", value=canbanner)
+        embed.add_field(name=f"{emojin}Vanity Url", value=customurl)
+        embed.add_field(name=f"{emojio}Roles - {n}", value=rolelist, inline=False)
+        if community:
+            embed.add_field(name=f"{emojip}Other Statistics", value=f"Verified: {verified}\nDiscord Partner: {partner}\nCommunity Server: Yes\nServer Discovery: {discoverable}\nServer Featuring: {featurable}\nWelcome Screen: {welcomescr}\nVerification Gate: {vergate}")
+        else:
+            embed.add_field(name=f"{emojip}Other Statistics", value=f"Verified: {verified}\nDiscord Partner: {partner}\nCommunity Server: No")
+        embed.set_author(name=name, icon_url=icon)
+        embed.set_thumbnail(url=icon)
+
+        await ctx.send(embed=embed)
+        
 
     #End of Commands
 
