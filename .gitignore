@@ -7,3 +7,4 @@ embeds.json
 /resources/backups/*.db
 /resources/backups/*.gz
 /resources/*.ini
+.DS_Store

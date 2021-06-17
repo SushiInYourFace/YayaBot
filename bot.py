@@ -15,9 +15,20 @@ import cogs.fancyEmbeds as fEmbeds
 # Logging config
 logging.basicConfig(format='[%(asctime)s] %(levelname)s: %(message)s', level=logging.INFO)
 
+Token = None
 #Open txt files
-with open("token.txt") as f:
-    Token = f.read()
+try:
+    with open("token.txt") as f:
+        Token = f.read()
+except FileNotFoundError: 
+    #user has not created token.txt
+    print("You don't seem to have created token.txt yet. Not a problem! Please send your bot token, and it will be made for you")
+    print("If you don't want to do this, you can just quit the program with ctrl+c, or type \"exit\" now")
+    Token = input()
+    if Token == "exit" or Token == "Exit":
+        sys.exit(0)
+    with open("token.txt", "w") as f:
+        f.write(Token)
 
 #Guild-Specific prefixes
 async def get_pre(bot, message):
