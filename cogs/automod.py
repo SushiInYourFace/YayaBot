@@ -5,6 +5,7 @@ import io
 import re
 import sqlite3
 import aiohttp
+import asyncio
 
 import discord
 from discord.ext import commands, tasks
@@ -286,6 +287,69 @@ class AutoMod(commands.Cog):
         await ctx.send(embed=embed)
         connection.commit()
 
+    @nameFilter.command(name="setnames", brief=":pencil: ")
+    async def nameFilter_setnames(self, ctx):
+        "Sets a custom nickname to be used when a name is filtered"
+        #fancy embeds
+        style = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
+        emoji = fEmbeds.fancyEmbeds.getStyleValue(self, ctx.guild.id, style, "emoji")
+        failEmoji = ":x:" if emoji else ""
+        filter_fail_embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{failEmoji}Cancelling", desc="That name fails your own filter. Kinda defeats the whole purpose, doesn't it?")
+        too_long_embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{failEmoji}Cancelling", desc="That name is too long! Discord only allows nicknames 32 charactes in length or shorter")
+
+        #used to make sure custom nickname follows guild filter (preventing an infinite loop) and doesn't exceed character limit
+        def valid_nick(nick):
+            if functions.filter_check(self.bot, nick, ctx.guild.id):
+                return "failed filter"
+            elif len(nick) > 32:
+                return "too long"
+            else:
+                return "valid"
+        #used to get responses
+        async def get_message():
+            try:
+                message = await self.bot.wait_for('message', timeout=60.0, check=check)
+                return message
+            except asyncio.TimeoutError:
+                await ctx.send("No response received. Cancelling")
+                return
+        def check(response):
+            return response.channel == ctx.channel and response.author == ctx.author
+        #actually getting user input now
+        await ctx.send("What would you like people with a filtered nickname to be renamed to?")
+        custom_nick = await get_message()
+        custom_nick = custom_nick.content
+        is_valid = valid_nick(custom_nick)
+        if is_valid != "valid":
+            if is_valid == "failed filter":
+                await ctx.send(embed=filter_fail_embed)
+                return
+            elif is_valid == "too long":
+                await ctx.send(embed=too_long_embed)
+                return
+            else:
+                await ctx.send("Error! Please contact sushiinyourface if this persists") #this should never happen
+                return
+        await ctx.send("Sounds good! Now, what do you want to have people with a filtered username renamed to?")
+        custom_username = await get_message()
+        custom_username = custom_username.content
+        is_valid = valid_nick(custom_username)
+        if is_valid != "valid":
+            if is_valid == "failed filter":
+                await ctx.send(embed=filter_fail_embed)
+                return
+            elif is_valid == "too long":
+                await ctx.send(embed=too_long_embed)
+                return
+            else:
+                await ctx.send("Error! Please contact sushiinyourface if this persists") #this should never happen
+                return
+        cursor.execute("INSERT INTO custom_names(guild,nickname,username) VALUES(?,?,?) ON CONFLICT(guild) DO UPDATE SET nickname=excluded.nickname, username=excluded.username", (ctx.guild.id, custom_nick, custom_username))
+        connection.commit()
+        success_emoji = ":white_check_mark:" if emoji else ""
+        success_embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{success_emoji}Done!", desc=f"Bad Nicknames = {custom_nick} \nBad Usernames = {custom_username}")
+        await ctx.send(embed=success_embed)
+
 
     async def check_message(self,message):
         if message.author.bot:
@@ -452,7 +516,8 @@ class AutoMod(commands.Cog):
             return
         if functions.filter_check(self.bot, member.display_name, member.guild.id):
             try:
-                await member.edit(nick="I had a bad nickname")
+                new_name = SqlCommands.get_new_nick(member.guild.id, "username")
+                await member.edit(nick=new_name)
             except discord.errors.Forbidden:
                 pass
 
@@ -528,7 +593,8 @@ class AutoMod(commands.Cog):
             return
         if functions.filter_check(self.bot, after.display_name, after.guild.id):
             try:
-                await after.edit(nick="I had a bad nickname")
+                new_name = SqlCommands.get_new_nick(after.guild.id, "nickname")
+                await after.edit(nick=new_name)
 
                 member = after
 
@@ -559,7 +625,8 @@ class AutoMod(commands.Cog):
                 continue
             if not member.nick and functions.filter_check(self.bot, member.display_name, member.guild.id):
                 try:
-                    await member.edit(nick="I had a bad username")
+                    new_name = SqlCommands.get_new_nick(after.guild.id, "username")
+                    await after.edit(nick=new_name)
 
                     logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(member.guild.id,)).fetchone()
         

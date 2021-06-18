@@ -143,6 +143,22 @@ class Sql:
             con.commit()
             return False
 
+    def get_new_nick(self, guild, flagged_nametype):
+        #returns a replacement nickname when when the bot flags one as needing to be changed
+        server_nicks = cursor.execute("SELECT * FROM custom_names WHERE guild=?",(guild,)).fetchone()
+        no_table = False
+        if server_nicks is None:
+            no_table = True
+            #Server does not have a table for custom nicknames yet
+            cursor.execute("INSERT INTO custom_names(guild, nickname, username) VALUES(?,?,?)",(guild, "I had a bad nickname", "I had a bad username"))
+            con.commit()
+        if flagged_nametype == "nickname":
+            return server_nicks[1] if not no_table else "I had a bad nickname"
+        elif flagged_nametype == "username":
+            return server_nicks[2] if not no_table else "I had a bad username"
+        else:
+            return "I had a bad name"
+
 class timeconverters:
     def secondsconverter(self, value, startType):
         if startType == "s":

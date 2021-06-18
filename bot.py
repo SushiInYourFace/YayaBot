@@ -156,12 +156,12 @@ cursor.execute("CREATE TABLE IF NOT EXISTS message_filter (guild INTEGER PRIMARY
 cursor.execute("CREATE TABLE IF NOT EXISTS spam_filters (guild INTEGER PRIMARY KEY, emoji_limit INTEGER, invite_filter INTEGER, message_spam_limit INTEGER, character_repeat_limit INTEGER)")
 cursor.execute("CREATE TABLE IF NOT EXISTS tags (guild INTEGER PRIMARY KEY, role INTEGER, tags TEXT NOT NULL)")
 cursor.execute("CREATE TABLE IF NOT EXISTS name_filtering (guild INTEGER PRIMARY KEY, enabled INTEGER)")
+cursor.execute("CREATE TABLE IF NOT EXISTS custom_names (guild INTEGER PRIMARY KEY, nickname TEXT, username TEXT)")
 con.commit()
 
 #load filters into bot variable
 bot.guild_filters = {}
 filters = cursor.execute("SELECT * FROM message_filter").fetchall()
-
 filter_tuple = namedtuple("filter_tuple", ["enabled", "wildcard", "exact"])
 for guild_filter in filters:
     functions.update_filter(bot, guild_filter)
