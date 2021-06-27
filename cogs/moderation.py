@@ -4,6 +4,7 @@ import json
 import sqlite3
 import time
 import logging
+from urllib.parse import non_hierarchical
 
 import discord
 from discord import errors
@@ -94,7 +95,7 @@ class Moderation(commands.Cog):
             
         await ctx.send(embed=successEmbed)
 
-        SqlCommands.new_case(member.id, ctx.guild.id, "ban", reason, bantime, -1, str(ctx.author))
+        await SqlCommands.new_case(member.id, ctx.guild.id, "ban", reason, bantime, -1, str(ctx.author))
 
         logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(member.guild.id,)).fetchone()
         
@@ -154,7 +155,7 @@ class Moderation(commands.Cog):
 
         await ctx.send(embed=successEmbed)
 
-        SqlCommands.new_case(member.id, ctx.guild.id, "kick", reason, kicktime, -1, str(ctx.author))
+        await SqlCommands.new_case(member.id, ctx.guild.id, "kick", reason, kicktime, -1, str(ctx.author))
 
         logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(member.guild.id,)).fetchone()
         
@@ -202,7 +203,7 @@ class Moderation(commands.Cog):
 
         await ctx.send(embed=successEmbed)
 
-        SqlCommands.new_case(user.id, ctx.guild.id, "unban", "N/A", unbanTime, -1, str(ctx.author))
+        await SqlCommands.new_case(user.id, ctx.guild.id, "unban", "N/A", unbanTime, -1, str(ctx.author))
 
         logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(ctx.guild.id,)).fetchone()
 
@@ -238,7 +239,7 @@ class Moderation(commands.Cog):
         if reason == None:
             reason = "No reason specified"
         totalsecs = TimeConversions.secondsconverter(timevalue, timeformat)
-        roleid = SqlCommands.get_role(ctx.guild.id, "gravel")
+        roleid = await SqlCommands.get_role(ctx.guild.id, "gravel")
         converter = commands.RoleConverter()
         role = await converter.convert(ctx,str(roleid))
         await member.add_roles(role)
@@ -267,7 +268,7 @@ class Moderation(commands.Cog):
         except errors.HTTPException:
             unsent = True
 
-        SqlCommands.new_case(member.id, ctx.guild.id, "gravel", reason, now, end, str(ctx.author))
+        await SqlCommands.new_case(member.id, ctx.guild.id, "gravel", reason, now, end, str(ctx.author))
 
         if unsent:
             successEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle="Gravelled " + str(member), desc="Failed to send a message to the user.",  useColor=1)
@@ -309,7 +310,7 @@ class Moderation(commands.Cog):
         if reason == None:
             reason = "No reason specified"
         totalsecs = TimeConversions.secondsconverter(timevalue, timeformat)
-        roleid = SqlCommands.get_role(ctx.guild.id, "muted")
+        roleid = await SqlCommands.get_role(ctx.guild.id, "muted")
         roleid = str(roleid)
         converter = commands.RoleConverter()
         role = await converter.convert(ctx,roleid)
@@ -338,7 +339,7 @@ class Moderation(commands.Cog):
         except errors.HTTPException:
             unsent = True
 
-        SqlCommands.new_case(member.id, ctx.guild.id, "mute", reason, now, end, str(ctx.author))
+        await SqlCommands.new_case(member.id, ctx.guild.id, "mute", reason, now, end, str(ctx.author))
 
         if unsent:
             successEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojib}Muted " + str(member), desc="Failed to send a message to the user.", useColor=1)
@@ -385,7 +386,7 @@ class Moderation(commands.Cog):
         warnEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}You have been warned in {ctx.guild.name}", force=True, forceColor=0xff0000)
         warnEmbed.add_field(name="Reason:", value=reason)
 
-        SqlCommands.new_case(member.id, ctx.guild.id, "warn", reason, time.time(), -1, str(ctx.author))
+        await SqlCommands.new_case(member.id, ctx.guild.id, "warn", reason, time.time(), -1, str(ctx.author))
 
         try:
             await member.send(embed=warnEmbed)
@@ -497,7 +498,7 @@ class Moderation(commands.Cog):
     async def unmute(self, ctx, member : discord.Member):
         mod = str(ctx.author)
         unmutetime = time.time()
-        muted = SqlCommands.get_role(ctx.guild.id, "muted")
+        muted = await SqlCommands.get_role(ctx.guild.id, "muted")
         mutedRole = ctx.guild.get_role(muted)
         await member.remove_roles(mutedRole,)
 
@@ -515,7 +516,7 @@ class Moderation(commands.Cog):
 
         await ctx.send(embed=successEmbed)
 
-        SqlCommands.new_case(member.id, ctx.guild.id, "unmute", "N/A", unmutetime, -1, mod)
+        await SqlCommands.new_case(member.id, ctx.guild.id, "unmute", "N/A", unmutetime, -1, mod)
 
         logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(member.guild.id,)).fetchone()
         
@@ -537,7 +538,7 @@ class Moderation(commands.Cog):
     async def ungravel(self, ctx, member : discord.Member):
         mod = str(ctx.author)
         ungraveltime = time.time()
-        gravel = SqlCommands.get_role(ctx.guild.id, "gravel")
+        gravel = await SqlCommands.get_role(ctx.guild.id, "gravel")
         mutedRole = ctx.guild.get_role(gravel)
         await member.remove_roles(mutedRole,)
 
@@ -555,7 +556,7 @@ class Moderation(commands.Cog):
 
         await ctx.send(embed=successEmbed)
 
-        SqlCommands.new_case(member.id, ctx.guild.id, "ungravel", "N/A", ungraveltime, -1, mod)
+        await SqlCommands.new_case(member.id, ctx.guild.id, "ungravel", "N/A", ungraveltime, -1, mod)
 
         logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(member.guild.id,)).fetchone()
         
@@ -889,7 +890,7 @@ class Moderation(commands.Cog):
             case = cursor.execute("SELECT guild, user, type FROM caselog WHERE id = ?", (item[0],)).fetchone()
             guild = self.bot.get_guild(int(case[0]))
             if case[2] == "gravel":
-                roleid = SqlCommands.get_role(case[0], "gravel")
+                roleid = await SqlCommands.get_role(case[0], "gravel")
                 role = guild.get_role(roleid)
                 member = guild.get_member(case[1])
                 try:
@@ -897,7 +898,7 @@ class Moderation(commands.Cog):
                 except:
                     pass
             elif case[2] == "mute":
-                roleid = SqlCommands.get_role(case[0], "muted")
+                roleid = await SqlCommands.get_role(case[0], "muted")
                 role = guild.get_role(roleid)
                 member = guild.get_member(case[1])
                 try:
@@ -943,8 +944,10 @@ class Moderation(commands.Cog):
             if cooldown:
                 self.bot.cooldowns[ctx.guild.id][cooldown[0][0]] = cooldown[0][1]
 
-SqlCommands = functions.Sql()
+SqlCommands = None
 TimeConversions = functions.timeconverters()
 
 def setup(bot):
+    global SqlCommands
+    SqlCommands = functions.Sql(bot)
     bot.add_cog(Moderation(bot))

@@ -199,6 +199,14 @@ if not extensions:
     cursor.executemany("INSERT INTO extensions(extension) VALUES (?)", default_extensions)
     con.commit()
     extensions = default_extensions
+cursor.close()
+con.close()
+
+#initialize aiosql connection
+async def async_connect(bot):
+    bot.db = await aiosqlite.connect("database.db")
+
+asyncio.get_event_loop().run_until_complete(async_connect(bot))
 
 logging.info("Loading Cogs.")
 for extension in extensions:
@@ -208,13 +216,11 @@ for extension in extensions:
     except commands.ExtensionNotFound:
         logging.info(f"Could not find {extension[0]}")
 logging.info("Done.")
-cursor.close()
-con.close()
+
 
 #startup
 @bot.event
 async def on_ready():
-    bot.db = await aiosqlite.connect("database.db")
     bot.startTime = time.time()
     bot.restart = False
     bot.args = sys.argv
