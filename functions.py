@@ -1,10 +1,12 @@
 import re
 import sqlite3
+from sqlite3.dbapi2 import connect
+import aiosqlite
 import time
 from collections import namedtuple
 
-con = sqlite3.connect("database.db")
-cursor = con.cursor()
+#con = sqlite3.connect("database.db")
+#cursor = con.cursor()
 
 def has_modrole(ctx, bot=None):
     if not bot:
@@ -98,8 +100,13 @@ def update_filter(bot, guild_filter):
     bot.guild_filters[guild_filter[0]] = guild_tuple
 
 class Sql:
-    def newest_case(self):
-        caseNumber = cursor.execute("SELECT id FROM caselog ORDER BY id DESC LIMIT 1").fetchone()
+    def __init__(self, bot):
+        self.bot = bot
+        self.connection: aiosqlite.Connection = self.bot.db
+    async def newest_case(self):
+        caseNumber = None
+        async with self.connection.execute("SELECT id FROM caselog ORDER BY id DESC LIMIT 1") as cursor:
+            caseNumber = await cursor.fetchone()
         if caseNumber == None:
             caseNumber = 0
         else:
@@ -107,63 +114,74 @@ class Sql:
         caseNumber += 1
         return(caseNumber)
 
-    def newest_guild_case(self, guild):
-        guildCaseNumber = cursor.execute("SELECT id_in_guild FROM caselog WHERE guild = ? ORDER BY id DESC LIMIT 1", (guild,)).fetchone()
-        if guildCaseNumber == None:
-            guildCaseNumber = 0
-        else:
-            guildCaseNumber = guildCaseNumber[0]
-        guildCaseNumber += 1
-        return(guildCaseNumber)
+    async def newest_guild_case(self, guild):
+        async with self.connection.execute("SELECT id_in_guild FROM caselog WHERE guild = ? ORDER BY id DESC LIMIT 1", (guild,)) as cursor:
+            guildCaseNumber = await cursor.fetchone()
+            if guildCaseNumber == None:
+                guildCaseNumber = 0
+            else:
+                guildCaseNumber = guildCaseNumber[0]
+            guildCaseNumber += 1
+            return(guildCaseNumber)
 
 
-    def new_case(self, user, guild, casetype, reason, started, expires, mod):
-        caseID = self.newest_case()
-        id_in_guild = self.newest_guild_case(guild)
+    async def new_case(self, user, guild, casetype, reason, started, expires, mod):
+        caseID = await self.newest_case()
+        id_in_guild = await self.newest_guild_case(guild)
+        cursor = await self.connection.cursor()
         if expires != -1:
             #checks if user already has an active case of the same type, and removes it if it is less severe
-            unexpired_cases = cursor.execute("SELECT id FROM caselog WHERE guild=? AND user=? AND type=? AND expires >=? AND expires <=? ", (guild,user, casetype, time.time(), expires)).fetchall()
+            unexpired_cases = await cursor.execute("SELECT id FROM caselog WHERE guild=? AND user=? AND type=? AND expires >=? AND expires <=? ", (guild,user, casetype, time.time(), expires))
+            unexpired_cases = await unexpired_cases.fetchall()
             #should only ever be <=1 case that meets these criteria, but better safe than sorry
             if unexpired_cases is not None:    
                 for case in unexpired_cases:
-                    cursor.execute("DELETE FROM active_cases WHERE id = ?", (case[0],))
-            cursor.execute("INSERT INTO active_cases(id, expiration) VALUES(?,?)", (caseID, expires))
-        cursor.execute("INSERT INTO caselog(id, id_in_guild, guild, user, type, reason, started, expires, moderator) VALUES(?,?,?,?,?,?,?,?,?)", (caseID, id_in_guild, guild, user, casetype, reason, started, expires, mod))
-        con.commit()
+                    await cursor.execute("DELETE FROM active_cases WHERE id = ?", (case[0],))
+            await cursor.execute("INSERT INTO active_cases(id, expiration) VALUES(?,?)", (caseID, expires))
+        await cursor.execute("INSERT INTO caselog(id, id_in_guild, guild, user, type, reason, started, expires, moderator) VALUES(?,?,?,?,?,?,?,?,?)", (caseID, id_in_guild, guild, user, casetype, reason, started, expires, mod))
+        await self.connection.commit()
+        await cursor.close()
 
-    def get_role(self, guild, role):
+    async def get_role(self, guild, role):
         if role == "gravel":
-            roleid = cursor.execute("SELECT gravel FROM role_ids WHERE guild = ?", (guild,)).fetchone()
+            cursor = await self.connection.execute("SELECT gravel FROM role_ids WHERE guild = ?", (guild,))
         elif role == "muted":
-            roleid = cursor.execute("SELECT muted FROM role_ids WHERE guild = ?", (guild,)).fetchone()
+            cursor = await self.connection.execute("SELECT muted FROM role_ids WHERE guild = ?", (guild,))
+        roleid = await cursor.fetchone()
+        await cursor.close()
         return roleid[0]
 
-    def namefilter_enabled(self, guild):
+    async def namefilter_enabled(self, guild):
         #checks if filter is enabled
-        filter_status = cursor.execute("SELECT enabled FROM name_filtering WHERE guild = ?",(guild,)).fetchone()
+        cursor = await self.connection.cursor()
+        filter_status = await cursor.execute("SELECT enabled FROM name_filtering WHERE guild = ?",(guild,))
+        filter_status = await filter_status.fetchone()
         if filter_status is not None:
+            await cursor.close()
             return bool(filter_status[0]) #casts the 0 or 1 stored to a boolean
         else: 
             #guild hasn't set up name filtering, create a row in the table for them and disable the filter
-            cursor.execute("INSERT INTO name_filtering(guild, enabled) VALUES(?,?)",(guild, 0))
-            con.commit()
+            await cursor.execute("INSERT INTO name_filtering(guild, enabled) VALUES(?,?)",(guild, 0))
+            self.connection.commit()
+            cursor.close()
             return False
 
-    def get_new_nick(self, guild, flagged_nametype):
+    async def get_new_nick(self, guild, flagged_nametype):
         #returns a replacement nickname when when the bot flags one as needing to be changed
-        server_nicks = cursor.execute("SELECT * FROM custom_names WHERE guild=?",(guild,)).fetchone()
-        no_table = False
-        if server_nicks is None:
-            no_table = True
-            #Server does not have a table for custom nicknames yet
-            cursor.execute("INSERT INTO custom_names(guild, nickname, username) VALUES(?,?,?)",(guild, "I had a bad nickname", "I had a bad username"))
-            con.commit()
-        if flagged_nametype == "nickname":
-            return server_nicks[1] if not no_table else "I had a bad nickname"
-        elif flagged_nametype == "username":
-            return server_nicks[2] if not no_table else "I had a bad username"
-        else:
-            return "I had a bad name"
+        async with self.connection.execute("SELECT * FROM custom_names WHERE guild=?",(guild,)) as cursor:
+            server_nicks = await cursor.fetchone()
+            no_table = False
+            if server_nicks is None:
+                no_table = True
+                #Server does not have a table for custom nicknames yet
+                await cursor.execute("INSERT INTO custom_names(guild, nickname, username) VALUES(?,?,?)",(guild, "I had a bad nickname", "I had a bad username"))
+                self.connection.commit()
+            if flagged_nametype == "nickname":
+                return server_nicks[1] if not no_table else "I had a bad nickname"
+            elif flagged_nametype == "username":
+                return server_nicks[2] if not no_table else "I had a bad username"
+            else:
+                return "I had a bad name"
 
 class timeconverters:
     def secondsconverter(self, value, startType):
