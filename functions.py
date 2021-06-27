@@ -6,44 +6,50 @@ from collections import namedtuple
 con = sqlite3.connect("database.db")
 cursor = con.cursor()
 
-def has_modrole(ctx):
-    modrole = cursor.execute("SELECT moderator FROM role_ids WHERE guild = ?", (ctx.guild.id,)).fetchone()
+def has_modrole(ctx, bot=None):
+    if not bot:
+        modrole = ctx.bot.modrole.get(ctx.guild.id)
+    else:
+        modrole = bot.modrole.get(ctx.guild.id)
     member_roles = [role.id for role in ctx.author.roles]
     if modrole is None:
         return False
-    elif (modrole[0] in member_roles):
+    elif (modrole in member_roles):
         return True
     else:
         return False
 
 #For when you can't use context
-def has_modrole_no_ctx(member):
-    modrole = cursor.execute("SELECT moderator FROM role_ids WHERE guild = ?", (member.guild.id,)).fetchone()
+def has_modrole_no_ctx(member, bot):
+    modrole = bot.modrole.get(member.guild.id)
     member_roles = [role.id for role in member.roles]
     if modrole is None:
         return False
-    elif (modrole[0] in member_roles):
+    elif (modrole in member_roles):
         return True
     else:
         return False
 
-def has_adminrole(ctx):
-    adminrole = cursor.execute("SELECT admin FROM role_ids WHERE guild = ?", (ctx.guild.id,)).fetchone()
+def has_adminrole(ctx, bot=None):
+    if not bot:
+        adminrole = ctx.bot.adminrole.get(ctx.guild.id)
+    else:
+        adminrole = bot.adminrole.get(ctx.guild.id)
     member_roles = [role.id for role in ctx.author.roles]
     if adminrole is None:
         return False
-    elif (adminrole[0] in member_roles):
+    elif (adminrole in member_roles):
         return True
     else:
         return False
 
 #For when you can't use context
-def has_adminrole_no_ctx(member):
-    adminrole = cursor.execute("SELECT admin FROM role_ids WHERE guild = ?", (member.guild.id,)).fetchone()
+def has_adminrole_no_ctx(member, bot):
+    adminrole = bot.adminrole.get(member.guild.id)
     member_roles = [role.id for role in member.roles]
     if adminrole is None:
         return False
-    elif (adminrole[0] in member_roles):
+    elif (adminrole in member_roles):
         return True
     else:
         return False
