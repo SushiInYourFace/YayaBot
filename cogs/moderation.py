@@ -643,9 +643,9 @@ class Moderation(commands.Cog):
             out = "This member has no roles."
             x = ""
 
-        if functions.has_modrole_no_ctx(member):
+        if functions.has_modrole_no_ctx(member, self.bot):
             ack = ack + "Server Moderator, "
-        if functions.has_adminrole_no_ctx(member):
+        if functions.has_adminrole_no_ctx(member, self.bot):
             ack = ack + "Server Administrator, "
         if member == member.guild.owner:
             ack = ack + "Server Owner, "

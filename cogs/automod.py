@@ -358,7 +358,7 @@ class AutoMod(commands.Cog):
             return
         if isinstance(message.channel, discord.channel.DMChannel):
             return
-        if functions.has_modrole(message) or functions.has_adminrole(message):
+        if functions.has_modrole(message, self.bot) or functions.has_adminrole(message, self.bot):
             return
         if message.guild.id not in self.bot.guild_filters:
             return

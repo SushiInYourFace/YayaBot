@@ -2,6 +2,7 @@ import asyncio
 import logging
 import platform
 import sqlite3
+import aiosqlite
 import time, datetime
 import sys
 from collections import namedtuple
@@ -25,7 +26,7 @@ except FileNotFoundError:
     print("You don't seem to have created token.txt yet. Not a problem! Please send your bot token, and it will be made for you")
     print("If you don't want to do this, you can just quit the program with ctrl+c, or type \"exit\" now")
     Token = input()
-    if Token == "exit" or Token == "Exit":
+    if Token.lower() == "exit":
         sys.exit(0)
     with open("token.txt", "w") as f:
         f.write(Token)
@@ -34,8 +35,8 @@ except FileNotFoundError:
 async def get_pre(bot, message):
     prefix = "!"
     try:
-        guildcommand = cursor.execute("SELECT prefix FROM guild_prefixes WHERE guild = ?", (message.guild.id,)).fetchone()
-        prefix = (str(guildcommand[0]))
+        if message.guild.id in bot.guild_prefixes:
+            prefix = bot.guild_prefixes[message.guild.id]
     except TypeError:
         pass
     except AttributeError:
@@ -166,10 +167,54 @@ filter_tuple = namedtuple("filter_tuple", ["enabled", "wildcard", "exact"])
 for guild_filter in filters:
     functions.update_filter(bot, guild_filter)
 
+#load prefixes into bot var
+bot.guild_prefixes = {}
+prefixes = cursor.execute("SELECT * FROM guild_prefixes").fetchall()
+if prefixes is not None:
+    for prefix in prefixes:
+        bot.guild_prefixes[prefix[0]] = prefix[1]
+
+#fuck it, load mod and admin roles into bot var. (Not sure if this is how this should be done permanently, but it will work for now)
+bot.modrole = {}
+bot.adminrole = {}
+modroles = cursor.execute("SELECT guild, moderator, admin FROM role_ids").fetchall()
+if modroles is not None:
+    for server_roles in modroles:
+        bot.modrole[server_roles[0]] = server_roles[1]
+        bot.adminrole[server_roles[0]] = server_roles[2]
+
+#cogs to be loaded on startup
+default_extensions = [
+    ('cogs.community',),
+    ('cogs.moderation',),
+    ('cogs.utilities',),
+    ('cogs.owner',),
+    ('cogs.automod',),
+    ('cogs.fancyEmbeds',),
+]
+
+extensions = cursor.execute("SELECT * FROM extensions").fetchall()
+
+if not extensions:
+    cursor.executemany("INSERT INTO extensions(extension) VALUES (?)", default_extensions)
+    con.commit()
+    extensions = default_extensions
+
+logging.info("Loading Cogs.")
+for extension in extensions:
+    try:
+        bot.load_extension(extension[0])
+        logging.info(f"Loaded {extension[0]}")
+    except commands.ExtensionNotFound:
+        logging.info(f"Could not find {extension[0]}")
+logging.info("Done.")
+cursor.close()
+con.close()
 
 #startup
 @bot.event
 async def on_ready():
+    bot.db = await aiosqlite.connect("database.db")
     bot.startTime = time.time()
     bot.restart = False
     bot.args = sys.argv
@@ -211,33 +256,6 @@ async def about(ctx):
     embed.add_field(name="_ _", value="_ _", inline=True)
     embed.add_field(name=f"{emojid}Discord.py Version:", value=f"[{discord.__version__}](https://github.com/Rapptz/discord.py)", inline=True)
     await ctx.send(embed=embed)
-
-
-#cogs to be loaded on startup
-default_extensions = [
-    ('cogs.community',),
-    ('cogs.moderation',),
-    ('cogs.utilities',),
-    ('cogs.owner',),
-    ('cogs.automod',),
-    ('cogs.fancyEmbeds',),
-]
-
-extensions = cursor.execute("SELECT * FROM extensions").fetchall()
-
-if not extensions:
-    cursor.executemany("INSERT INTO extensions(extension) VALUES (?)", default_extensions)
-    con.commit()
-    extensions = default_extensions
-
-logging.info("Loading Cogs.")
-for extension in extensions:
-    try:
-        bot.load_extension(extension[0])
-        logging.info(f"Loaded {extension[0]}")
-    except commands.ExtensionNotFound:
-        logging.info(f"Could not find {extension[0]}")
-logging.info("Done.")
         
 #error handling
 @bot.event

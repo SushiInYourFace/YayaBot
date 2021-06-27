@@ -50,6 +50,7 @@ class Utilities(commands.Cog):
     async def setup_prefix(self, ctx, prefix):
         cursor.execute("INSERT INTO guild_prefixes(guild,prefix) VALUES(?, ?) ON CONFLICT(guild) DO UPDATE SET prefix=excluded.prefix", (ctx.guild.id, prefix))
         connection.commit()
+        self.bot.guild_prefixes[ctx.guild.id] = prefix
         await ctx.send("Your new server-specific prefix is " + prefix)
 
     #all, chonky function
@@ -127,9 +128,14 @@ class Utilities(commands.Cog):
         await ctx.send("Last, please tell me what prefix you would like to use for commands")
         prefix = await get_message()
 
+        self.bot.guild_prefixes[ctx.guild.id] = prefix  
+        self.bot.modrole[ctx.guild.id] = modRole.id
+        self.bot.adminrole[ctx.guild.id] = adminRole.id
+
         cursor.execute("INSERT INTO guild_prefixes(guild,prefix) VALUES(?, ?) ON CONFLICT(guild) DO UPDATE SET prefix=excluded.prefix", (guild.id, prefix.content))
         cursor.execute("INSERT INTO role_ids(guild,gravel,muted,moderator,admin,modlogs,command_usage,command_cooldown) VALUES(?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(guild) DO UPDATE SET gravel=excluded.gravel, muted=excluded.muted, moderator=excluded.moderator, admin=excluded.admin, modlogs=excluded.modlogs, command_usage=excluded.command_usage, command_cooldown=excluded.command_cooldown", (guild.id, gravelRole.id, mutedRole.id, modRole.id, adminRole.id, getattr(logChannel,"id",0), getattr(commandRole,"id",0),commandCooldown))
         connection.commit()
+
 
         e = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
         emoji = fEmbeds.fancyEmbeds.getStyleValue(self , ctx.guild.id, e, "emoji")
@@ -218,6 +224,7 @@ class Utilities(commands.Cog):
         cursor.execute("INSERT INTO role_ids(guild, moderator) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET moderator=excluded.moderator", (ctx.guild.id, role.id))
         connection.commit()
 
+        self.bot.modrole[ctx.guild.id] = role.id
         e = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
         emoji = fEmbeds.fancyEmbeds.getStyleValue(self , ctx.guild.id, e, "emoji")
 
@@ -233,7 +240,8 @@ class Utilities(commands.Cog):
     async def setup_admin(self, ctx, *, role:discord.Role):
         cursor.execute("INSERT INTO role_ids(guild, admin) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET admin=excluded.admin", (ctx.guild.id, role.id))
         connection.commit()
-
+        
+        self.bot.modrole[ctx.guild.id] = role.id
         e = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
         emoji = fEmbeds.fancyEmbeds.getStyleValue(self , ctx.guild.id, e, "emoji")
 
