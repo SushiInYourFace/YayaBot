@@ -1,6 +1,4 @@
 import re
-import sqlite3
-from sqlite3.dbapi2 import connect
 import aiosqlite
 import time
 from collections import namedtuple
@@ -102,7 +100,7 @@ def update_filter(bot, guild_filter):
 class Sql:
     def __init__(self, bot):
         self.bot = bot
-        self.connection: aiosqlite.Connection = self.bot.db
+        self.connection: aiosqlite.Connection = self.bot.connection
     async def newest_case(self):
         caseNumber = None
         async with self.connection.execute("SELECT id FROM caselog ORDER BY id DESC LIMIT 1") as cursor:
@@ -207,4 +205,3 @@ class timeconverters:
             return str(minutes) + (" Minute" if minutes==1 else " Minutes")
         else:
             return str(seconds) + (" Second" if seconds==1 else " Seconds")
-

@@ -1,7 +1,6 @@
 import asyncio
 import json
 import random
-import sqlite3
 import io
 import aiohttp
 
@@ -11,25 +10,31 @@ import functions
 import discord
 from discord.ext import commands
 
-#sets up SQLite
-connection = sqlite3.connect("database.db")
-cursor = connection.cursor()
 
 async def tag_check(ctx):
     if ctx.invoked_with == "help":
         return True
-    tags = cursor.execute("SELECT * FROM tags WHERE guild = ?", (ctx.guild.id,)).fetchone()
+    cursor = await ctx.bot.connection.execute("SELECT * FROM tags WHERE guild = ?", (ctx.guild.id,))
+    tags = await cursor.fetchone()
     if (tags is None and ctx.author.guild_permissions.manage_messages): # No guild tags and the user can manage messages
         if not (ctx.command.root_parent == "tag" or ctx.command.name == "tag"): # Check is not coming from a tag command so return True
             return True
-        cursor.execute("INSERT INTO tags(guild,role,tags) VALUES(?,?,?)",(ctx.guild.id,ctx.author.top_role.id,"{}"))
-        connection.commit()
+        await cursor.execute("INSERT INTO tags(guild,role,tags) VALUES(?,?,?)",(ctx.guild.id,ctx.author.top_role.id,"{}"))
+        await ctx.bot.connection.commit()
         await ctx.send(f"Tags created and role set to {ctx.author.top_role.name}.")
-        tags = cursor.execute("SELECT * FROM tags WHERE guild = ?", (ctx.guild.id,)).fetchone()
+        tags = await cursor.execute("SELECT * FROM tags WHERE guild = ?", (ctx.guild.id,))
+        tags = await tags.fetchone()
+        await cursor.close()
     elif tags is None: # User cannot manage messages but there are no tags
+        await cursor.close()
         return False
     if ctx.guild.get_role(int(tags[1])) <= ctx.author.top_role: # Tags do exist and the user has the roles required
+        await cursor.close()
         return True
+    try:
+        await cursor.close()
+    except:
+        pass
     return False
 
 
@@ -39,6 +44,7 @@ class Utilities(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self._last_member = None
+        self.connection = bot.connection
 
     @commands.group(name="setup", help="setup some (or all) features of the bot", aliases=["su",], brief=":wrench: ")
     @commands.check_any(commands.has_permissions(administrator=True),commands.check(functions.has_adminrole))
@@ -48,8 +54,10 @@ class Utilities(commands.Cog):
 
     @setup.command(help="Sets a server-specific bot prefix", name="prefix", aliases=["set_prefix",], brief=":pencil2: ")
     async def setup_prefix(self, ctx, prefix):
-        cursor.execute("INSERT INTO guild_prefixes(guild,prefix) VALUES(?, ?) ON CONFLICT(guild) DO UPDATE SET prefix=excluded.prefix", (ctx.guild.id, prefix))
-        connection.commit()
+        cursor = await self.connection.cursor()
+        await cursor.execute("INSERT INTO guild_prefixes(guild,prefix) VALUES(?, ?) ON CONFLICT(guild) DO UPDATE SET prefix=excluded.prefix", (ctx.guild.id, prefix))
+        await self.connection.commit()
+        await cursor.close()
         self.bot.guild_prefixes[ctx.guild.id] = prefix
         await ctx.send("Your new server-specific prefix is " + prefix)
 
@@ -132,9 +140,11 @@ class Utilities(commands.Cog):
         self.bot.modrole[ctx.guild.id] = modRole.id
         self.bot.adminrole[ctx.guild.id] = adminRole.id
 
-        cursor.execute("INSERT INTO guild_prefixes(guild,prefix) VALUES(?, ?) ON CONFLICT(guild) DO UPDATE SET prefix=excluded.prefix", (guild.id, prefix.content))
-        cursor.execute("INSERT INTO role_ids(guild,gravel,muted,moderator,admin,modlogs,command_usage,command_cooldown) VALUES(?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(guild) DO UPDATE SET gravel=excluded.gravel, muted=excluded.muted, moderator=excluded.moderator, admin=excluded.admin, modlogs=excluded.modlogs, command_usage=excluded.command_usage, command_cooldown=excluded.command_cooldown", (guild.id, gravelRole.id, mutedRole.id, modRole.id, adminRole.id, getattr(logChannel,"id",0), getattr(commandRole,"id",0),commandCooldown))
-        connection.commit()
+        cursor = await self.connection.cursor()
+        await cursor.execute("INSERT INTO guild_prefixes(guild,prefix) VALUES(?, ?) ON CONFLICT(guild) DO UPDATE SET prefix=excluded.prefix", (guild.id, prefix.content))
+        await cursor.execute("INSERT INTO role_ids(guild,gravel,muted,moderator,admin,modlogs,command_usage,command_cooldown) VALUES(?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(guild) DO UPDATE SET gravel=excluded.gravel, muted=excluded.muted, moderator=excluded.moderator, admin=excluded.admin, modlogs=excluded.modlogs, command_usage=excluded.command_usage, command_cooldown=excluded.command_cooldown", (guild.id, gravelRole.id, mutedRole.id, modRole.id, adminRole.id, getattr(logChannel,"id",0), getattr(commandRole,"id",0),commandCooldown))
+        await self.connection.commit()
+        await cursor.close()
 
 
         e = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
@@ -174,23 +184,27 @@ class Utilities(commands.Cog):
 
     @setup.command(name="modlogs", help="Specifies the channel to be used for modlogs, do not specify a channel to remove logs.", aliases=["logchannel", "modlog", "logs",], brief=":file_folder: ")
     async def setup_modlogs(self, ctx, *, channel:discord.TextChannel=None):
+        cursor = await self.connection.cursor()
         if channel:
             try:
                 await channel.send("Set up modlogs in this channel!")
                 await ctx.send(f"Set up modlogs in {channel.mention}!")
-                cursor.execute("INSERT INTO role_ids(guild, modlogs) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET modlogs=excluded.modlogs", (ctx.guild.id, channel.id))
+                await cursor.execute("INSERT INTO role_ids(guild, modlogs) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET modlogs=excluded.modlogs", (ctx.guild.id, channel.id))
             except:
                 await ctx.send("Something went wrong. Please make sure you specify a valid channel, and that I have permissions to send messages to it")
                 return
         else:
-            cursor.execute("INSERT INTO role_ids(guild,modlogs) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET modlogs=excluded.modlogs", (ctx.guild.id, 0))
+            await cursor.execute("INSERT INTO role_ids(guild,modlogs) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET modlogs=excluded.modlogs", (ctx.guild.id, 0))
             await ctx.send("Turned off modlogs")
-        connection.commit()
+        await self.connection.commit()
+        await cursor.close()
 
     @setup.command(name="gravel", help="Specifies the role given to someone who is graveled", aliases=["gravelrole",], brief=":mute: ")
     async def setup_gravel(self, ctx, role:discord.Role):
-        cursor.execute("INSERT INTO role_ids(guild, gravel) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET gravel=excluded.gravel", (ctx.guild.id, role.id))
-        connection.commit()
+        cursor = await self.connection.cursor()
+        await cursor.execute("INSERT INTO role_ids(guild, gravel) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET gravel=excluded.gravel", (ctx.guild.id, role.id))
+        await self.connection.commit()
+        await cursor.close()
 
         e = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
         emoji = fEmbeds.fancyEmbeds.getStyleValue(self , ctx.guild.id, e, "emoji")
@@ -205,8 +219,10 @@ class Utilities(commands.Cog):
         
     @setup.command(name="mute", help="Specifies the role given to someone who is muted", aliases=["muterole", "muted", "mutedrole"], brief=":mute: ")
     async def setup_mute(self, ctx, *, role:discord.Role):
-        cursor.execute("INSERT INTO role_ids(guild, muted) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET muted=excluded.muted", (ctx.guild.id, role.id))
-        connection.commit()
+        cursor = await self.connection.cursor()
+        await cursor.execute("INSERT INTO role_ids(guild, muted) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET muted=excluded.muted", (ctx.guild.id, role.id))
+        await self.connection.commit()
+        await cursor.close()
 
         e = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
         emoji = fEmbeds.fancyEmbeds.getStyleValue(self , ctx.guild.id, e, "emoji")
@@ -221,8 +237,10 @@ class Utilities(commands.Cog):
 
     @setup.command(name="moderator", help="Sets the role used to determine whether a user can use moderation commands", aliases=["mod", "modrole"], brief=":hammer: ")
     async def setup_moderator(self, ctx, *, role:discord.Role):
-        cursor.execute("INSERT INTO role_ids(guild, moderator) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET moderator=excluded.moderator", (ctx.guild.id, role.id))
-        connection.commit()
+        cursor = await self.connection.cursor()
+        await cursor.execute("INSERT INTO role_ids(guild, moderator) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET moderator=excluded.moderator", (ctx.guild.id, role.id))
+        await self.connection.commit()
+        await cursor.close()
 
         self.bot.modrole[ctx.guild.id] = role.id
         e = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
@@ -238,8 +256,10 @@ class Utilities(commands.Cog):
 
     @setup.command(name="admin", help="Sets the role used to determine whether a user can use admin commands", aliases=["adminrole"], brief=":tools:")
     async def setup_admin(self, ctx, *, role:discord.Role):
-        cursor.execute("INSERT INTO role_ids(guild, admin) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET admin=excluded.admin", (ctx.guild.id, role.id))
-        connection.commit()
+        cursor = await self.connection.cursor()
+        await cursor.execute("INSERT INTO role_ids(guild, admin) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET admin=excluded.admin", (ctx.guild.id, role.id))
+        await self.connection.commit()
+        await cursor.close()
         
         self.bot.modrole[ctx.guild.id] = role.id
         e = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
@@ -256,8 +276,10 @@ class Utilities(commands.Cog):
 
     @setup.command(name="command", help="Sets the role used to determine whether a user can use commands", aliases=["commandrole"], brief=":page_facing_up: ")
     async def setup_command(self, ctx, *, role:discord.Role=None):
-        cursor.execute("INSERT INTO role_ids(guild, command_usage) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET command_usage=excluded.command_usage", (ctx.guild.id, getattr(role,"id",0)))
-        connection.commit()
+        cursor = await self.connection.cursor() 
+        await cursor.execute("INSERT INTO role_ids(guild, command_usage) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET command_usage=excluded.command_usage", (ctx.guild.id, getattr(role,"id",0)))
+        await self.connection.commit()
+        await cursor.close()
 
         e = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
         emoji = fEmbeds.fancyEmbeds.getStyleValue(self , ctx.guild.id, e, "emoji")
@@ -273,8 +295,10 @@ class Utilities(commands.Cog):
 
     @setup.command(name="cooldown", help="Sets the cooldown (in ms) between command uses", aliases=["commandCooldown","command_cooldown"], brief=":stopwatch: ")
     async def setup_cooldown(self, ctx, cooldown:int=0):
-        cursor.execute("INSERT INTO role_ids(guild, command_cooldown) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET command_cooldown=excluded.command_cooldown", (ctx.guild.id, cooldown))
-        connection.commit()
+        cursor = await self.connection.cursor()
+        await cursor.execute("INSERT INTO role_ids(guild, command_cooldown) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET command_cooldown=excluded.command_cooldown", (ctx.guild.id, cooldown))
+        await self.connection.commit()
+        await cursor.close()
 
         e = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
         emoji = fEmbeds.fancyEmbeds.getStyleValue(self , ctx.guild.id, e, "emoji")
@@ -298,7 +322,9 @@ class Utilities(commands.Cog):
         if tag.find(' ') == -1:
             await ctx.send_help(ctx.command)
         tag = tag[tag.find(' ')+1:]
-        guildTags = cursor.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,)).fetchone()
+        cursor = await self.connection.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,))
+        guildTags = await cursor.fetchone()
+        await cursor.close()
         if ctx.guild.get_role(int(guildTags[1])) <= ctx.author.top_role:
             tags = json.loads(guildTags[2])
             try:
@@ -326,22 +352,26 @@ class Utilities(commands.Cog):
     @tag_add.command(name="text",aliases=["t"], brief=":placard: ")
     async def tag_add_text(self,ctx,tag,*,text):
         """Sets a tags text assosiation."""
-        guildTags = cursor.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,)).fetchone()
+        cursor = await self.connection.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,))
+        guildTags = await cursor.fetchone()
         tags = json.loads(guildTags[2])
         tags[tag] = {"text": text,"embed": None}
-        cursor.execute("UPDATE tags SET tags=? WHERE guild=?",(json.dumps(tags),ctx.guild.id))
-        connection.commit()
+        await cursor.execute("UPDATE tags SET tags=? WHERE guild=?",(json.dumps(tags),ctx.guild.id))
+        await self.connection.commit()
+        await cursor.close()
         await ctx.send("Tag updated.")
 
     @tag_add.command(name="simpleEmbed",aliases=["se","simpleembed","simple_embed"], brief=":bookmark_tabs: ")
     async def tag_add_simpleEmbed(self,ctx,tag,title,*,description=None):
         """Creates a simple embed with only a title and description.
         Title must be in "s and has a character limit of 256.."""
-        guildTags = cursor.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,)).fetchone()
+        cursor = await self.connection.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,))
+        guildTags = await cursor.fetchone()
         tags = json.loads(guildTags[2])
         tags[tag] = {"text": None,"embed": {"title":title,"description":description if description else ""}}
-        cursor.execute("UPDATE tags SET tags=? WHERE guild=?",(json.dumps(tags),ctx.guild.id))
-        connection.commit()
+        await cursor.execute("UPDATE tags SET tags=? WHERE guild=?",(json.dumps(tags),ctx.guild.id))
+        await self.connection.commit()
+        await cursor.close()
         await ctx.send("Tag updated.")
 
     @tag_add.command(name="embed",aliases=["e"], brief=":newspaper: ")
@@ -361,7 +391,8 @@ class Utilities(commands.Cog):
         else:
             embed.replace("\n","")
             embed = json.loads(embed)
-        guildTags = cursor.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,)).fetchone()
+        cursor = await self.connection.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,))
+        guildTags = await cursor.fetchone()
         tags = json.loads(guildTags[2])
         if 'content' in embed.keys():
             text = embed["content"]
@@ -374,25 +405,30 @@ class Utilities(commands.Cog):
         else:
             embed = None
         tags[tag] = {"text": text,"embed": embed}
-        cursor.execute("UPDATE tags SET tags=? WHERE guild=?",(json.dumps(tags),ctx.guild.id))
-        connection.commit()
+        await cursor.execute("UPDATE tags SET tags=? WHERE guild=?",(json.dumps(tags),ctx.guild.id))
+        await self.connection.commit()
+        await cursor.close()
         await ctx.send("Tag updated.")
 
     @tag.command(name="remove",aliases=["delete","del"], brief=":scissors: ")
     @commands.check(functions.has_modrole)
     async def tag_remove(self,ctx,tag):
         """Removes a tag text assosiation."""
-        guildTags = cursor.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,)).fetchone()
+        cursor = await self.connection.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,))
+        guildTags = await cursor.fetchone()
         tags = json.loads(guildTags[2])
         tags.pop(tag)
-        cursor.execute("UPDATE tags SET tags=? WHERE guild=?",(json.dumps(tags),ctx.guild.id))
-        connection.commit()
+        await cursor.execute("UPDATE tags SET tags=? WHERE guild=?",(json.dumps(tags),ctx.guild.id))
+        await self.connection.commit()
+        await cursor.close()
         await ctx.send("Tag updated.")
 
     @tag.command(name="list",aliases=["get"], brief=":file_cabinet: ")
     async def tag_list(self,ctx):
         """Lists tags and their text assosiation."""
-        guildTags = cursor.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,)).fetchone()
+        cursor = self.connection.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,))
+        guildTags = await cursor.fetchone()
+        await cursor.close()
         tags = json.loads(guildTags[2])
 
         e = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
@@ -412,8 +448,10 @@ class Utilities(commands.Cog):
         """Sets the lowest role to be able to use tags."""
         if not role:
             role = ctx.author.top_role
-        cursor.execute("UPDATE tags SET role=? WHERE guild=?",(role.id,ctx.guild.id))
-        connection.commit()
+        cursor = await self.connection.cursor()
+        await cursor.execute("UPDATE tags SET role=? WHERE guild=?",(role.id,ctx.guild.id))
+        await self.connection.commit()
+        await cursor.close()
         await ctx.send(f"Tag role set to {role.name}.")
 
     @commands.command(brief=":ping_pong: ")

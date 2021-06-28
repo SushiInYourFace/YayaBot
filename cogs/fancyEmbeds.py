@@ -299,7 +299,7 @@ class fancyEmbeds(commands.Cog):
                     return
             f__ = f_[str(ctx.guild.id)]["styles"][style]["colors"]
         except:
-            tryMakeStorage(guildid)
+            tryMakeStorage(ctx.guild.id)
             with open("embeds.json", "r+") as f:
                 f_ = json.load(f)
                 try:

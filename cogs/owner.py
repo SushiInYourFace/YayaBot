@@ -21,9 +21,6 @@ from discord.ext import commands
 # Logging config
 logging.basicConfig(format='[%(asctime)s] %(levelname)s: %(message)s', level=logging.INFO)
 
-connection = sqlite3.connect("database.db")
-cursor = connection.cursor()
-
 def setup(bot):
     bot.add_cog(Owner(bot))
 
@@ -33,6 +30,7 @@ class Owner(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.bot.previousReload = None
+        self.connection = bot.connection
 
     @commands.command(brief=":sleeping: ")
     @commands.is_owner()
@@ -61,7 +59,8 @@ class Owner(commands.Cog):
         """Loads a cog."""
         for cog in cogs:
             cog = f"cogs.{cog}"
-            inDb = cursor.execute("SELECT * FROM extensions WHERE extension = ?", (cog,)).fetchone()
+            cursor = await self.connection.execute("SELECT * FROM extensions WHERE extension = ?", (cog,))
+            inDb = await cursor.fetchone()
             inDb = (inDb is not None)
             loadCog = (cog not in self.bot.extensions.keys())
             if ((not loadCog) and inDb):
@@ -78,9 +77,10 @@ class Owner(commands.Cog):
                     await ctx.send(f"Loading cog `{cog}` failed")
                     raise
             if not inDb:
-                cursor.execute("INSERT INTO extensions(extension) VALUES(?)", (cog,))
-                connection.commit()
+                await cursor.execute("INSERT INTO extensions(extension) VALUES(?)", (cog,))
+                await self.connection.commit()
             await ctx.send(f"Cog `{cog}` {'loaded' if loadCog else ''}{' and ' if (loadCog and not inDb) else ''}{'added to database' if not inDb else ''}.")
+            await cursor.close()
 
     @cog.command(aliases = ['u'], brief=":outbox_tray: ")
     async def unload(self,ctx,*cogs):
@@ -90,7 +90,8 @@ class Owner(commands.Cog):
                 await ctx.send("Cannot unload owner.")
                 return
             cog = f"cogs.{cog}"
-            inDb = cursor.execute("SELECT count(*) FROM extensions WHERE extension = ?", (cog,)).fetchone()
+            cursor = await self.connection.execute("SELECT count(*) FROM extensions WHERE extension = ?", (cog,))
+            inDb = await cursor.fetchone()
             inDb = (inDb is not None)
             unloadCog = (cog in self.bot.extensions.keys())
             if not (unloadCog and inDb):
@@ -104,8 +105,9 @@ class Owner(commands.Cog):
                     await ctx.send(f"Unloading cog `{cog}` failed")
                     raise
             if inDb:
-                cursor.execute("DELETE FROM extensions WHERE extension=?", (cog,))
-                connection.commit()
+                await cursor.execute("DELETE FROM extensions WHERE extension=?", (cog,))
+                await self.connection.commit()
+            await cursor.close()
             await ctx.send(f"Cog {cog} {'unloaded' if unloadCog else ''}{' and ' if (unloadCog and inDb) else ''}{'removed from database' if inDb else ''}.")
 
     @cog.command(aliases = ['r'], brief=":arrows_counterclockwise: ")
@@ -210,7 +212,7 @@ class Owner(commands.Cog):
             return()
         backup = sqlite3.connect("resources/backups/tempbackupfile.db")
         with backup:
-            connection.backup(backup, pages=1) #actual backup happens here
+            await self.connection.backup(backup, pages=1) #actual backup happens here
         backup.close()
         timestamp = datetime.now().strftime('%m_%d_%Y-%H_%M_%S')
         fname = f'resources/backups/{timestamp}.db.gz'
@@ -255,7 +257,9 @@ class Owner(commands.Cog):
         if message.content == mention:
             prefix = "!"
             try:
-                guildcommand = cursor.execute("SELECT prefix FROM guild_prefixes WHERE guild = ?", (message.guild.id,)).fetchone()
+                cursor = await self.connection.execute("SELECT prefix FROM guild_prefixes WHERE guild = ?", (message.guild.id,))
+                guildcommand = await cursor.fetchone()
+                await cursor.close()
                 prefix = (str(guildcommand[0]))
             except TypeError:
                 pass

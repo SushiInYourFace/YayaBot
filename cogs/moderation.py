@@ -1,7 +1,6 @@
 import datetime
 import io
 import json
-import sqlite3
 import time
 import logging
 from urllib.parse import non_hierarchical
@@ -13,10 +12,6 @@ from discord.ext import commands, tasks
 import functions
 import cogs.fancyEmbeds as fEmbeds
 
-#sets up SQLite
-connection = sqlite3.connect("database.db")
-cursor = connection.cursor()
-
 class Moderation(commands.Cog):
     """Cog for moderators to help them moderate!"""
 
@@ -27,6 +22,7 @@ class Moderation(commands.Cog):
         self.bot.cooldowns = {}
         self.bot.pending_cooldowns = {}
         self.bot.before_invoke(self.before_invoke)
+        self.connection = bot.connection
 
     @commands.group(help="Purge command.", brief=":x: ")
     @commands.check(functions.has_modrole)
@@ -97,7 +93,9 @@ class Moderation(commands.Cog):
 
         await SqlCommands.new_case(member.id, ctx.guild.id, "ban", reason, bantime, -1, str(ctx.author))
 
-        logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(member.guild.id,)).fetchone()
+        cursor = await self.connection.execute("SELECT modlogs from role_ids WHERE guild = ?",(member.guild.id,))
+        logID = await cursor.fetchone()
+        await cursor.close()
         
         if logID and logID != 0:
 
@@ -157,7 +155,9 @@ class Moderation(commands.Cog):
 
         await SqlCommands.new_case(member.id, ctx.guild.id, "kick", reason, kicktime, -1, str(ctx.author))
 
-        logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(member.guild.id,)).fetchone()
+        cursor = await self.connection.execute("SELECT modlogs from role_ids WHERE guild = ?",(ctx.guild.id,))
+        logID = await cursor.fetchone()
+        await cursor.close()
         
         if logID and logID != 0:
 
@@ -205,7 +205,9 @@ class Moderation(commands.Cog):
 
         await SqlCommands.new_case(user.id, ctx.guild.id, "unban", "N/A", unbanTime, -1, str(ctx.author))
 
-        logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(ctx.guild.id,)).fetchone()
+        cursor = await self.connection.execute("SELECT modlogs from role_ids WHERE guild = ?",(ctx.guild.id,))
+        logID = await cursor.fetchone()
+        await cursor.close()
 
         if logID and logID != 0:
 
@@ -277,7 +279,9 @@ class Moderation(commands.Cog):
 
         await ctx.send(embed=successEmbed)
 
-        logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(member.guild.id,)).fetchone()
+        cursor = await self.connection.execute("SELECT modlogs from role_ids WHERE guild = ?",(ctx.guild.id,))
+        logID = await cursor.fetchone()
+        await cursor.close()
 
         if logID and logID != 0:
 
@@ -348,7 +352,9 @@ class Moderation(commands.Cog):
 
         await ctx.send(embed=successEmbed)
 
-        logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(member.guild.id,)).fetchone()
+        cursor = await self.connection.execute("SELECT modlogs from role_ids WHERE guild = ?",(ctx.guild.id,))
+        logID = await cursor.fetchone()
+        await cursor.close()
 
         if logID and logID != 0:
 
@@ -396,7 +402,9 @@ class Moderation(commands.Cog):
             failEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojic}Logged a warning for user {str(member)}", desc="Failed to send a message to the user.", force=True, forceColor=0x00ff00)
             await ctx.send(embed=failEmbed)
 
-        logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(member.guild.id,)).fetchone()
+        cursor = await self.connection.execute("SELECT modlogs from role_ids WHERE guild = ?",(ctx.guild.id,))
+        logID = await cursor.fetchone()
+        await cursor.close()
         
         if logID and logID != 0:
 
@@ -437,7 +445,9 @@ class Moderation(commands.Cog):
 
         logEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}{str(member)}'s Modlogs", useColor=1)
 
-        logs = cursor.execute("SELECT id_in_guild, guild, user, type, reason, started, expires, moderator FROM caselog WHERE user = ? AND guild = ?", (member.id, ctx.guild.id)).fetchall()
+        cursor = await self.connection.execute("SELECT id_in_guild, guild, user, type, reason, started, expires, moderator FROM caselog WHERE user = ? AND guild = ?", (member.id, ctx.guild.id))
+        logs = await cursor.fetchall()
+        await cursor.close()
 
         for log in logs:
             start = datetime.datetime.fromtimestamp(int(log[5])).strftime('%Y-%m-%d %H:%M:%S')
@@ -455,7 +465,9 @@ class Moderation(commands.Cog):
     @commands.command(help="Shows information on a case", brief=":notepad_spiral: ")
     @commands.check(functions.has_modrole)
     async def case(self, ctx, case:int):
-        caseinfo = cursor.execute("SELECT id_in_guild, guild, user, type, reason, started, expires, moderator FROM caselog WHERE id = ?", (case,)).fetchone()
+        cursor = await self.connection.execute("SELECT id_in_guild, guild, user, type, reason, started, expires, moderator FROM caselog WHERE id = ?", (case,))
+        caseinfo = await cursor.fetchone()
+        await cursor.close()
         try:
             start = datetime.datetime.fromtimestamp(int(caseinfo[5])).strftime('%Y-%m-%d %H:%M:%S')
         except TypeError:
@@ -518,7 +530,9 @@ class Moderation(commands.Cog):
 
         await SqlCommands.new_case(member.id, ctx.guild.id, "unmute", "N/A", unmutetime, -1, mod)
 
-        logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(member.guild.id,)).fetchone()
+        cursor = await self.connection.execute("SELECT modlogs from role_ids WHERE guild = ?",(ctx.guild.id,))
+        logID = await cursor.fetchone()
+        await cursor.close()
         
         if logID and logID != 0:
 
@@ -558,7 +572,9 @@ class Moderation(commands.Cog):
 
         await SqlCommands.new_case(member.id, ctx.guild.id, "ungravel", "N/A", ungraveltime, -1, mod)
 
-        logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(member.guild.id,)).fetchone()
+        cursor = await self.connection.execute("SELECT modlogs from role_ids WHERE guild = ?",(ctx.guild.id,))
+        logID = await cursor.fetchone()
+        await cursor.close()
         
         if logID and logID != 0:
 
@@ -842,7 +858,7 @@ class Moderation(commands.Cog):
                 invite = await guild.vanity_invite().url
             except:
                 invite = await guild.invites()
-                invite = invites[0].url
+                invite = invite[0].url
         else:
             invites = await guild.invites()
             invite = invites[0].url
@@ -880,14 +896,16 @@ class Moderation(commands.Cog):
 
     #End of Commands
 
-
     #checks if a role needs to be removed
     @tasks.loop(seconds=5.0)
     async def timedRoleCheck(self):
         now = time.time()
-        expired = cursor.execute("SELECT id FROM active_cases WHERE expiration <= " + str(now)).fetchall()
+        cursor = await self.connection.cursor()
+        expired = await cursor.execute("SELECT id FROM active_cases WHERE expiration <= " + str(now))
+        expired = await expired.fetchall()
         for item in expired:
-            case = cursor.execute("SELECT guild, user, type FROM caselog WHERE id = ?", (item[0],)).fetchone()
+            case = await cursor.execute("SELECT guild, user, type FROM caselog WHERE id = ?", (item[0],))
+            case = await case.fetchone()
             guild = self.bot.get_guild(int(case[0]))
             if case[2] == "gravel":
                 roleid = await SqlCommands.get_role(case[0], "gravel")
@@ -905,8 +923,9 @@ class Moderation(commands.Cog):
                     await member.remove_roles(role)
                 except:
                     pass
-            cursor.execute("DELETE FROM active_cases WHERE id = ?", (item[0],))
-            connection.commit()
+            await cursor.execute("DELETE FROM active_cases WHERE id = ?", (item[0],))
+            await self.connection.commit()
+        await cursor.close()
          
     async def bot_check_once(self,ctx):
         if isinstance(ctx.channel,discord.DMChannel):
@@ -921,7 +940,8 @@ class Moderation(commands.Cog):
         if now < self.bot.cooldowns[ctx.guild.id].get(ctx.author.id,now):
             await ctx.message.add_reaction("🕐")
             return False
-        cmd = cursor.execute("SELECT command_usage, command_cooldown FROM role_ids WHERE guild = ?", (ctx.guild.id,)).fetchone()
+        cursor = self.connection.execute("SELECT command_usage, command_cooldown FROM role_ids WHERE guild = ?", (ctx.guild.id,))
+        cmd = cursor.fetchone()
         if cmd:
             commandRole, commandCooldown = cmd
         else:

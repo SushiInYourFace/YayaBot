@@ -3,7 +3,6 @@ import time, datetime
 import difflib
 import io
 import re
-import sqlite3
 import aiohttp
 import asyncio
 
@@ -13,25 +12,24 @@ from discord.ext import commands, tasks
 import functions
 import cogs.fancyEmbeds as fEmbeds
 
-#sets up SQLite
-connection = sqlite3.connect("database.db")
-cursor = connection.cursor()
 
 async def word_filter_pre_invoke(self,ctx):
-    inDb = cursor.execute("SELECT * FROM message_filter WHERE guild = ?", (ctx.guild.id,)).fetchone()
-    if (inDb is None): # Guild filter doesn't exist
-        cursor.execute("INSERT INTO message_filter(guild,enabled,filterWildCard,filterExact) VALUES(?,?,?,?)",(ctx.guild.id,1,"",""))
-        connection.commit()
-        await ctx.send("Word filter created and enabled.")
-    return True
+    async with ctx.bot.connection.execute("SELECT * FROM message_filter WHERE guild = ?", (ctx.guild.id,)) as cursor:
+        inDb = await cursor.fetchone()
+        if (inDb is None): # Guild filter doesn't exist
+            await cursor.execute("INSERT INTO message_filter(guild,enabled,filterWildCard,filterExact) VALUES(?,?,?,?)",(ctx.guild.id,1,"",""))
+            await ctx.bot.connection.commit()
+            await ctx.send("Word filter created and enabled.")
+        return True
 
 async def spam_filter_pre_invoke(self,ctx):
-    inDb = cursor.execute("SELECT * FROM spam_filters WHERE guild = ?", (ctx.guild.id,)).fetchone()
-    if (inDb is None): # Guild filter doesn't exist
-        cursor.execute("INSERT INTO spam_filters(guild,emoji_limit,invite_filter,message_spam_limit,character_repeat_limit) VALUES(?,?,?,?,?)",(ctx.guild.id,-1,0,-1,-1))
-        connection.commit()
-        await ctx.send("Filter created and enabled.")
-    return True
+    async with ctx.bot.connection.execute("SELECT * FROM message_filter WHERE guild = ?", (ctx.guild.id,)) as cursor:
+        inDb = await cursor.fetchone()
+        if (inDb is None): # Guild filter doesn't exist
+            await cursor.execute("INSERT INTO spam_filters(guild,emoji_limit,invite_filter,message_spam_limit,character_repeat_limit) VALUES(?,?,?,?,?)",(ctx.guild.id,-1,0,-1,-1))
+            await ctx.bot.connection.commit()
+            await ctx.send("Filter created and enabled.")
+        return True
 
 class AutoMod(commands.Cog):
     """Moderates chat and users automatically!"""
@@ -40,6 +38,7 @@ class AutoMod(commands.Cog):
         self.bot = bot
         self._last_member = None
         self.warnCooldown = {}
+        self.connection = bot.connection
 
     @commands.group(aliases=["word_filter"], brief=":abcd: ")
     @commands.check(functions.has_modrole)
@@ -77,20 +76,23 @@ class AutoMod(commands.Cog):
     async def wordFilter_set_wild(self,ctx,*,new_filter=None):
         """Sets the wildcard filter."""
         new_filter = await self.new_filter_format(ctx,new_filter)
-        cursor.execute("UPDATE message_filter SET filterWildCard=? WHERE guild=?",(new_filter,ctx.guild.id))
-        connection.commit()
+        await self.connection.execute("UPDATE message_filter SET filterWildCard=? WHERE guild=?",(new_filter,ctx.guild.id))
+        await self.connection.commit()
         await ctx.send("Filter set.")
-        current_filter = cursor.execute("SELECT * from message_filter WHERE guild=?",(ctx.guild.id,)).fetchone() 
-        functions.update_filter(self.bot, current_filter)
+        async with self.connection.execute("SELECT * from message_filter WHERE guild=?",(ctx.guild.id,)) as cursor:
+            current_filter = await cursor.fetchone()
+            functions.update_filter(self.bot, current_filter)
 
     @wordFilter_set.command(name="exact", brief=":ballpoint_pen: ")
     async def wordFilter_set_exact(self,ctx,*,new_filter=None):
         """Sets the exact filter."""
         new_filter = await self.new_filter_format(ctx,new_filter)
-        cursor.execute("UPDATE message_filter SET filterExact=? WHERE guild=?",(new_filter.replace(" ",""),ctx.guild.id))
-        connection.commit()
+        await self.connection.execute("UPDATE message_filter SET filterExact=? WHERE guild=?",(new_filter.replace(" ",""),ctx.guild.id))
+        await self.connection.commit()
         await ctx.send("Filter set.")
-        current_filter = cursor.execute("SELECT * from message_filter WHERE guild=?",(ctx.guild.id,)).fetchone() 
+        cursor = await self.connection.execute("SELECT * from message_filter WHERE guild=?",(ctx.guild.id,)).fetchone()
+        current_filter = await cursor.fetchone()
+        await cursor.close()
         functions.update_filter(self.bot, current_filter)
 
     @wordFilter.command(name="add", brief=":pencil: ")
@@ -100,7 +102,9 @@ class AutoMod(commands.Cog):
         To add a wildcard, prefix the word with `*`, for example `[p]filter add *mario luigi` would add mario to the wildcard filter and luigi to the exact.
         For example `[p]filter add "mario and luigi"` would filter `mario and luigi` only and not `mario`, `and` or `luigi` separately.
         Filter words must not contain characters other than letters or spaces and exact words cannot contain spaces."""
-        guildFilter = cursor.execute("SELECT * FROM message_filter WHERE guild = ?",(ctx.guild.id,)).fetchone()
+        cursor = await self.connection.cursor()
+        guildFilter = await cursor.execute("SELECT * FROM message_filter WHERE guild = ?",(ctx.guild.id,))
+        guildFilter = await guildFilter.fetchone()
         wildFilter = guildFilter[2].split(";")
         exactFilter = guildFilter[3].split(";")
         if not exactFilter:
@@ -122,9 +126,11 @@ class AutoMod(commands.Cog):
                     exactFilter.append(word.replace(" ","").replace("*",""))
         wildFilter = ";".join(wildFilter)
         exactFilter = ";".join(exactFilter)
-        cursor.execute("UPDATE message_filter SET filterWildCard=?, filterExact=? WHERE guild=?",(wildFilter,exactFilter,ctx.guild.id))
-        connection.commit()
-        current_filter = cursor.execute("SELECT * from message_filter WHERE guild=?",(ctx.guild.id,)).fetchone() 
+        await cursor.execute("UPDATE message_filter SET filterWildCard=?, filterExact=? WHERE guild=?",(wildFilter,exactFilter,ctx.guild.id))
+        await self.connection.commit()
+        current_filter = await cursor.execute("SELECT * from message_filter WHERE guild=?",(ctx.guild.id,))
+        current_filter = await current_filter.fetchone() 
+        await cursor.close()
         functions.update_filter(self.bot, current_filter)
         await ctx.send("Added to filter.")
 
@@ -134,7 +140,9 @@ class AutoMod(commands.Cog):
         You can specify multiple words with spaces, to remove something that includes a space you must encase it in ".
         To remove a wildcard, prefix the word with `*`, for example `[p]filter remove *mario luigi` would remove mario from the wildcard filter and luigi from the exact.
         For example `[p]filter add "mario and luigi"` would remove `mario and luigi`"""
-        guildFilter = cursor.execute("SELECT * FROM message_filter WHERE guild = ?",(ctx.guild.id,)).fetchone()
+        cursor = await self.connection.cursor()
+        guildFilter = await cursor.execute("SELECT * FROM message_filter WHERE guild = ?",(ctx.guild.id,))
+        guildFilter = await cursor.fetchone()
         wildFilter = guildFilter[2].split(";")
         exactFilter = guildFilter[3].split(";")
         if not exactFilter:
@@ -159,9 +167,11 @@ class AutoMod(commands.Cog):
                     notFoundWords.append(word)
         wildFilter = ";".join(wildFilter)
         exactFilter = ";".join(exactFilter)
-        cursor.execute("UPDATE message_filter SET filterWildCard=?, filterExact=? WHERE guild=?",(wildFilter,exactFilter,ctx.guild.id))
-        connection.commit()
-        current_filter = cursor.execute("SELECT * from message_filter WHERE guild=?",(ctx.guild.id,)).fetchone() 
+        await cursor.execute("UPDATE message_filter SET filterWildCard=?, filterExact=? WHERE guild=?",(wildFilter,exactFilter,ctx.guild.id))
+        await self.connection.commit()
+        current_filter = await cursor.execute("SELECT * from message_filter WHERE guild=?",(ctx.guild.id,))
+        current_filter = await current_filter.fetchone()
+        await cursor.close()
         functions.update_filter(self.bot, current_filter)
         await ctx.send(f"Removed from filter. {'The following words were not found so not removed: ' if notFoundWords else ''}{' '.join(notFoundWords) if notFoundWords else ''}")
         
@@ -169,7 +179,9 @@ class AutoMod(commands.Cog):
     async def wordFilter_get(self,ctx):
         """Sends the filter.
         Usually sent as a message but is sent as a text file if it's over 2000 characters"""
-        guildFilter = cursor.execute("SELECT * FROM message_filter WHERE guild = ?",(ctx.guild.id,)).fetchone()
+        cursor = await self.connection.execute("SELECT * FROM message_filter WHERE guild = ?",(ctx.guild.id,))
+        guildFilter = await cursor.fetchone()
+        await cursor.close()
         text = f'Wildcard:\n{str(guildFilter[2])}\n\nExact:\n{str(guildFilter[3])}'
         if len(text) <= 1977:
             await ctx.send(f"Filter {'enabled' if guildFilter[1] == 1 else 'disabled'} ```{text}```")
@@ -181,11 +193,16 @@ class AutoMod(commands.Cog):
     @wordFilter.command(name="toggle", brief=":wrench: ")
     async def wordFilter_toggle(self,ctx):
         """Toggles whether the filter is on or not."""
-        enabled = cursor.execute("SELECT * FROM message_filter WHERE guild = ?",(ctx.guild.id,)).fetchone()[1]
+        cursor = self.connection.cursor()
+        enabled = await cursor.execute("SELECT * FROM message_filter WHERE guild = ?",(ctx.guild.id,))
+        enabled = await enabled.fetchone()
+        enabled = enabled[1]
         enabled = 1 if enabled == 0 else 0
-        cursor.execute("UPDATE message_filter SET enabled=? WHERE guild=?",(enabled,ctx.guild.id))
-        connection.commit()
-        current_filter = cursor.execute("SELECT * from message_filter WHERE guild=?",(ctx.guild.id,)).fetchone() 
+        await cursor.execute("UPDATE message_filter SET enabled=? WHERE guild=?",(enabled,ctx.guild.id))
+        await self.connection.commit()
+        current_filter = await cursor.execute("SELECT * from message_filter WHERE guild=?",(ctx.guild.id,))
+        current_filter = await current_filter.fetchone() 
+        await cursor.close()
         functions.update_filter(self.bot, current_filter)
         await ctx.send(f"Filter now {'enabled' if enabled == 1 else 'disabled'}.")
 
@@ -200,7 +217,9 @@ class AutoMod(commands.Cog):
     @spamFilter.group(name="get",aliases=["list"], brief=":notepad_spiral: ")
     async def spamFilter_get(self,ctx):
         """Sends current values for the spam filters."""
-        values = cursor.execute("SELECT * FROM spam_filters WHERE guild = ?",(ctx.guild.id,)).fetchone()
+        cursor = await self.connection.execute("SELECT * FROM spam_filters WHERE guild = ?",(ctx.guild.id,))
+        values = await cursor.fetchone()
+        await cursor.close()
 
         style = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
         emoji = fEmbeds.fancyEmbeds.getStyleValue(self, ctx.guild.id, style, "emoji")
@@ -230,10 +249,14 @@ class AutoMod(commands.Cog):
     @spamFilter.command(name="invites", brief=":envelope: ")
     async def spamFilter_invites(self,ctx):
         """Toggles if invites are filtered."""
-        enabled = cursor.execute("SELECT invite_filter FROM spam_filters WHERE guild = ?",(ctx.guild.id,)).fetchone()[0]
+        cursor = await self.connection.cursor()
+        enabled = await cursor.execute("SELECT invite_filter FROM spam_filters WHERE guild = ?",(ctx.guild.id,))
+        enabled = await cursor.fetchone()
+        enabled = enabled[0]
         enabled = 1 if enabled == 0 else 0
-        cursor.execute("UPDATE spam_filters SET invite_filter=? WHERE guild=?",(enabled,ctx.guild.id))
-        connection.commit()
+        await cursor.execute("UPDATE spam_filters SET invite_filter=? WHERE guild=?",(enabled,ctx.guild.id))
+        await self.connection.commit()
+        await cursor.close()
         await ctx.send(f"Invite filter now {'enabled' if enabled == 1 else 'disabled'}.")
 
     @spamFilter.command(name="emoji", brief=":slight_smile: ")
@@ -241,8 +264,10 @@ class AutoMod(commands.Cog):
         """Sets emoji limit. To remove, don't specify a limit."""
         if not limit:
             limit = -1
-        cursor.execute("UPDATE spam_filters SET emoji_limit=? WHERE guild=?",(limit,ctx.guild.id))
-        connection.commit()
+        cursor = await self.connection.cursor()
+        await cursor.execute("UPDATE spam_filters SET emoji_limit=? WHERE guild=?",(limit,ctx.guild.id))
+        await self.connection.commit()
+        await cursor.close()
         await ctx.send(f"Emoji limit now {limit if limit > -1 else 'disabled'}.")
 
     @spamFilter.command(name="messageLimit",aliases=["message_limit"], brief=":speech_balloon: ")
@@ -250,8 +275,10 @@ class AutoMod(commands.Cog):
         """Sets the limit for messages sent within 5 seconds. To remove, don't specify a limit."""
         if not limit:
             limit = -1
-        cursor.execute("UPDATE spam_filters SET message_spam_limit=? WHERE guild=?",(limit,ctx.guild.id))
-        connection.commit()
+        cursor = await self.connection.cursor()
+        await cursor.execute("UPDATE spam_filters SET message_spam_limit=? WHERE guild=?",(limit,ctx.guild.id))
+        await self.connection.commit()
+        await cursor.close()
         await ctx.send(f"Message limit now {limit if limit > -1 else 'disabled'}.")
 
     @spamFilter.command(name="repeatingLimit",aliases=["repeating_limit"], brief=":repeat: ")
@@ -259,8 +286,10 @@ class AutoMod(commands.Cog):
         """Sets the limit for repeating characters in a message. To remove don't specify a limit."""
         if not limit:
             limit = -1
-        cursor.execute("UPDATE spam_filters SET character_repeat_limit=? WHERE guild=?",(limit,ctx.guild.id))
-        connection.commit()
+        cursor = await self.connection.cursor()
+        await cursor.execute("UPDATE spam_filters SET character_repeat_limit=? WHERE guild=?",(limit,ctx.guild.id))
+        await self.connection.commit()
+        await cursor.close()
         await ctx.send(f"Character repeat limit now {limit if limit > -1 else 'disabled'}.")
 
     @commands.group(aliases=["name_filter"], brief=":name_badge: ")
@@ -273,19 +302,21 @@ class AutoMod(commands.Cog):
     @nameFilter.command(name="toggle", brief=":wrench: ")
     async def nameFilter_toggle(self, ctx):
         "Toggles whether the name filter is enabled"
+        cursor = await self.connection.cursor()
         style = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
         emoji = fEmbeds.fancyEmbeds.getStyleValue(self, ctx.guild.id, style, "emoji")
         prev_state = await SqlCommands.namefilter_enabled(ctx.guild.id)
         if prev_state == False:
-            cursor.execute("UPDATE name_filtering SET enabled= ? WHERE guild= ?",(1, ctx.guild.id))
+            await cursor.execute("UPDATE name_filtering SET enabled= ? WHERE guild= ?",(1, ctx.guild.id))
             emojiA = ":white_check_mark:" if emoji else ""
             embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojiA}Name filtering enabled")
         elif prev_state == True:
-            cursor.execute("UPDATE name_filtering SET enabled= ? WHERE guild= ?",(1, ctx.guild.id))
+            await cursor.execute("UPDATE name_filtering SET enabled= ? WHERE guild= ?",(1, ctx.guild.id))
             emojiA = ":regional_indicator_x:" if emoji else ""
             embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojiA}Name filtering disabled")
         await ctx.send(embed=embed)
-        connection.commit()
+        await self.connection.commit()
+        await cursor.close()
 
     @nameFilter.command(name="setnames", brief=":pencil: ")
     async def nameFilter_setnames(self, ctx):
@@ -344,8 +375,10 @@ class AutoMod(commands.Cog):
             else:
                 await ctx.send("Error! Please contact sushiinyourface if this persists") #this should never happen
                 return
-        cursor.execute("INSERT INTO custom_names(guild,nickname,username) VALUES(?,?,?) ON CONFLICT(guild) DO UPDATE SET nickname=excluded.nickname, username=excluded.username", (ctx.guild.id, custom_nick, custom_username))
-        connection.commit()
+        cursor = await self.connection.cursor()
+        await cursor.execute("INSERT INTO custom_names(guild,nickname,username) VALUES(?,?,?) ON CONFLICT(guild) DO UPDATE SET nickname=excluded.nickname, username=excluded.username", (ctx.guild.id, custom_nick, custom_username))
+        await self.connection.commit()
+        await cursor.close()
         success_emoji = ":white_check_mark:" if emoji else ""
         success_embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{success_emoji}Done!", desc=f"Bad Nicknames = {custom_nick} \nBad Usernames = {custom_username}")
         await ctx.send(embed=success_embed)
@@ -381,7 +414,10 @@ class AutoMod(commands.Cog):
             if self.warnCooldown[message.channel.id] < time.time():
                 await message.channel.send(f"Watch your language {message.author.mention}",delete_after=2)
             self.warnCooldown[message.channel.id] = time.time()+2
-        spamFilters = cursor.execute("SELECT * FROM spam_filters WHERE guild = ?",(message.guild.id,)).fetchone()
+        cursor = await self.connection.cursor()
+        spamFilters = await cursor.execute("SELECT * FROM spam_filters WHERE guild = ?",(message.guild.id,))
+        spamFilters = await spamFilters.fetchone()
+        await cursor.close()
         if spamFilters:
             if spamFilters[1] > -1: # emoji limit enabled
                 unicodeCheck = re.compile('[\U00010000-\U0010ffff]', flags=re.UNICODE)
@@ -440,8 +476,9 @@ class AutoMod(commands.Cog):
             emojia = ""
         else:
             emojia = ":memo: "
-
-        logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(after.guild.id,)).fetchone()
+        cursor = await self.connection.execute("SELECT modlogs from role_ids WHERE guild = ?",(after.guild.id,))
+        logID = await cursor.fetchone()
+        await cursor.close()
 
         if after.author.bot:
             return
@@ -497,7 +534,9 @@ class AutoMod(commands.Cog):
         else:
             emojia = ":wastebasket: "
 
-        logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(message.guild.id,)).fetchone()
+        cursor = await self.connection.execute("SELECT modlogs from role_ids WHERE guild = ?",(message.guild.id,))
+        logID = await cursor.fetchone()
+        await cursor.close()
         if logID and logID != 0 and not message.author.bot:
             channel = message.guild.get_channel(logID[0])
             content = message.content
@@ -522,7 +561,10 @@ class AutoMod(commands.Cog):
                 pass
 
         #Role Persists
-        cases = cursor.execute("SELECT id, type FROM caselog WHERE guild = ? AND user = ? AND expires >= ?", (member.guild.id, member.id, time.time(),)).fetchall()
+        cursor = await self.connection.cursor()
+        cases = await cursor.execute("SELECT id, type FROM caselog WHERE guild = ? AND user = ? AND expires >= ?", (member.guild.id, member.id, time.time(),))
+        cases = await cases.fetchall()
+        await cursor.close()
         persists = ""
         if cases is not None:
             #iterate through cases in case the user is both muted and graveled
@@ -544,7 +586,9 @@ class AutoMod(commands.Cog):
                     pass
 
         #Join Logging
-        logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(member.guild.id,)).fetchone()
+        cursor = await self.connection.execute("SELECT modlogs from role_ids WHERE guild = ?",(member.guild.id,))
+        logID = await cursor.fetchone()
+        await cursor.close()
         
         if logID and logID != 0:
 
@@ -573,7 +617,9 @@ class AutoMod(commands.Cog):
     async def on_member_leave(self, member):
         
         #Leave Logging
-        logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(member.guild.id,)).fetchone()
+        cursor = await self.connection.execute("SELECT modlogs from role_ids WHERE guild = ?",(member.guild.id,))
+        logID = await cursor.fetchone()
+        await cursor.close()
         
         if logID and logID != 0:
 
@@ -586,7 +632,6 @@ class AutoMod(commands.Cog):
             await channel.send(embed=embed)
 
     @commands.Cog.listener()
-    #TODO: #42 Allow guild-specific default nicks
     async def on_member_update(self, before, after):
         #Checks if member has an appropriate nick when they update it
         if not await SqlCommands.namefilter_enabled(after.guild.id):
@@ -598,8 +643,10 @@ class AutoMod(commands.Cog):
 
                 member = after
 
-                logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(member.guild.id,)).fetchone()
-        
+                cursor = await self.connection.execute("SELECT modlogs from role_ids WHERE guild = ?",(after.guild.id,))
+                logID = await cursor.fetchone()
+                await cursor.close()
+
                 if logID and logID != 0:
 
                     channel = member.guild.get_channel(logID[0])
@@ -628,8 +675,9 @@ class AutoMod(commands.Cog):
                     new_name = await SqlCommands.get_new_nick(after.guild.id, "username")
                     await after.edit(nick=new_name)
 
-                    logID = cursor.execute("SELECT modlogs from role_ids WHERE guild = ?",(member.guild.id,)).fetchone()
-        
+                    cursor = await self.connection.execute("SELECT modlogs from role_ids WHERE guild = ?",(after.guild.id,))
+                    logID = await cursor.fetchone()
+                    await cursor.close()
                     if logID and logID != 0:
 
                         channel = member.guild.get_channel(logID[0])

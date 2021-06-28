@@ -204,7 +204,7 @@ con.close()
 
 #initialize aiosql connection
 async def async_connect(bot):
-    bot.db = await aiosqlite.connect("database.db")
+    bot.connection = await aiosqlite.connect("database.db")
 
 asyncio.get_event_loop().run_until_complete(async_connect(bot))
 
