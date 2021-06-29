@@ -24,8 +24,8 @@ def requirements_check():
     try:
         pkg_resources.require(open('requirements.txt',mode='r'))
     except pkg_resources.DistributionNotFound as error:
-        logging.warning(str(error)+"! Run '"+sys.executable+" -m pip install -r requirements.txt' as admin/sudo or with '--user'.")
-    exit()
+        logging.warning(str(error)+"! Run '"+sys.executable+" -m pip install -r requirements.txt' as admin/sudo or with '--user'. Press ctrl+c to stop or press enter to continue anyway.")
+        input()
 
 while run:
     subprocess.run(["git","fetch","origin"])

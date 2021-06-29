@@ -940,8 +940,8 @@ class Moderation(commands.Cog):
         if now < self.bot.cooldowns[ctx.guild.id].get(ctx.author.id,now):
             await ctx.message.add_reaction("🕐")
             return False
-        cursor = self.connection.execute("SELECT command_usage, command_cooldown FROM role_ids WHERE guild = ?", (ctx.guild.id,))
-        cmd = cursor.fetchone()
+        cursor = await self.connection.execute("SELECT command_usage, command_cooldown FROM role_ids WHERE guild = ?", (ctx.guild.id,))
+        cmd = await cursor.fetchone()
         if cmd:
             commandRole, commandCooldown = cmd
         else:
