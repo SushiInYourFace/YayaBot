@@ -244,17 +244,11 @@ class Owner(commands.Cog):
             os.remove(f"resources/backups/{f}")
         await ctx.send(f"Deleted {amount} backup(s), you now have {len(os.listdir('resources/backups'))}")
 
-        
-
     @commands.Cog.listener()
     async def on_message(self,message):
         if message.author.bot:
             return
-        if isinstance(message.channel,discord.DMChannel):
-            mention = self.bot.user.mention
-        else:
-            mention = message.guild.me.mention
-        if message.content == mention:
+        if self.bot.user.mentioned_in(message):
             prefix = "!"
             try:
                 cursor = await self.connection.execute("SELECT prefix FROM guild_prefixes WHERE guild = ?", (message.guild.id,))
@@ -263,4 +257,4 @@ class Owner(commands.Cog):
                 prefix = (str(guildcommand[0]))
             except TypeError:
                 pass
-            await message.channel.send(f"My prefix here is `{prefix}`",delete_after=6)
+            await message.channel.send(f"My prefix here is `{prefix}`",delete_after=8)
