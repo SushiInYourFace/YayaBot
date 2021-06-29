@@ -249,12 +249,5 @@ class Owner(commands.Cog):
         if message.author.bot:
             return
         if self.bot.user.mentioned_in(message):
-            prefix = "!"
-            try:
-                cursor = await self.connection.execute("SELECT prefix FROM guild_prefixes WHERE guild = ?", (message.guild.id,))
-                guildcommand = await cursor.fetchone()
-                await cursor.close()
-                prefix = (str(guildcommand[0]))
-            except TypeError:
-                pass
+            prefix = self.bot.guild_prefixes.get(message.guild.id,"!")
             await message.channel.send(f"My prefix here is `{prefix}`",delete_after=8)

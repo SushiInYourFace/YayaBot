@@ -1,10 +1,18 @@
+import logging
 import subprocess
 import sys
-import logging
+import pkg_resources
 
 logging.basicConfig(format='[%(asctime)s] %(levelname)s: %(message)s', level=logging.INFO)
 
 run = True
+
+def requirements_check():
+    try:
+        pkg_resources.require(open('requirements.txt',mode='r'))
+    except pkg_resources.DistributionNotFound as error:
+        logging.warning(f"{error}! Run '{sys.executable} -m pip install requirements' as admin/sudo or with '--user'.")
+    exit()
 
 while run:
     subprocess.run(["git","fetch","origin"])
@@ -22,7 +30,8 @@ while run:
             logging.info("No Update Required.")
     else:
         logging.info("Committed changes, not updating.")
-    code = subprocess.run([sys.executable,"bot.py"],stdout=subprocess.PIPE).returncode
+    requirements_check()
+    code = subprocess.run([sys.executable,"bot.py"],stdout=subprocess.PIPE).returncod
     if code == 0:
         run = False
 

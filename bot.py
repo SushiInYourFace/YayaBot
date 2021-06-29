@@ -33,15 +33,7 @@ except FileNotFoundError:
 
 #Guild-Specific prefixes
 async def get_pre(bot, message):
-    prefix = "!"
-    try:
-        if message.guild.id in bot.guild_prefixes:
-            prefix = bot.guild_prefixes[message.guild.id]
-    except TypeError:
-        pass
-    except AttributeError:
-        pass
-    return prefix
+    return bot.guild_prefixes.get(message.guild.id,"!")
 
 #Help command
 class NewHelp(commands.HelpCommand):
