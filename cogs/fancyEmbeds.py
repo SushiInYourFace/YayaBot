@@ -1,7 +1,8 @@
-import typing
+import datetime
 import json
-import time, datetime
 import logging
+import time
+import typing
 
 import discord
 from discord.ext import commands
@@ -38,12 +39,11 @@ def tryMakeStorage(guildid):
         #If the storage exists, read and load the file to a variable to add to.
         with open("embeds.json", "r+") as f:
             f_ = json.load(f)
-            try:
                 #This should throw a KeyError
-                test = f_[guildid]["active"]
+            if "active" in f_[guildid]:
                 #This shouldn't happen, if it does, then i probably overlooked something somewhere. This only appears when tryMakeStorage() is called when the given guildid already has a storage.
                 logging.error("If you see this, then you found something that shouldn't happen! If this problem persists, you should report it.")
-            except KeyError:
+            else:
                 #Add the new object into the storage with the default data.
                 f_[guildid] = {
                     "active": "shinyamber",
@@ -96,10 +96,10 @@ class fancyEmbeds(commands.Cog):
     #Fields can still be created in the normal way.
     def makeEmbed(self, guildid, embTitle="", desc=None, useColor=0, force=False, forceColor=None, footer=None, nofooter=False, b=None):
         """Build an embed based on the current embed Style.
-        
+
         Returns a discord.Embed with a title, description (if specified), color and footer based on the active embed style values.\n
         You can set the keyword Force to True if you wish to force a specific color onto the embed, and specify that color as forceColor.\n
-        To add content to the footer here, set footer, or if you want to set a footer later, set nofooter to True here and add it later through addFooter() 
+        To add content to the footer here, set footer, or if you want to set a footer later, set nofooter to True here and add it later through addFooter()
         """
         #Get all the required embed style data from storage
         style = fancyEmbeds.getActiveStyle(self, guildid)
@@ -111,7 +111,7 @@ class fancyEmbeds(commands.Cog):
         if force is True:
             if forceColor is None:
                 raise TypeError
-            if type(forceColor) == tuple:
+            if isinstance(forceColor,tuple):
                 red = int(forceColor[0])
                 green = int(forceColor[1])
                 blue = int(forceColor[2])
@@ -121,27 +121,27 @@ class fancyEmbeds(commands.Cog):
                 colorType = discord.Colour(int(forceColor))
 
         #Create the embed, this little block handles the four scenarios which change the values which should be passed.
-        if desc == None and timestamps == False:
+        if desc is None and timestamps is False:
             emb = discord.Embed(title=embTitle, color=colorType)
-        elif desc == None:
+        elif desc is None:
             emb = discord.Embed(title=embTitle, color=colorType, timestamp=datetime.datetime.utcfromtimestamp(time.time()))
-        elif timestamps == False:
+        elif timestamps is False:
             emb = discord.Embed(title=embTitle, color=colorType, description=desc)
         else:
             emb = discord.Embed(title=embTitle, color=colorType, description=desc, timestamp=datetime.datetime.utcfromtimestamp(time.time()))
 
         #Check to see whether the footer should be added and if so, add it.
-        if nofooter == False:
+        if nofooter is False:
             #This might not be necessary, could be removed soon.
-            if b != None:
+            if b is not None:
                 self.bot = b
 
             #Create footer with bot icon, name, and, if specified, extra footer content.
-            if footer == None:
+            if footer is None:
                 emb.set_footer(text=self.bot.user.name, icon_url=self.bot.user.avatar_url)
             else:
                 emb.set_footer(text=f"{self.bot.user.name} - {footer}", icon_url=self.bot.user.avatar_url)
-        
+
         #finally, return the embed.
         return emb
 
@@ -149,7 +149,7 @@ class fancyEmbeds(commands.Cog):
     def addFooter(self, embed, footer, bot):
         """"Add a footer to an embed with fancy embeds formatting. Only necessary when you make an embed with nofooter set to True, otherwise makeEmbed() will create this for you."""
         embed.set_footer(text=f"{bot.user.name} - {footer}", icon_url=bot.user.avatar_url)
-        
+
         return embed
 
     #Embed command group
@@ -192,21 +192,17 @@ class fancyEmbeds(commands.Cog):
         try:
             with open("embeds.json", "r+") as f:
                 f_ = json.load(f)
-                try:
-                    test = f_[str(ctx.guild.id)]["styles"][new]
-                except KeyError:
+                if not new in f_[str(ctx.guild.id)]["styles"]:
                     await ctx.send("Sorry, that style does not exist!")
                     return
         except:
             tryMakeStorage(ctx.guild.id)
             with open("embeds.json", "r+") as f:
                 f_ = json.load(f)
-                try:
-                    test = f_[str(ctx.guild.id)]["styles"][new]
-                except KeyError:
+                if not new in f_[str(ctx.guild.id)]["styles"]:
                     await ctx.send("Sorry, that style does not exist!")
                     return
-            
+
         f_[str(ctx.guild.id)]["active"] = new
 
         with open("embeds.json", "w") as f:
@@ -247,13 +243,11 @@ class fancyEmbeds(commands.Cog):
         guildid = ctx.guild.id
 
         #Check that the style exists first. Throws a false error later if the style doesn't exist.
-        try:
-            with open("embeds.json", "r+") as f:
-                f_ = json.load(f)
-            test = f_[str(guildid)]["styles"][name]
-        except:
-            await ctx.send("That style does not exist!")
-            return
+        with open("embeds.json", "r+") as f:
+            f_ = json.load(f)
+            if not name in f_[str(guildid)]["styles"]:
+                await ctx.send("That style does not exist!")
+                return
 
         col = fancyEmbeds.getStyleValue(self, guildid, name, "colors")
         time = fancyEmbeds.getStyleValue(self, guildid, name, "time")
@@ -291,10 +285,7 @@ class fancyEmbeds(commands.Cog):
         try:
             with open("embeds.json", "r+") as f:
                 f_ = json.load(f)
-                try:
-                    test = f_[str(ctx.guild.id)]["styles"][style]
-                except KeyError:
-                    test = f_[str(ctx.guild.id)]
+                if not style in f_[str(ctx.guild.id)]["styles"]:
                     await ctx.send(f"The style {style} does not exist!")
                     return
             f__ = f_[str(ctx.guild.id)]["styles"][style]["colors"]
@@ -302,9 +293,7 @@ class fancyEmbeds(commands.Cog):
             tryMakeStorage(ctx.guild.id)
             with open("embeds.json", "r+") as f:
                 f_ = json.load(f)
-                try:
-                    test = f_[str(ctx.guild.id)]["styles"][style]
-                except KeyError:
+                if not style in f_[str(ctx.guild.id)]["styles"][style]:
                     await ctx.send(f"The style {style} does not exist!")
                     return
             f__ = f_[str(ctx.guild.id)]["styles"][style]["colors"]
@@ -341,19 +330,14 @@ class fancyEmbeds(commands.Cog):
         try:
             with open("embeds.json", "r+") as f:
                 f_ = json.load(f)
-                try:
-                    test = f_[str(ctx.guild.id)]["styles"][style]
-                except KeyError:
-                    test = f_[str(ctx.guild.id)]
+                if not style in f_[str(ctx.guild.id)]["styles"]:
                     await ctx.send(f"The style {style} does not exist!")
                     return
         except:
             tryMakeStorage(ctx.guild.id)
             with open("embeds.json", "r+") as f:
                 f_ = json.load(f)
-                try:
-                    test = f_[str(ctx.guild.id)]["styles"][style]
-                except KeyError:
+                if not style in f_[str(ctx.guild.id)]["styles"]:
                     await ctx.send(f"The style {style} does not exist!")
                     return
 
@@ -378,19 +362,14 @@ class fancyEmbeds(commands.Cog):
         try:
             with open("embeds.json", "r+") as f:
                 f_ = json.load(f)
-                try:
-                    test = f_[str(ctx.guild.id)]["styles"][style]
-                except KeyError:
-                    test = f_[str(ctx.guild.id)]
+                if not style in f_[str(ctx.guild.id)]["styles"]:
                     await ctx.send(f"The style {style} does not exist!")
                     return
         except:
             tryMakeStorage(ctx.guild.id)
             with open("embeds.json", "r+") as f:
                 f_ = json.load(f)
-                try:
-                    test = f_[str(ctx.guild.id)]["styles"][style]
-                except KeyError:
+                if not style in f_[str(ctx.guild.id)]["styles"]:
                     await ctx.send(f"The style {style} does not exist!")
                     return
 

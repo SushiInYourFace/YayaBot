@@ -1,22 +1,19 @@
 import asyncio
+import gzip
 import logging
 import os
-import random
+import shutil
 import sqlite3
 import subprocess
-import sys
 import typing
-import io
-import gzip
-import shutil
-from pathlib import Path
 from datetime import datetime
-
-import cogs.fancyEmbeds as fEmbeds
-import functions
+from pathlib import Path
 
 import discord
 from discord.ext import commands
+
+import cogs.fancyEmbeds as fEmbeds
+import functions
 
 # Logging config
 logging.basicConfig(format='[%(asctime)s] %(levelname)s: %(message)s', level=logging.INFO)
@@ -115,7 +112,7 @@ class Owner(commands.Cog):
         """Reloads cogs."""
         allReloaded = False
         if not cogs:
-            if self.bot.previousReload == None:
+            if self.bot.previousReload is None:
                 await ctx.send("Please specify a cog!")
                 return
             else:
@@ -147,11 +144,11 @@ class Owner(commands.Cog):
         """Lists loaded and unloaded cogs."""
         loaded_cogs = [cog.split(".")[1] for cog in self.bot.extensions.keys()]
         unloaded_cogs = [cog[:-3] for cog in os.listdir("cogs") if (cog[:-3] not in loaded_cogs and cog.endswith(".py"))]
-        
+
         style = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
         emoji = fEmbeds.fancyEmbeds.getStyleValue(self, ctx.guild.id, style, "emoji")
 
-        if emoji == False:
+        if emoji is False:
             emojia = ""
             emojib = ""
             emojic = ""
@@ -182,12 +179,12 @@ class Owner(commands.Cog):
         branch = await b.communicate()
         branch = branch[0].decode().replace("\n","")
         local = await asyncio.create_subprocess_shell(f"git log --name-only origin/{branch}..HEAD", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
-        out, err = await local.communicate()
+        out, _ = await local.communicate()
         if out:
             await ctx.send("You have committed changes that you have not pushed, please push them before updating")
             return
         incoming = await asyncio.create_subprocess_shell(f"git diff --name-only HEAD origin/{branch}", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
-        out, err = await incoming.communicate()
+        out, _ = await incoming.communicate()
         if not out:
             await ctx.send("No new changes!")
             return

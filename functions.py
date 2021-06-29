@@ -1,7 +1,8 @@
 import re
-import aiosqlite
 import time
 from collections import namedtuple
+
+import aiosqlite
 
 #con = sqlite3.connect("database.db")
 #cursor = con.cursor()
@@ -14,7 +15,7 @@ def has_modrole(ctx, bot=None):
     member_roles = [role.id for role in ctx.author.roles]
     if modrole is None:
         return False
-    elif (modrole in member_roles):
+    elif modrole in member_roles:
         return True
     else:
         return False
@@ -25,7 +26,7 @@ def has_modrole_no_ctx(member, bot):
     member_roles = [role.id for role in member.roles]
     if modrole is None:
         return False
-    elif (modrole in member_roles):
+    elif modrole in member_roles:
         return True
     else:
         return False
@@ -38,7 +39,7 @@ def has_adminrole(ctx, bot=None):
     member_roles = [role.id for role in ctx.author.roles]
     if adminrole is None:
         return False
-    elif (adminrole in member_roles):
+    elif adminrole in member_roles:
         return True
     else:
         return False
@@ -49,7 +50,7 @@ def has_adminrole_no_ctx(member, bot):
     member_roles = [role.id for role in member.roles]
     if adminrole is None:
         return False
-    elif (adminrole in member_roles):
+    elif adminrole in member_roles:
         return True
     else:
         return False
@@ -62,8 +63,8 @@ def filter_check(bot, message, guildID: int):
     except KeyError:
         print("The bot tried to reference filters for a guild it does not have stored in memory. Please contact SushiInYourFace if this problem persists")
         return False
-    formatted_content = re.sub("[^\w ]|_", "", message).lower()
-    spaceless_content = re.sub("[^\w]|_", "", message)
+    formatted_content = re.sub(r"[^\w ]|_", "", message).lower()
+    spaceless_content = re.sub(r"[^\w]|_", "", message)
     if guild_filter.wildcard:
         if guild_filter.wildcard.search(spaceless_content):
             should_filter = True
@@ -105,22 +106,22 @@ class Sql:
         caseNumber = None
         async with self.connection.execute("SELECT id FROM caselog ORDER BY id DESC LIMIT 1") as cursor:
             caseNumber = await cursor.fetchone()
-        if caseNumber == None:
+        if caseNumber is None:
             caseNumber = 0
         else:
             caseNumber = caseNumber[0]
         caseNumber += 1
-        return(caseNumber)
+        return caseNumber
 
     async def newest_guild_case(self, guild):
         async with self.connection.execute("SELECT id_in_guild FROM caselog WHERE guild = ? ORDER BY id DESC LIMIT 1", (guild,)) as cursor:
             guildCaseNumber = await cursor.fetchone()
-            if guildCaseNumber == None:
+            if guildCaseNumber is None:
                 guildCaseNumber = 0
             else:
                 guildCaseNumber = guildCaseNumber[0]
             guildCaseNumber += 1
-            return(guildCaseNumber)
+            return guildCaseNumber
 
 
     async def new_case(self, user, guild, casetype, reason, started, expires, mod):
@@ -132,7 +133,7 @@ class Sql:
             unexpired_cases = await cursor.execute("SELECT id FROM caselog WHERE guild=? AND user=? AND type=? AND expires >=? AND expires <=? ", (guild,user, casetype, time.time(), expires))
             unexpired_cases = await unexpired_cases.fetchall()
             #should only ever be <=1 case that meets these criteria, but better safe than sorry
-            if unexpired_cases is not None:    
+            if unexpired_cases is not None:
                 for case in unexpired_cases:
                     await cursor.execute("DELETE FROM active_cases WHERE id = ?", (case[0],))
             await cursor.execute("INSERT INTO active_cases(id, expiration) VALUES(?,?)", (caseID, expires))
@@ -157,7 +158,7 @@ class Sql:
         if filter_status is not None:
             await cursor.close()
             return bool(filter_status[0]) #casts the 0 or 1 stored to a boolean
-        else: 
+        else:
             #guild hasn't set up name filtering, create a row in the table for them and disable the filter
             await cursor.execute("INSERT INTO name_filtering(guild, enabled) VALUES(?,?)",(guild, 0))
             self.connection.commit()

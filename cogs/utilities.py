@@ -1,14 +1,14 @@
 import asyncio
+import io
 import json
 import random
-import io
+
 import aiohttp
+import discord
+from discord.ext import commands
 
 import cogs.fancyEmbeds as fEmbeds
 import functions
-
-import discord
-from discord.ext import commands
 
 
 async def tag_check(ctx):
@@ -134,9 +134,9 @@ class Utilities(commands.Cog):
         else:
             logChannel = None
         await ctx.send("Last, please tell me what prefix you would like to use for commands")
-        prefix = await get_message()
+        prefix = await get_message().content
 
-        self.bot.guild_prefixes[ctx.guild.id] = prefix  
+        self.bot.guild_prefixes[ctx.guild.id] = prefix
         self.bot.modrole[ctx.guild.id] = modRole.id
         self.bot.adminrole[ctx.guild.id] = adminRole.id
 
@@ -171,7 +171,7 @@ class Utilities(commands.Cog):
             emojii = ":pencil2: "
 
         response = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}Server set up successfully!", useColor=0)
-        response.add_field(name=f"{emojib}Gravel role", value=gravelRole.mention) 
+        response.add_field(name=f"{emojib}Gravel role", value=gravelRole.mention)
         response.add_field(name=f"{emojic}Muted role", value=mutedRole.mention)
         response.add_field(name=f"{emojid}Moderator role", value=modRole.mention)
         response.add_field(name=f"{emojie}Admin role", value=adminRole.mention)
@@ -216,7 +216,7 @@ class Utilities(commands.Cog):
 
         embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}Changed Gravel Role:", desc=role.mention, useColor=1)
         await ctx.send(embed=embed)
-        
+
     @setup.command(name="mute", help="Specifies the role given to someone who is muted", aliases=["muterole", "muted", "mutedrole"], brief=":mute: ")
     async def setup_mute(self, ctx, *, role:discord.Role):
         cursor = await self.connection.cursor()
@@ -260,7 +260,7 @@ class Utilities(commands.Cog):
         await cursor.execute("INSERT INTO role_ids(guild, admin) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET admin=excluded.admin", (ctx.guild.id, role.id))
         await self.connection.commit()
         await cursor.close()
-        
+
         self.bot.modrole[ctx.guild.id] = role.id
         e = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
         emoji = fEmbeds.fancyEmbeds.getStyleValue(self , ctx.guild.id, e, "emoji")
@@ -276,7 +276,7 @@ class Utilities(commands.Cog):
 
     @setup.command(name="command", help="Sets the role used to determine whether a user can use commands", aliases=["commandrole"], brief=":page_facing_up: ")
     async def setup_command(self, ctx, *, role:discord.Role=None):
-        cursor = await self.connection.cursor() 
+        cursor = await self.connection.cursor()
         await cursor.execute("INSERT INTO role_ids(guild, command_usage) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET command_usage=excluded.command_usage", (ctx.guild.id, getattr(role,"id",0)))
         await self.connection.commit()
         await cursor.close()
@@ -438,7 +438,7 @@ class Utilities(commands.Cog):
             emojia = ""
         else:
             emojia = ":bookmark_tabs: "
-        
+
         embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}Tags:", desc=", ".join(tags.keys())+f"\n\nUsable by {ctx.guild.get_role(int(guildTags[1])).mention} and above.", useColor=2)
         await ctx.send(embed=embed)
 

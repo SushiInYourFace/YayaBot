@@ -1,17 +1,18 @@
 import asyncio
+import datetime
 import logging
 import platform
 import sqlite3
-import aiosqlite
-import time, datetime
 import sys
+import time
 from collections import namedtuple
 
+import aiosqlite
 import discord
 from discord.ext import commands
 
-import functions
 import cogs.fancyEmbeds as fEmbeds
+import functions
 
 # Logging config
 logging.basicConfig(format='[%(asctime)s] %(levelname)s: %(message)s', level=logging.INFO)
@@ -21,7 +22,7 @@ Token = None
 try:
     with open("token.txt") as f:
         Token = f.read()
-except FileNotFoundError: 
+except FileNotFoundError:
     #user has not created token.txt
     print("You don't seem to have created token.txt yet. Not a problem! Please send your bot token, and it will be made for you")
     print("If you don't want to do this, you can just quit the program with ctrl+c, or type \"exit\" now")
@@ -56,7 +57,6 @@ class NewHelp(commands.HelpCommand):
         useEmoji = fEmbeds.fancyEmbeds.getStyleValue(self, self.context.guild.id, style, "emoji")
 
         pageOut = 0
-        colour = discord.Colour.random()
         titleDesc = ["YayaBot Help!",f"Say `{self.clean_prefix}help <command>` for more info on a command!"]
         page = [fEmbeds.fancyEmbeds.makeEmbed(self, self.context.guild.id, embTitle=titleDesc[0], desc=titleDesc[1], useColor=0, nofooter=True)]
         for cog,commands in mapping.items():
@@ -254,12 +254,12 @@ async def about(ctx):
     embed.add_field(name="_ _", value="_ _", inline=True)
     embed.add_field(name=f"{emojid}Discord.py Version:", value=f"[{discord.__version__}](https://github.com/Rapptz/discord.py)", inline=True)
     await ctx.send(embed=embed)
-        
+
 #error handling
 @bot.event
 async def on_command_error(ctx, error):
     if hasattr(ctx.command, 'on_error'):
-            return
+        return
     ignored = (commands.CommandNotFound, commands.CheckFailure)
     error = getattr(error, 'original', error)
     #ignores ignored errors

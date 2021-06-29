@@ -1,22 +1,22 @@
-import collections
-import time, datetime
+import asyncio
+import datetime
 import difflib
 import io
 import re
+import time
+
 import aiohttp
-import asyncio
-
 import discord
-from discord.ext import commands, tasks
+from discord.ext import commands
 
-import functions
 import cogs.fancyEmbeds as fEmbeds
+import functions
 
 
 async def word_filter_pre_invoke(self,ctx):
     async with ctx.bot.connection.execute("SELECT * FROM message_filter WHERE guild = ?", (ctx.guild.id,)) as cursor:
         inDb = await cursor.fetchone()
-        if (inDb is None): # Guild filter doesn't exist
+        if inDb is None: # Guild filter doesn't exist
             await cursor.execute("INSERT INTO message_filter(guild,enabled,filterWildCard,filterExact) VALUES(?,?,?,?)",(ctx.guild.id,1,"",""))
             await ctx.bot.connection.commit()
             await ctx.send("Word filter created and enabled.")
@@ -25,7 +25,7 @@ async def word_filter_pre_invoke(self,ctx):
 async def spam_filter_pre_invoke(self,ctx):
     async with ctx.bot.connection.execute("SELECT * FROM message_filter WHERE guild = ?", (ctx.guild.id,)) as cursor:
         inDb = await cursor.fetchone()
-        if (inDb is None): # Guild filter doesn't exist
+        if inDb is None: # Guild filter doesn't exist
             await cursor.execute("INSERT INTO spam_filters(guild,emoji_limit,invite_filter,message_spam_limit,character_repeat_limit) VALUES(?,?,?,?,?)",(ctx.guild.id,-1,0,-1,-1))
             await ctx.bot.connection.commit()
             await ctx.send("Filter created and enabled.")
@@ -33,7 +33,7 @@ async def spam_filter_pre_invoke(self,ctx):
 
 class AutoMod(commands.Cog):
     """Moderates chat and users automatically!"""
-    
+
     def __init__(self, bot):
         self.bot = bot
         self._last_member = None
@@ -65,7 +65,7 @@ class AutoMod(commands.Cog):
                         new_filter = await r.text()
         elif (not ctx.message.attachments and new_filter is None):
             new_filter = ""
-        new_filter = re.sub("[^\w ]|_","",new_filter)
+        new_filter = re.sub(r"[^\w ]|_","",new_filter)
         if new_filter.endswith(";"):
             new_filter = new_filter[:-1]
         if new_filter.startswith(";"):
@@ -116,20 +116,20 @@ class AutoMod(commands.Cog):
         if "" in wildFilter:
             wildFilter.remove("")
         for word in words:
-            word = re.sub("[^\w *]|_","",word)
+            word = re.sub(r"[^\w *]|_","",word)
             for w in word.split(";"):
                 if len(word) == 1:
                     continue
-                if word.startswith("*"):
-                    wildFilter.append(word.replace("*",""))
+                if w.startswith("*"):
+                    wildFilter.append(w.replace("*",""))
                 else:
-                    exactFilter.append(word.replace(" ","").replace("*",""))
+                    exactFilter.append(w.replace(" ","").replace("*",""))
         wildFilter = ";".join(wildFilter)
         exactFilter = ";".join(exactFilter)
         await cursor.execute("UPDATE message_filter SET filterWildCard=?, filterExact=? WHERE guild=?",(wildFilter,exactFilter,ctx.guild.id))
         await self.connection.commit()
         current_filter = await cursor.execute("SELECT * from message_filter WHERE guild=?",(ctx.guild.id,))
-        current_filter = await current_filter.fetchone() 
+        current_filter = await current_filter.fetchone()
         await cursor.close()
         functions.update_filter(self.bot, current_filter)
         await ctx.send("Added to filter.")
@@ -174,7 +174,7 @@ class AutoMod(commands.Cog):
         await cursor.close()
         functions.update_filter(self.bot, current_filter)
         await ctx.send(f"Removed from filter. {'The following words were not found so not removed: ' if notFoundWords else ''}{' '.join(notFoundWords) if notFoundWords else ''}")
-        
+
     @wordFilter.command(name="get",aliases=["list"], brief=":notepad_spiral: ")
     async def wordFilter_get(self,ctx):
         """Sends the filter.
@@ -188,7 +188,7 @@ class AutoMod(commands.Cog):
         else:
             fp = io.StringIO(text)
             f = discord.File(fp,filename="filter.txt")
-            await ctx.send("Filter is too large so is sent as a file:",file=f)    
+            await ctx.send("Filter is too large so is sent as a file:",file=f)
 
     @wordFilter.command(name="toggle", brief=":wrench: ")
     async def wordFilter_toggle(self,ctx):
@@ -201,7 +201,7 @@ class AutoMod(commands.Cog):
         await cursor.execute("UPDATE message_filter SET enabled=? WHERE guild=?",(enabled,ctx.guild.id))
         await self.connection.commit()
         current_filter = await cursor.execute("SELECT * from message_filter WHERE guild=?",(ctx.guild.id,))
-        current_filter = await current_filter.fetchone() 
+        current_filter = await current_filter.fetchone()
         await cursor.close()
         functions.update_filter(self.bot, current_filter)
         await ctx.send(f"Filter now {'enabled' if enabled == 1 else 'disabled'}.")
@@ -224,7 +224,7 @@ class AutoMod(commands.Cog):
         style = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
         emoji = fEmbeds.fancyEmbeds.getStyleValue(self, ctx.guild.id, style, "emoji")
 
-        if emoji == False:
+        if emoji is False:
             emojia = ""
             emojib = ""
             emojic = ""
@@ -243,7 +243,7 @@ class AutoMod(commands.Cog):
             embed.add_field(name=f"{emojic}Invite Filter:", value=('enabled' if values[2] == 1 else 'disabled'))
             embed.add_field(name=f"{emojid}Message Spam Limit:", value=(values[3] if values[3] > -1 else 'disabled'))
             embed.add_field(name=f"{emojie}Character Repeat Limit:", value=(values[4] if values[4] > -1 else 'disabled'))
-            
+
             await ctx.send(embed=embed)
 
     @spamFilter.command(name="invites", brief=":envelope: ")
@@ -306,11 +306,11 @@ class AutoMod(commands.Cog):
         style = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
         emoji = fEmbeds.fancyEmbeds.getStyleValue(self, ctx.guild.id, style, "emoji")
         prev_state = await SqlCommands.namefilter_enabled(ctx.guild.id)
-        if prev_state == False:
+        if prev_state is False:
             await cursor.execute("UPDATE name_filtering SET enabled= ? WHERE guild= ?",(1, ctx.guild.id))
             emojiA = ":white_check_mark:" if emoji else ""
             embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojiA}Name filtering enabled")
-        elif prev_state == True:
+        elif prev_state is True:
             await cursor.execute("UPDATE name_filtering SET enabled= ? WHERE guild= ?",(1, ctx.guild.id))
             emojiA = ":regional_indicator_x:" if emoji else ""
             embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojiA}Name filtering disabled")
@@ -399,15 +399,15 @@ class AutoMod(commands.Cog):
             return
         should_delete = False
         guild_filter = self.bot.guild_filters[message.guild.id]
-        formatted_content = re.sub("[^\w ]|_", "", message.content).lower()
-        spaceless_content = re.sub("[^\w]|_", "", message.content)
+        formatted_content = re.sub(r"[^\w ]|_", "", message.content).lower()
+        spaceless_content = re.sub(r"[^\w]|_", "", message.content)
         if guild_filter.wildcard:
             if guild_filter.wildcard.search(spaceless_content):
                 should_delete = True
         if guild_filter.exact:
             if guild_filter.exact.search(formatted_content):
                 should_delete = True
-        if (should_delete):
+        if should_delete:
             await message.delete()
             if message.channel.id not in self.warnCooldown:
                 self.warnCooldown[message.channel.id] = 0
@@ -472,7 +472,7 @@ class AutoMod(commands.Cog):
         style = fEmbeds.fancyEmbeds.getActiveStyle(self, after.guild.id)
         emoji = fEmbeds.fancyEmbeds.getStyleValue(self, after.guild.id, style, "emoji")
 
-        if emoji == False:
+        if emoji is False:
             emojia = ""
         else:
             emojia = ":memo: "
@@ -498,7 +498,7 @@ class AutoMod(commands.Cog):
         start = []
         end = []
 
-        for i in range(len(result)):
+        for i in enumerate(result):
             if result[i].startswith("- "):
                 start.append("~~" + result[i][2:] + "~~")
             elif result[i].startswith("+ "):
@@ -510,7 +510,7 @@ class AutoMod(commands.Cog):
                 end.append(result[i].strip(" "))
 
         #formats strikethroughs pretty
-        for i in range(len(start)):
+        for i in enumerate(start):
             try:
                 if start[i].endswith("~~") and start[i+1].startswith("~~"):
                     start[i] = start[i][:-2]
@@ -520,7 +520,7 @@ class AutoMod(commands.Cog):
 
         editEmbed.add_field(name="Before", value=" ".join(start))
         editEmbed.add_field(name="After", value=" ".join(end))
-        
+
         await channel.send(embed=editEmbed)
 
     @commands.Cog.listener()
@@ -529,7 +529,7 @@ class AutoMod(commands.Cog):
         style = fEmbeds.fancyEmbeds.getActiveStyle(self, message.guild.id)
         emoji = fEmbeds.fancyEmbeds.getStyleValue(self, message.guild.id, style, "emoji")
 
-        if emoji == False:
+        if emoji is False:
             emojia = ""
         else:
             emojia = ":wastebasket: "
@@ -589,7 +589,7 @@ class AutoMod(commands.Cog):
         cursor = await self.connection.execute("SELECT modlogs from role_ids WHERE guild = ?",(member.guild.id,))
         logID = await cursor.fetchone()
         await cursor.close()
-        
+
         if logID and logID != 0:
 
             channel = member.guild.get_channel(logID[0])
@@ -615,12 +615,12 @@ class AutoMod(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_leave(self, member):
-        
+
         #Leave Logging
         cursor = await self.connection.execute("SELECT modlogs from role_ids WHERE guild = ?",(member.guild.id,))
         logID = await cursor.fetchone()
         await cursor.close()
-        
+
         if logID and logID != 0:
 
             channel = member.guild.get_channel(logID[0])
@@ -651,7 +651,7 @@ class AutoMod(commands.Cog):
 
                     channel = member.guild.get_channel(logID[0])
                     title = f"Member Renamed: {member.name}"
-                    desc = f"Reason: Inappropriate nickname - Automod"
+                    desc = "Reason: Inappropriate nickname - Automod"
                     url = member.avatar_url
 
                     embed = fEmbeds.fancyEmbeds.makeEmbed(self, after.guild.id, embTitle=title, desc=desc, useColor=1)
@@ -661,8 +661,8 @@ class AutoMod(commands.Cog):
 
             except discord.errors.Forbidden:
                 pass
-            
-    
+
+
     @commands.Cog.listener()
     async def on_user_update(self, before, after):
         #fires when someone updates their username, and makes sure it's appropriate
@@ -682,7 +682,7 @@ class AutoMod(commands.Cog):
 
                         channel = member.guild.get_channel(logID[0])
                         title = f"Member Renamed: {member.name}"
-                        desc = f"Reason: Inappropriate username - Automod"
+                        desc = "Reason: Inappropriate username - Automod"
                         url = member.avatar_url
 
                         embed = fEmbeds.fancyEmbeds.makeEmbed(self, member.guild.id, embTitle=title, desc=desc, useColor=1)

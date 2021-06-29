@@ -1,16 +1,13 @@
 import datetime
-import io
-import json
-import time
 import logging
-from urllib.parse import non_hierarchical
+import time
 
 import discord
-from discord import errors
 from discord.ext import commands, tasks
 
-import functions
 import cogs.fancyEmbeds as fEmbeds
+import functions
+
 
 class Moderation(commands.Cog):
     """Cog for moderators to help them moderate!"""
@@ -35,7 +32,7 @@ class Moderation(commands.Cog):
     async def purge_number(self, ctx, arg:int):
         arg += 1 # adding one to ignore the command invoking message
         await ctx.channel.purge(limit=arg)
-    
+
     #purge match command, only purges messages that contain a certain string
     @purge.command(help="Purges messages containing a certain string", name="match", aliases=["m"], brief=":abcd: ")
     async def purge_match(self, ctx, limit:int, *, filtered):
@@ -63,7 +60,7 @@ class Moderation(commands.Cog):
         style = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
         emoji = fEmbeds.fancyEmbeds.getStyleValue(self, ctx.guild.id, style, "emoji")
 
-        if emoji == False:
+        if emoji is False:
             emojia = ""
             emojib = ""
             emojic = ""
@@ -75,20 +72,20 @@ class Moderation(commands.Cog):
             emojid = ":scroll: "
 
         bantime = time.time()
-        
+
         banEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}You have been banned from "+ ctx.guild.name, force=True, forceColor=0xff0000)
         banEmbed.add_field(name="Ban reason: ", value=reason)
         try:
             await member.send(embed=banEmbed)
             unsent = False
-        except errors.HTTPException:
+        except discord.errors.HTTPException:
             unsent = True
-        
+
         if unsent:
             successEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojib}Banned " + str(member), force=True, forceColor=0x00ff00, desc="Failed to send a message to the user.")
         else:
             successEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojib}Banned " + str(member), force=True, forceColor=0x00ff00)
-            
+
         await ctx.send(embed=successEmbed)
 
         await SqlCommands.new_case(member.id, ctx.guild.id, "ban", reason, bantime, -1, str(ctx.author))
@@ -96,7 +93,7 @@ class Moderation(commands.Cog):
         cursor = await self.connection.execute("SELECT modlogs from role_ids WHERE guild = ?",(member.guild.id,))
         logID = await cursor.fetchone()
         await cursor.close()
-        
+
         if logID and logID != 0:
 
             channel = member.guild.get_channel(logID[0])
@@ -119,13 +116,13 @@ class Moderation(commands.Cog):
         elif ctx.guild.me.top_role <= member.top_role:
             await ctx.send("I don't have permission to kick that member.")
             return
-        if reason == None:
+        if reason is None:
             reason = "No reason specified"
 
         style = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
         emoji = fEmbeds.fancyEmbeds.getStyleValue(self, ctx.guild.id, style, "emoji")
 
-        if emoji == False:
+        if emoji is False:
             emojia = ""
             emojib = ""
             emojic = ""
@@ -133,7 +130,7 @@ class Moderation(commands.Cog):
             emojia = ":boot: "
             emojib = ":cop: "
             emojic = ":scroll: "
-            
+
         kicktime = time.time()
 
         kickEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}You have been kicked from "+ ctx.guild.name, force=True, forceColor=0xff0000)
@@ -143,9 +140,9 @@ class Moderation(commands.Cog):
         try:
             await member.send(embed=kickEmbed)
             unsent = False
-        except errors.HTTPException:
+        except discord.errors.HTTPException:
             unsent = True
-        
+
         if unsent:
             successEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}Kicked " + str(member), force=True, forceColor=0x00ff00, desc="Failed to send a message to the user.")
         else:
@@ -158,7 +155,7 @@ class Moderation(commands.Cog):
         cursor = await self.connection.execute("SELECT modlogs from role_ids WHERE guild = ?",(ctx.guild.id,))
         logID = await cursor.fetchone()
         await cursor.close()
-        
+
         if logID and logID != 0:
 
             channel = member.guild.get_channel(logID[0])
@@ -181,7 +178,7 @@ class Moderation(commands.Cog):
         style = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
         emoji = fEmbeds.fancyEmbeds.getStyleValue(self, ctx.guild.id, style, "emoji")
 
-        if emoji == False:
+        if emoji is False:
             emojia = ""
             emojib = ""
             emojic = ""
@@ -226,7 +223,7 @@ class Moderation(commands.Cog):
     @commands.command(help="Gravels a user", brief=":mute: ")
     @commands.check(functions.has_modrole)
     async def gravel(self, ctx, member : discord.Member, graveltime, *, reason=None):
-        now = time.time()    
+        now = time.time()
         if graveltime[-1] == "m" or graveltime[-1] == "h" or graveltime[-1] == "d" or graveltime[-1] == "s":
             timeformat = graveltime[-1]
             timevalue = graveltime[:-1]
@@ -238,7 +235,7 @@ class Moderation(commands.Cog):
         except ValueError:
             await ctx.send("Oops! That's not a valid time format")
             return
-        if reason == None:
+        if reason is None:
             reason = "No reason specified"
         totalsecs = TimeConversions.secondsconverter(timevalue, timeformat)
         roleid = await SqlCommands.get_role(ctx.guild.id, "gravel")
@@ -250,7 +247,7 @@ class Moderation(commands.Cog):
         style = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
         emoji = fEmbeds.fancyEmbeds.getStyleValue(self, ctx.guild.id, style, "emoji")
 
-        if emoji == False:
+        if emoji is False:
             emojia = ""
             emojib = ""
             emojic = ""
@@ -267,15 +264,15 @@ class Moderation(commands.Cog):
         try:
             await member.send(embed=gravelEmbed)
             unsent = False
-        except errors.HTTPException:
+        except discord.errors.HTTPException:
             unsent = True
 
         await SqlCommands.new_case(member.id, ctx.guild.id, "gravel", reason, now, end, str(ctx.author))
 
         if unsent:
-            successEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle="Gravelled " + str(member), desc="Failed to send a message to the user.",  useColor=1)
+            successEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojib}Gravelled " + str(member), desc="Failed to send a message to the user.",  useColor=1)
         else:
-            successEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle="Gravelled " + str(member), useColor=1)
+            successEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojib}Gravelled " + str(member), useColor=1)
 
         await ctx.send(embed=successEmbed)
 
@@ -299,7 +296,7 @@ class Moderation(commands.Cog):
     @commands.command(help="Mutes a user", brief=":mute: ")
     @commands.check(functions.has_modrole)
     async def mute(self, ctx, member : discord.Member, mutetime, *, reason=None):
-        now = time.time()    
+        now = time.time()
         if mutetime[-1] == "m" or mutetime[-1] == "h" or mutetime[-1] == "d" or mutetime[-1] == "s":
             timeformat = mutetime[-1]
             timevalue = mutetime[:-1]
@@ -311,7 +308,7 @@ class Moderation(commands.Cog):
         except ValueError:
             await ctx.send("Oops! That's not a valid time format")
             return
-        if reason == None:
+        if reason is None:
             reason = "No reason specified"
         totalsecs = TimeConversions.secondsconverter(timevalue, timeformat)
         roleid = await SqlCommands.get_role(ctx.guild.id, "muted")
@@ -324,7 +321,7 @@ class Moderation(commands.Cog):
         style = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
         emoji = fEmbeds.fancyEmbeds.getStyleValue(self, ctx.guild.id, style, "emoji")
 
-        if emoji == False:
+        if emoji is False:
             emojia = ""
             emojib = ""
             emojic = ""
@@ -336,11 +333,11 @@ class Moderation(commands.Cog):
         muteEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}You have been muted in {ctx.guild.name} for {TimeConversions.fromseconds(totalsecs)}.", force=True, forceColor=0xFF0000)
 
         muteEmbed.add_field(name="Reason:", value=reason)
-        
+
         try:
             await member.send(embed=muteEmbed)
             unsent = False
-        except errors.HTTPException:
+        except discord.errors.HTTPException:
             unsent = True
 
         await SqlCommands.new_case(member.id, ctx.guild.id, "mute", reason, now, end, str(ctx.author))
@@ -376,7 +373,7 @@ class Moderation(commands.Cog):
         style = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
         emoji = fEmbeds.fancyEmbeds.getStyleValue(self, ctx.guild.id, style, "emoji")
 
-        if emoji == False:
+        if emoji is False:
             emojia = ""
             emojib = ""
             emojic = ""
@@ -398,14 +395,14 @@ class Moderation(commands.Cog):
             await member.send(embed=warnEmbed)
             successEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojib}Successfully warned {str(member)}", force=True, forceColor=0x00ff00)
             await ctx.send(embed=successEmbed)
-        except errors.HTTPException:
+        except discord.errors.HTTPException:
             failEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojic}Logged a warning for user {str(member)}", desc="Failed to send a message to the user.", force=True, forceColor=0x00ff00)
             await ctx.send(embed=failEmbed)
 
         cursor = await self.connection.execute("SELECT modlogs from role_ids WHERE guild = ?",(ctx.guild.id,))
         logID = await cursor.fetchone()
         await cursor.close()
-        
+
         if logID and logID != 0:
 
             channel = member.guild.get_channel(logID[0])
@@ -426,7 +423,7 @@ class Moderation(commands.Cog):
         style = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
         emoji = fEmbeds.fancyEmbeds.getStyleValue(self, ctx.guild.id, style, "emoji")
 
-        if emoji == False:
+        if emoji is False:
             emojia = ""
             emojib = ""
             emojic = ""
@@ -457,7 +454,7 @@ class Moderation(commands.Cog):
                 totaltime = "N/A"
 
             logEmbed.add_field(name=f"{emojib}__**Case " + str(log[0]) + "**__", value=f"{emojic}**Type- **" + log[3] + f"\n{emojid}**Reason- **" + log[4] + f"\n{emojie}**Time- **" + start + f"\n{emojif}**Length- **" + totaltime + f"\n{emojig}**Moderator- **" + log[7], inline=True)
-        
+
         logEmbed.set_thumbnail(url=member.avatar_url)
 
         await ctx.send(embed = logEmbed)
@@ -481,7 +478,7 @@ class Moderation(commands.Cog):
         style = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
         emoji = fEmbeds.fancyEmbeds.getStyleValue(self, ctx.guild.id, style, "emoji")
 
-        if emoji == False:
+        if emoji is False:
             emojia = ""
             emojib = ""
             emojic = ""
@@ -517,7 +514,7 @@ class Moderation(commands.Cog):
         style = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
         emoji = fEmbeds.fancyEmbeds.getStyleValue(self, ctx.guild.id, style, "emoji")
 
-        if emoji == False:
+        if emoji is False:
             emojia = ""
             emojib = ""
         else:
@@ -533,7 +530,7 @@ class Moderation(commands.Cog):
         cursor = await self.connection.execute("SELECT modlogs from role_ids WHERE guild = ?",(ctx.guild.id,))
         logID = await cursor.fetchone()
         await cursor.close()
-        
+
         if logID and logID != 0:
 
             channel = member.guild.get_channel(logID[0])
@@ -559,7 +556,7 @@ class Moderation(commands.Cog):
         style = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
         emoji = fEmbeds.fancyEmbeds.getStyleValue(self, ctx.guild.id, style, "emoji")
 
-        if emoji == False:
+        if emoji is False:
             emojia = ""
             emojib = ""
         else:
@@ -575,7 +572,7 @@ class Moderation(commands.Cog):
         cursor = await self.connection.execute("SELECT modlogs from role_ids WHERE guild = ?",(ctx.guild.id,))
         logID = await cursor.fetchone()
         await cursor.close()
-        
+
         if logID and logID != 0:
 
             channel = member.guild.get_channel(logID[0])
@@ -598,7 +595,7 @@ class Moderation(commands.Cog):
         style = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
         emoji = fEmbeds.fancyEmbeds.getStyleValue(self, ctx.guild.id, style, "emoji")
 
-        if emoji == False:
+        if emoji is False:
             emojia = ""
             emojib = ""
             emojic = ""
@@ -629,8 +626,8 @@ class Moderation(commands.Cog):
 
         #Creating and sending the embed
 
-        if nickname != name: 
-            desc = f"This member has a nickname of: {nickname}" 
+        if nickname != name:
+            desc = f"This member has a nickname of: {nickname}"
         else:
             desc = ""
 
@@ -639,7 +636,7 @@ class Moderation(commands.Cog):
         permlist = ""
 
         mentionedroles = []
-        out = f""
+        out = ""
         n = 0
         x = 0
 
@@ -656,7 +653,7 @@ class Moderation(commands.Cog):
 
         x = f" - {x}"
 
-        if out == f"":
+        if out == "":
             out = "This member has no roles."
             x = ""
 
@@ -892,7 +889,7 @@ class Moderation(commands.Cog):
         embed.set_thumbnail(url=icon)
 
         await ctx.send(embed=embed)
-        
+
 
     #End of Commands
 
@@ -926,7 +923,7 @@ class Moderation(commands.Cog):
             await cursor.execute("DELETE FROM active_cases WHERE id = ?", (item[0],))
             await self.connection.commit()
         await cursor.close()
-         
+
     async def bot_check_once(self,ctx):
         if isinstance(ctx.channel,discord.DMChannel):
             return True
@@ -951,7 +948,7 @@ class Moderation(commands.Cog):
             if commandCooldown and not (ctx.invoked_with == "help" and ctx.command.name != "help"):
                 self.bot.pending_cooldowns[ctx.guild.id][ctx.author.id] = (ctx.command,datetime.datetime.now() + datetime.timedelta(milliseconds=commandCooldown))
             return True
-        elif (commandRole in member_roles):
+        elif commandRole in member_roles:
             if commandCooldown and not (ctx.invoked_with == "help" and ctx.command.name != "help"):
                 self.bot.pending_cooldowns[ctx.guild.id][ctx.author.id] = (ctx.command,datetime.datetime.now() + datetime.timedelta(milliseconds=commandCooldown))
             return True
