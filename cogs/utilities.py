@@ -2,6 +2,7 @@ import asyncio
 import io
 import json
 import random
+import typing
 
 import aiohttp
 import discord
@@ -460,7 +461,13 @@ class Utilities(commands.Cog):
         """Pong!"""
         await ctx.send(f"Pong! {round((self.bot.latency*1000),4)} ms")
 
-
+    @commands.command(brief=":speech_balloon: ")
+    @commands.check(functions.has_modrole)
+    async def message(self, ctx, *, text):
+        """Sends a message to the current channel as the bot."""
+        embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, desc=text, useColor=0)
+        msg = await ctx.send(embed=embed)
+        await ctx.message.delete()
 
 def setup(bot):
     bot.add_cog(Utilities(bot))
