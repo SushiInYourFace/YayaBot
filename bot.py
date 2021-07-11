@@ -47,6 +47,8 @@ class NewHelp(commands.HelpCommand):
             description = "..."
         if command.brief:
             emote = command.brief
+        elif command.name == "help":
+            emote = ":question: "
         else:
             emote = ""
         embed.add_field(name=f"{emote}{command.name}", value=f"{description}", inline=True)
