@@ -10,12 +10,14 @@ import aiosqlite
 def has_modrole(ctx, bot=None):
     if not bot:
         modrole = ctx.bot.modrole.get(ctx.guild.id)
+        trialrole = ctx.bot.modrole.get(ctx.guild.id)
     else:
         modrole = bot.modrole.get(ctx.guild.id)
+        trialrole = bot.trialrole.get(ctx.guild.id)
     member_roles = [role.id for role in ctx.author.roles]
-    if modrole is None:
+    if modrole is None and trialrole is None:
         return False
-    elif modrole in member_roles:
+    elif modrole in member_roles or trialrole in member_roles:
         return True
     else:
         return False

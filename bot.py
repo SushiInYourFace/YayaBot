@@ -141,7 +141,7 @@ bot = commands.Bot(command_prefix=get_pre, intents=intents, help_command=NewHelp
 con = sqlite3.connect("database.db")
 cursor = con.cursor()
 cursor.execute("CREATE TABLE IF NOT EXISTS guild_prefixes (guild INTEGER PRIMARY KEY, prefix TEXT)")
-cursor.execute("CREATE TABLE IF NOT EXISTS role_ids (guild INTEGER PRIMARY KEY, gravel INTEGER, muted INTEGER, moderator INTEGER, admin INTEGER, modlogs INTEGER, command_usage INTEGER, command_cooldown INTEGER)")
+cursor.execute("CREATE TABLE IF NOT EXISTS role_ids (guild INTEGER PRIMARY KEY, gravel INTEGER, muted INTEGER, moderator INTEGER, admin INTEGER, trialmod INTEGER, modlogs INTEGER, command_usage INTEGER, command_cooldown INTEGER)")
 cursor.execute("CREATE TABLE IF NOT EXISTS active_cases (id INTEGER PRIMARY KEY, expiration FLOAT)")
 cursor.execute("CREATE TABLE IF NOT EXISTS caselog (id INTEGER PRIMARY KEY, id_in_guild INTEGER, guild INTEGER, user INTEGER, type TEXT, reason TEXT, started FLOAT, expires FLOAT, moderator TEXT)")
 cursor.execute("CREATE TABLE IF NOT EXISTS extensions (extension TEXT PRIMARY KEY)")
@@ -169,6 +169,7 @@ if prefixes is not None:
 #fuck it, load mod and admin roles into bot var. (Not sure if this is how this should be done permanently, but it will work for now)
 bot.modrole = {}
 bot.adminrole = {}
+bot.trialrole = {}
 modroles = cursor.execute("SELECT guild, moderator, admin FROM role_ids").fetchall()
 if modroles is not None:
     for server_roles in modroles:

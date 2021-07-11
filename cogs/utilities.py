@@ -104,6 +104,13 @@ class Utilities(commands.Cog):
         except commands.RoleNotFound:
             await ctx.send("That does not appear to be a valid role. Cancelling")
             return
+        await ctx.send("Please say the name of your trial moderator role (or 'none' for no role)")
+        message = await get_message()
+        try:
+            trialRole = await commands.RoleConverter().convert(ctx,message.content)
+        except commands.RoleNotFound:
+            await ctx.send("That does not appear to be a valid role. Cancelling")
+            return
         await ctx.send("Enter the name of your commands role or 'none' for no role (if supplied, this role will be required to use any commands).")
         message = await get_message()
         if message.content.lower() != "none":
@@ -135,15 +142,16 @@ class Utilities(commands.Cog):
         else:
             logChannel = None
         await ctx.send("Last, please tell me what prefix you would like to use for commands")
-        prefix = await get_message().content
+        prefix = await get_message()
 
-        self.bot.guild_prefixes[ctx.guild.id] = prefix
+        self.bot.guild_prefixes[ctx.guild.id] = prefix.content
         self.bot.modrole[ctx.guild.id] = modRole.id
         self.bot.adminrole[ctx.guild.id] = adminRole.id
+        self.bot.trialrole[ctx.guild.id] = trialRole.id
 
         cursor = await self.connection.cursor()
         await cursor.execute("INSERT INTO guild_prefixes(guild,prefix) VALUES(?, ?) ON CONFLICT(guild) DO UPDATE SET prefix=excluded.prefix", (guild.id, prefix.content))
-        await cursor.execute("INSERT INTO role_ids(guild,gravel,muted,moderator,admin,modlogs,command_usage,command_cooldown) VALUES(?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(guild) DO UPDATE SET gravel=excluded.gravel, muted=excluded.muted, moderator=excluded.moderator, admin=excluded.admin, modlogs=excluded.modlogs, command_usage=excluded.command_usage, command_cooldown=excluded.command_cooldown", (guild.id, gravelRole.id, mutedRole.id, modRole.id, adminRole.id, getattr(logChannel,"id",0), getattr(commandRole,"id",0),commandCooldown))
+        await cursor.execute("INSERT INTO role_ids(guild,gravel,muted,moderator,admin,trialmod,modlogs,command_usage,command_cooldown) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(guild) DO UPDATE SET gravel=excluded.gravel, muted=excluded.muted, moderator=excluded.moderator, admin=excluded.admin, trialmod=excluded.trialmod, modlogs=excluded.modlogs, command_usage=excluded.command_usage, command_cooldown=excluded.command_cooldown", (guild.id, gravelRole.id, mutedRole.id, modRole.id, adminRole.id, trialRole.id,getattr(logChannel,"id",0), getattr(commandRole,"id",0),commandCooldown))
         await self.connection.commit()
         await cursor.close()
 
@@ -160,26 +168,30 @@ class Utilities(commands.Cog):
             emojig = ""
             emojih = ""
             emojii = ""
+            emojij = ""
         else:
             emojia = ":wrench: "
             emojib = ":mute: "
             emojic = ":mute: "
-            emojid = ":hammer: "
+            emojid = ":hammer_pick: "
             emojie = ":tools: "
-            emojif = ":file_folder: "
-            emojig = ":page_facing_up: "
-            emojih = ":stopwatch: "
-            emojii = ":pencil2: "
+            emojif = ":hammer: "
+            emojig = ":file_folder: "
+            emojih = ":page_facing_up: "
+            emojii = ":stopwatch: "
+            emojij = ":pencil2: "
+            
 
         response = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}Server set up successfully!", useColor=0)
         response.add_field(name=f"{emojib}Gravel role", value=gravelRole.mention)
         response.add_field(name=f"{emojic}Muted role", value=mutedRole.mention)
         response.add_field(name=f"{emojid}Moderator role", value=modRole.mention)
         response.add_field(name=f"{emojie}Admin role", value=adminRole.mention)
-        response.add_field(name=f"{emojif}Modlog channel", value=getattr(logChannel,"mention","None"))
-        response.add_field(name=f"{emojig}Command role", value=getattr(commandRole,"mention","None"))
-        response.add_field(name=f"{emojih}Command cooldown", value=f"{commandCooldown / 1000} Seconds")
-        response.add_field(name=f"{emojii}Command Prefix", value=f"`{prefix.content}`")
+        response.add_field(name=f"{emojif}Trial Mod role", value=trialRole.mention)
+        response.add_field(name=f"{emojig}Modlog channel", value=getattr(logChannel,"mention","None"))
+        response.add_field(name=f"{emojih}Command role", value=getattr(commandRole,"mention","None"))
+        response.add_field(name=f"{emojii}Command cooldown", value=f"{commandCooldown / 1000} Seconds")
+        response.add_field(name=f"{emojij}Command Prefix", value=f"`{prefix.content}`")
 
         await ctx.send(embed=response)
 
@@ -236,7 +248,7 @@ class Utilities(commands.Cog):
         embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}Changed Muted Role:", desc=role.mention, useColor=1)
         await ctx.send(embed=embed)
 
-    @setup.command(name="moderator", help="Sets the role used to determine whether a user can use moderation commands", aliases=["mod", "modrole"], brief=":hammer: ")
+    @setup.command(name="moderator", help="Sets the role used to determine whether a user can use moderation commands", aliases=["mod", "modrole"], brief=":hammer_pick: ")
     async def setup_moderator(self, ctx, *, role:discord.Role):
         cursor = await self.connection.cursor()
         await cursor.execute("INSERT INTO role_ids(guild, moderator) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET moderator=excluded.moderator", (ctx.guild.id, role.id))
@@ -250,7 +262,7 @@ class Utilities(commands.Cog):
         if emoji is False:
             emojia = ""
         else:
-            emojia = ":hammer: "
+            emojia = ":hammer_pick: "
 
         embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}Changed Moderator Role:", desc=role.mention, useColor=1)
         await ctx.send(embed=embed)
@@ -272,6 +284,26 @@ class Utilities(commands.Cog):
             emojia = ":tools: "
 
         embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}Admin role set", desc=role.mention, useColor=3)
+
+        await ctx.send(embed=embed)
+
+    @setup.command(name="trial", help="Sets the role used to determine whether a user is a trial mod.", aliases=["trialrole"], brief=":hammer:")
+    async def setup_trial(self, ctx, *, role:discord.Role):
+        cursor = await self.connection.cursor()
+        await cursor.execute("INSERT INTO role_ids(guild, trialmod) VALUES(?,?) ON CONFLICT(guild) DO UPDATE SET trialmod=excluded.trialmod", (ctx.guild.id, role.id))
+        await self.connection.commit()
+        await cursor.close()
+
+        self.bot.trialrole[ctx.guild.id] = role.id
+        e = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
+        emoji = fEmbeds.fancyEmbeds.getStyleValue(self , ctx.guild.id, e, "emoji")
+
+        if emoji is False:
+            emojia = ""
+        else:
+            emojia = ":hammer: "
+
+        embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}Trial Mod role set", desc=role.mention, useColor=3)
 
         await ctx.send(embed=embed)
 
