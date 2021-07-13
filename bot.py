@@ -172,11 +172,12 @@ if prefixes is not None:
 bot.modrole = {}
 bot.adminrole = {}
 bot.trialrole = {}
-modroles = cursor.execute("SELECT guild, moderator, admin FROM role_ids").fetchall()
+modroles = cursor.execute("SELECT guild, moderator, admin, trialmod FROM role_ids").fetchall()
 if modroles is not None:
     for server_roles in modroles:
         bot.modrole[server_roles[0]] = server_roles[1]
         bot.adminrole[server_roles[0]] = server_roles[2]
+        bot.trialrole[server_roles[0]] = server_roles[3]
 
 #cogs to be loaded on startup
 default_extensions = [
