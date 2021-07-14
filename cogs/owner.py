@@ -143,7 +143,13 @@ class Owner(commands.Cog):
     async def cogs_list(self,ctx):
         """Lists loaded and unloaded cogs."""
         loaded_cogs = [cog.split(".")[1] for cog in self.bot.extensions.keys()]
-        unloaded_cogs = [cog[:-3] for cog in os.listdir("cogs") if (cog[:-3] not in loaded_cogs and cog.endswith(".py"))]
+        unloaded_cogs = []
+        for d, _, files in os.walk("cogs"):
+            for f in files:
+                if d != "cogs":
+                    f = d.replace("/",".")[5:] + "." + f
+                if f[:-3] not in loaded_cogs and f.endswith(".py"):
+                    unloaded_cogs.append("`"+f[:-3]+"`")
 
         style = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
         emoji = fEmbeds.fancyEmbeds.getStyleValue(self, ctx.guild.id, style, "emoji")
@@ -158,7 +164,7 @@ class Owner(commands.Cog):
             emojic = ":tools: "
 
         embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}Cogs.", desc=None, useColor=2)
-        embed.add_field(name=f"{emojib}Loaded Cogs:", value=", ".join(loaded_cogs)+".", inline=False)
+        embed.add_field(name=f"{emojib}Loaded Cogs:", value=", ".join(["`"+c+"`" for c in loaded_cogs])+".", inline=False)
         embed.add_field(name=f"{emojic}Unloaded Cogs:", value=", ".join(unloaded_cogs)+".", inline=False)
         await ctx.send(embed=embed)
 

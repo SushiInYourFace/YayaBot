@@ -39,23 +39,18 @@ def tryMakeStorage(guildid):
         #If the storage exists, read and load the file to a variable to add to.
         with open("embeds.json", "r+") as f:
             f_ = json.load(f)
-                #This should throw a KeyError
-            if "active" in f_[guildid]:
-                #This shouldn't happen, if it does, then i probably overlooked something somewhere. This only appears when tryMakeStorage() is called when the given guildid already has a storage.
-                logging.error("If you see this, then you found something that shouldn't happen! If this problem persists, you should report it.")
-            else:
                 #Add the new object into the storage with the default data.
-                f_[guildid] = {
-                    "active": "shinyamber",
-                    "styles": {
-                        "shinyamber": {"colors": [0xFF8F00, 0xFFB300, 0xFFAB40, 0xFFE082], "time": True, "emoji": True},
-                        "electricblue": {"colors":[0x03A9F4, 0x0288D1, 0x4FC3F7, 0x80D8FF], "time": True, "emoji": True},
-                        "lushgreen": {"colors":[0x64DD17, 0x388E3C, 0x8BC34A, 0xA5D6A7], "time": True, "emoji": True},
-                        "royalpurple": {"colors":[0xE040FB, 0xD500F9, 0xEA80FC, 0xB388FF], "time": True, "emoji": True},
-                        "colorful": {"colors":[0x2196F3, 0xFFC107, 0xF44336, 0x76FF03], "time": True, "emoji": True}
-                    },
-                }
-                logging.info(f"Created storage object for guild with id {guildid}")
+            f_[guildid] = {
+                "active": "shinyamber",
+                "styles": {
+                    "shinyamber": {"colors": [0xFF8F00, 0xFFB300, 0xFFAB40, 0xFFE082], "time": True, "emoji": True},
+                    "electricblue": {"colors":[0x03A9F4, 0x0288D1, 0x4FC3F7, 0x80D8FF], "time": True, "emoji": True},
+                    "lushgreen": {"colors":[0x64DD17, 0x388E3C, 0x8BC34A, 0xA5D6A7], "time": True, "emoji": True},
+                    "royalpurple": {"colors":[0xE040FB, 0xD500F9, 0xEA80FC, 0xB388FF], "time": True, "emoji": True},
+                    "colorful": {"colors":[0x2196F3, 0xFFC107, 0xF44336, 0x76FF03], "time": True, "emoji": True}
+                },
+            }
+            logging.info(f"Created storage object for guild with id {guildid}")
         #Dump the new storage into embedss.json.
         with open("embeds.json", "w") as f:
             json.dump(f_, f, indent=4)

@@ -57,7 +57,6 @@ class NewHelp(commands.HelpCommand):
     async def send_bot_help(self,mapping):
         style = fEmbeds.fancyEmbeds.getActiveStyle(self, self.context.guild.id)
         useEmoji = fEmbeds.fancyEmbeds.getStyleValue(self, self.context.guild.id, style, "emoji")
-
         pageOut = 0
         titleDesc = ["YayaBot Help!",f"Say `{self.clean_prefix}help <command>` for more info on a command!"]
         page = [fEmbeds.fancyEmbeds.makeEmbed(self, self.context.guild.id, embTitle=titleDesc[0], desc=titleDesc[1], useColor=0, nofooter=True)]
