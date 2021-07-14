@@ -8,4 +8,5 @@ embeds.json
 /resources/backups/*.gz
 /resources/*.ini
 .DS_Store
-cogs/*/
+cogs/*
+!cogs/*.py
