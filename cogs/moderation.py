@@ -447,7 +447,11 @@ class Moderation(commands.Cog):
         await cursor.close()
 
         for log in logs:
-            start = datetime.datetime.fromtimestamp(int(log[5])).strftime('%Y-%m-%d %H:%M:%S')
+            if time.time() - int(log[5]) < (60*60*24):
+                form = "R"
+            else:
+                form = "F"
+            start = f"<t:{int(log[5])}:{form}>"
             if int(log[6]) != -1:
                 totaltime = TimeConversions.fromseconds(int(int(log[6])) - int(log[5]))
             else:
@@ -466,7 +470,11 @@ class Moderation(commands.Cog):
         caseinfo = await cursor.fetchone()
         await cursor.close()
         try:
-            start = datetime.datetime.fromtimestamp(int(caseinfo[5])).strftime('%Y-%m-%d %H:%M:%S')
+            if time.time() - int(caseinfo[5]) < (60*60*24):
+                form = "R"
+            else:
+                form = "F"
+            start = f"<t:{int(caseinfo[5])}:{form}>"
         except TypeError:
             await ctx.send("Could not find that case number")
             return

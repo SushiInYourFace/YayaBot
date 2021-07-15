@@ -133,9 +133,9 @@ class Sql:
         if expires != -1:
             #checks if user already has an active case of the same type, and removes it if it is less severe
             unexpired_cases = await cursor.execute("SELECT id FROM caselog WHERE guild=? AND user=? AND type=? AND expires >=? AND expires <=? ", (guild,user, casetype, time.time(), expires))
-            unexpired_cases = await unexpired_cases.fetchall()
             #should only ever be <=1 case that meets these criteria, but better safe than sorry
             if unexpired_cases is not None:
+                unexpired_cases = await unexpired_cases.fetchall()
                 for case in unexpired_cases:
                     await cursor.execute("DELETE FROM active_cases WHERE id = ?", (case[0],))
             await cursor.execute("INSERT INTO active_cases(id, expiration) VALUES(?,?)", (caseID, expires))
