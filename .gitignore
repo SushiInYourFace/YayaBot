@@ -2,7 +2,7 @@
 Discord_Token.txt
 database.db
 **/__pycache__/
-token.txt
+token*
 embeds.json
 /resources/backups/*.db
 /resources/backups/*.gz

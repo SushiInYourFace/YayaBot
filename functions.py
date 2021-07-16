@@ -1,6 +1,8 @@
 import re
 import time
 from collections import namedtuple
+from typing import Union
+import datetime
 
 import aiosqlite
 
@@ -208,3 +210,59 @@ class timeconverters:
             return str(minutes) + (" Minute" if minutes==1 else " Minutes")
         else:
             return str(seconds) + (" Second" if seconds==1 else " Seconds")
+
+class DiscordTimestamp():
+    """
+    A class useful for creating timestamps for display in discord.
+    Timestamp can be a UNIX timestamp, datetime or timedelta
+    Relative means time is added to current time.
+    """
+    def __init__(self,timestamp: Union[datetime.datetime,datetime.timedelta,int], relative: bool=False):
+        if isinstance(timestamp,datetime.datetime):
+            timestamp = timestamp.timestamp()
+        elif isinstance(timestamp,datetime.timedelta) and not relative:
+            timestamp = timestamp.total_seconds()
+        if relative:
+            if isinstance(timestamp,int):
+                timestamp = (datetime.datetime.now() + datetime.timedelta(seconds=timestamp)).timestamp()
+            else:
+                timestamp = (datetime.datetime.now() + timestamp).timestamp()
+        self.timestamp = int(timestamp)
+
+    def _to_discord(self,t: str):
+        return f"<t:{str(self.timestamp)}:{t}>"
+
+    @property
+    def date(self):
+        """A date displayed in Discord, `10/07/2021` or `07/10/2021`."""
+        return self._to_discord("d")
+
+    @property
+    def date_full(self):
+        """A date displayed in readable format in Discord, `10 July 2021` or `July 10, 2021`."""
+        return self._to_discord("D")
+
+    @property
+    def time(self):
+        """A time displayed in Discord, `18:21` or `6:21 PM`."""
+        return self._to_discord("t")
+
+    @property
+    def time_full(self):
+        """A time displayed with seconds in Discord, `18:21:21` or `6:21:21 PM`."""
+        return self._to_discord("T")
+
+    @property
+    def date_time(self):
+        """A time displayed with date and time in Discord, `10 July 2021 18:21` or `July 10, 2021 6:21 PM`."""
+        return self._to_discord("f")
+
+    @property
+    def date_time_full(self):
+        """A time displayed with date, time and weekday in Discord, `Saturday, 10 July 2021 18:21` or `Saturday, July 10, 2021 6:21 PM`."""
+        return self._to_discord("F")
+
+    @property
+    def relative(self):
+        """A time displayed as relative in Discord, `10 minutes ago` if before current time or `in 10 minutes` if in the future."""
+        return self._to_discord("R")

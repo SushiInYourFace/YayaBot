@@ -142,12 +142,12 @@ class Owner(commands.Cog):
     @cog.command(name="list",aliases=["ls"], brief=":gear: ")
     async def cogs_list(self,ctx):
         """Lists loaded and unloaded cogs."""
-        loaded_cogs = [cog.split(".")[1] for cog in self.bot.extensions.keys()]
+        loaded_cogs = ['.'.join(cog.split(".")[1:]) for cog in self.bot.extensions.keys()]
         unloaded_cogs = []
         visited = []
         for d, _, files in os.walk("cogs",followlinks=True):
             if os.path.realpath(d) in visited:
-                logging.warn("There is infinite recursion in your cogs folder, there is a link to the cog folder or a parent folder of it, this limits the amount of folders we can search for cogs. To fix this remove the links.")
+                logging.warning("There is infinite recursion in your cogs folder, there is a link to the cog folder or a parent folder of it, this limits the amount of folders we can search for cogs. To fix this remove the links.")
                 break
             visited.append(os.path.realpath(d))
             for f in files:
