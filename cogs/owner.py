@@ -118,7 +118,7 @@ class Owner(commands.Cog):
             else:
                 cogs = self.bot.previousReload
         if cogs[0] in ["*","all"]:
-            cogs = [cog.split(".")[1] for cog in self.bot.extensions.keys()]
+            cogs = ['.'.join(cog.split(".")[1:]) for cog in self.bot.extensions.keys()]
             allReloaded = True
         notLoaded = []
         loaded = []

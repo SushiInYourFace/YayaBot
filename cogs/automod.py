@@ -482,6 +482,8 @@ class AutoMod(commands.Cog):
 
         if after.author.bot:
             return
+        if not logID:
+            return
         if not logID[0]:
             return
         channel = after.guild.get_channel(logID[0])

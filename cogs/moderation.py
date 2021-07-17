@@ -801,10 +801,10 @@ class Moderation(commands.Cog):
         members = guild.member_count
         categories = len(guild.categories)
         allchannels = guild.channels
-        icon = guild.icon_url
+        icon = guild.icon.url
         desc = guild.description
-        banner = guild.banner_url
-        maxemoji = guild.emoji_limit
+        # banner = guild.banner.url
+        maxemoji = guild.emoji_limit*2 # multiply by 2 to account for animated emoji
         emoji = len(guild.emojis)
         maxfilesize = guild.filesize_limit
         features = guild.features

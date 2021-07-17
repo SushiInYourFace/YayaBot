@@ -10,3 +10,4 @@ embeds.json
 .DS_Store
 cogs/*
 !cogs/*.py
+venv

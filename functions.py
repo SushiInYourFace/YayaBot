@@ -166,7 +166,7 @@ class Sql:
             #guild hasn't set up name filtering, create a row in the table for them and disable the filter
             await cursor.execute("INSERT INTO name_filtering(guild, enabled) VALUES(?,?)",(guild, 0))
             self.connection.commit()
-            cursor.close()
+            await cursor.close()
             return False
 
     async def get_new_nick(self, guild, flagged_nametype):
