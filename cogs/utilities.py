@@ -106,11 +106,14 @@ class Utilities(commands.Cog):
             return
         await ctx.send("Please say the name of your trial moderator role (or 'none' for no role)")
         message = await get_message()
-        try:
-            trialRole = await commands.RoleConverter().convert(ctx,message.content)
-        except commands.RoleNotFound:
-            await ctx.send("That does not appear to be a valid role. Cancelling")
-            return
+        if message.content.lower() != "none":
+            try:
+                trialRole = await commands.RoleConverter().convert(ctx,message.content)
+            except commands.RoleNotFound:
+                await ctx.send("That does not appear to be a valid role. Cancelling")
+                return
+        else:
+            trialRole = None
         await ctx.send("Enter the name of your commands role or 'none' for no role (if supplied, this role will be required to use any commands).")
         message = await get_message()
         if message.content.lower() != "none":
@@ -147,11 +150,12 @@ class Utilities(commands.Cog):
         self.bot.guild_prefixes[ctx.guild.id] = prefix.content
         self.bot.modrole[ctx.guild.id] = modRole.id
         self.bot.adminrole[ctx.guild.id] = adminRole.id
-        self.bot.trialrole[ctx.guild.id] = trialRole.id
+        if trialRole is not None:
+            self.bot.trialrole[ctx.guild.id] = trialRole.id
 
         cursor = await self.connection.cursor()
         await cursor.execute("INSERT INTO guild_prefixes(guild,prefix) VALUES(?, ?) ON CONFLICT(guild) DO UPDATE SET prefix=excluded.prefix", (guild.id, prefix.content))
-        await cursor.execute("INSERT INTO role_ids(guild,gravel,muted,moderator,admin,trialmod,modlogs,command_usage,command_cooldown) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(guild) DO UPDATE SET gravel=excluded.gravel, muted=excluded.muted, moderator=excluded.moderator, admin=excluded.admin, trialmod=excluded.trialmod, modlogs=excluded.modlogs, command_usage=excluded.command_usage, command_cooldown=excluded.command_cooldown", (guild.id, gravelRole.id, mutedRole.id, modRole.id, adminRole.id, trialRole.id,getattr(logChannel,"id",0), getattr(commandRole,"id",0),commandCooldown))
+        await cursor.execute("INSERT INTO role_ids(guild,gravel,muted,moderator,admin,trialmod,modlogs,command_usage,command_cooldown) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(guild) DO UPDATE SET gravel=excluded.gravel, muted=excluded.muted, moderator=excluded.moderator, admin=excluded.admin, trialmod=excluded.trialmod, modlogs=excluded.modlogs, command_usage=excluded.command_usage, command_cooldown=excluded.command_cooldown", (guild.id, gravelRole.id, mutedRole.id, modRole.id, adminRole.id, getattr(trialRole,"id",0),getattr(logChannel,"id",0), getattr(commandRole,"id",0),commandCooldown))
         await self.connection.commit()
         await cursor.close()
 
@@ -187,7 +191,7 @@ class Utilities(commands.Cog):
         response.add_field(name=f"{emojic}Muted role", value=mutedRole.mention)
         response.add_field(name=f"{emojid}Moderator role", value=modRole.mention)
         response.add_field(name=f"{emojie}Admin role", value=adminRole.mention)
-        response.add_field(name=f"{emojif}Trial Mod role", value=trialRole.mention)
+        response.add_field(name=f"{emojif}Trial Mod role", value=getattr(trialRole,"mention","None"))
         response.add_field(name=f"{emojig}Modlog channel", value=getattr(logChannel,"mention","None"))
         response.add_field(name=f"{emojih}Command role", value=getattr(commandRole,"mention","None"))
         response.add_field(name=f"{emojii}Command cooldown", value=f"{commandCooldown / 1000} Seconds")
