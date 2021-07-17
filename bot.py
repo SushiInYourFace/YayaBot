@@ -58,7 +58,7 @@ class NewHelp(commands.HelpCommand):
         style = fEmbeds.fancyEmbeds.getActiveStyle(self, self.context.guild.id)
         useEmoji = fEmbeds.fancyEmbeds.getStyleValue(self, self.context.guild.id, style, "emoji")
         pageOut = 0
-        titleDesc = ["YayaBot Help!",f"Say `{self.clean_prefix}help <command>` for more info on a command!"]
+        titleDesc = ["YayaBot Help!",f"Say `{self.context.clean_prefix}help <command>` for more info on a command!"]
         page = [fEmbeds.fancyEmbeds.makeEmbed(self, self.context.guild.id, embTitle=titleDesc[0], desc=titleDesc[1], useColor=0, nofooter=True)]
         for cog,commands in mapping.items():
             commands = await self.filter_commands(commands)
@@ -116,8 +116,8 @@ class NewHelp(commands.HelpCommand):
                 return
         embed = fEmbeds.fancyEmbeds.makeEmbed(self, self.context.guild.id, embTitle=f"Help for {command.qualified_name}" + (" cog" if isinstance(command,commands.Cog) else ' command'), desc=(f"Aliases: {', '.join(list(command.aliases))}" if command.aliases else ""), useColor=1, b=bot)
         if not isinstance(command,commands.Cog):
-            embed.add_field(name=f"{emojia}Usage",value=f"`{self.clean_prefix}{command.qualified_name}{(' ' + command.signature.replace('_',' ')    ) if command.signature else ' <subcommand>' if isinstance(command,commands.Group) else ''}`")
-        embed.add_field(name=f"{emojib}Description",value=(command.help.replace("[p]",self.clean_prefix) if command.help else '...'),inline=False)
+            embed.add_field(name=f"{emojia}Usage",value=f"`{self.context.clean_prefix}{command.qualified_name}{(' ' + command.signature.replace('_',' ')    ) if command.signature else ' <subcommand>' if isinstance(command,commands.Group) else ''}`")
+        embed.add_field(name=f"{emojib}Description",value=(command.help.replace("[p]",self.context.clean_prefix) if command.help else '...'),inline=False)
         if isinstance(command,commands.Group) or isinstance(command,commands.Cog):
             embed.add_field(name="———————",value="**Subcommands**" if isinstance(command,commands.Group) else "**Commands**",inline=False)
             for subcommand in await self.filter_commands(command.commands, sort=True):
@@ -249,7 +249,7 @@ async def about(ctx):
         emojid = ":desktop: "
 
     embed = fEmbeds.fancyEmbeds.makeEmbed(b, ctx.guild.id, desc="Yayabot!", useColor=0)
-    embed.set_author(name="YayaBot", url="https://wwww.github.com/SushiInYourFace/YayaBot", icon_url=bot.user.avatar_url)
+    embed.set_author(name="YayaBot", url="https://wwww.github.com/SushiInYourFace/YayaBot", icon_url=bot.user.avatar.url)
     embed.add_field(name=f"{emojia}Instance Owner:", value=appinfo.owner, inline=True)
     embed.add_field(name="_ _", value="_ _", inline=True)
     embed.add_field(name=f"{emojib}Python Version:", value=f"[{platform.python_version()}](https://www.python.org)", inline=True)

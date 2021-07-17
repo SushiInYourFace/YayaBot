@@ -133,9 +133,9 @@ class fancyEmbeds(commands.Cog):
 
             #Create footer with bot icon, name, and, if specified, extra footer content.
             if footer is None:
-                emb.set_footer(text=self.bot.user.name, icon_url=self.bot.user.avatar_url)
+                emb.set_footer(text=self.bot.user.name, icon_url=self.bot.user.avatar.url)
             else:
-                emb.set_footer(text=f"{self.bot.user.name} - {footer}", icon_url=self.bot.user.avatar_url)
+                emb.set_footer(text=f"{self.bot.user.name} - {footer}", icon_url=self.bot.user.avatar.url)
 
         #finally, return the embed.
         return emb
@@ -143,7 +143,7 @@ class fancyEmbeds(commands.Cog):
     #For adding footers at a later point, in scenarios where you can't know what you'll need as extra content until after the intial embed creation.
     def addFooter(self, embed, footer, bot):
         """"Add a footer to an embed with fancy embeds formatting. Only necessary when you make an embed with nofooter set to True, otherwise makeEmbed() will create this for you."""
-        embed.set_footer(text=f"{bot.user.name} - {footer}", icon_url=bot.user.avatar_url)
+        embed.set_footer(text=f"{bot.user.name} - {footer}", icon_url=bot.user.avatar.url)
 
         return embed
 

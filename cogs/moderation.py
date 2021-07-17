@@ -100,7 +100,7 @@ class Moderation(commands.Cog):
 
             title = f"{emojib}User Banned: {member.name}"
             desc = f"{emojic}Responsible Moderator: {ctx.author.name}\n{emojid}Reason: {reason}"
-            url = member.avatar_url
+            url = member.avatar.url
 
             embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=title, desc=desc, useColor=2)
             embed.set_thumbnail(url=url)
@@ -162,7 +162,7 @@ class Moderation(commands.Cog):
 
             title = f"{emojia}User Kicked: {member.name}"
             desc = f"{emojib}Responsible Moderator: {ctx.author.name}\n{emojic}Reason: {reason}"
-            url = member.avatar_url
+            url = member.avatar.url
 
             embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=title, desc=desc, useColor=2)
             embed.set_thumbnail(url=url)
@@ -212,7 +212,7 @@ class Moderation(commands.Cog):
 
             title = f"{emojia}User Unbanned: {user.name}"
             desc = f"{emojic}Responsible Moderator: {ctx.author.name}"
-            url = user.avatar_url
+            url = user.avatar.url
 
             embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=title, desc=desc, useColor=1)
             embed.set_thumbnail(url=url)
@@ -286,7 +286,7 @@ class Moderation(commands.Cog):
 
             title = f"{emojia}User Gravelled: {member.name}"
             desc = f"{emojic}Responsible Moderator: {ctx.author.name}\n{emojid}Reason: {reason}"
-            url = member.avatar_url
+            url = member.avatar.url
 
             embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=title, desc=desc, useColor=2)
             embed.set_thumbnail(url=url)
@@ -359,7 +359,7 @@ class Moderation(commands.Cog):
 
             title = f"{emojia}User Muted: {member.name}"
             desc = f"{emojic}Responsible Moderator: {ctx.author.name}\nReason: {reason}"
-            url = member.avatar_url
+            url = member.avatar.url
 
             embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=title, desc=desc, useColor=2)
             embed.set_thumbnail(url=url)
@@ -409,7 +409,7 @@ class Moderation(commands.Cog):
 
             title = f"{emojia}User Warned: {member.name}"
             desc = f"{emojid}Responsible Moderator: {ctx.author.name}\n{emojie}Reason: {reason}"
-            url = member.avatar_url
+            url = member.avatar.url
 
             embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=title, desc=desc, useColor=2)
             embed.set_thumbnail(url=url)
@@ -459,7 +459,7 @@ class Moderation(commands.Cog):
 
             logEmbed.add_field(name=f"{emojib}__**Case " + str(log[0]) + "**__", value=f"{emojic}**Type- **" + log[3] + f"\n{emojid}**Reason- **" + log[4] + f"\n{emojie}**Time- **" + start + f"\n{emojif}**Length- **" + totaltime + f"\n{emojig}**Moderator- **" + log[7], inline=True)
 
-        logEmbed.set_thumbnail(url=member.avatar_url)
+        logEmbed.set_thumbnail(url=member.avatar.url)
 
         await ctx.send(embed = logEmbed)
 
@@ -506,7 +506,7 @@ class Moderation(commands.Cog):
         user = await self.bot.fetch_user(caseinfo[2])
 
         logEmbed.add_field(name=user, value=f"{emojib}**Type- **" + caseinfo[3] + f"\n{emojic}**Reason- **" + caseinfo[4] + f"\n{emojid}**Time- **" + start + f"\n{emojie}**Length- **" + totaltime + f"\n{emojif}**Moderator- **" + caseinfo[7], inline=True)
-        logEmbed.set_thumbnail(url=user.avatar_url)
+        logEmbed.set_thumbnail(url=user.avatar.url)
 
         await ctx.send(embed = logEmbed)
 
@@ -545,7 +545,7 @@ class Moderation(commands.Cog):
 
             title = f"{emojia}User Unmuted: {member.name}"
             desc = f"{emojib}Responsible Moderator: {ctx.author.name}"
-            url = member.avatar_url
+            url = member.avatar.url
 
             embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=title, desc=desc, useColor=1)
             embed.set_thumbnail(url=url)
@@ -587,7 +587,7 @@ class Moderation(commands.Cog):
 
             title = f"{emojia}User Ungraveled: {member.name}"
             desc = f"{emojib}Responsible Moderator: {ctx.author.name}"
-            url = member.avatar_url
+            url = member.avatar.url
 
             embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=title, desc=desc, useColor=1)
             embed.set_thumbnail(url=url)
@@ -624,7 +624,7 @@ class Moderation(commands.Cog):
         created = member.created_at
         joined = member.joined_at
         roles = member.roles
-        avatar = member.avatar_url
+        avatar = member.avatar.url
         nickname = member.display_name
         memberid = member.id
         perms = member.guild_permissions

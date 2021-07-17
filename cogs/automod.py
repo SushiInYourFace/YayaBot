@@ -487,7 +487,7 @@ class AutoMod(commands.Cog):
         channel = after.guild.get_channel(logID[0])
 
         editEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, after.guild.id, embTitle=f"{emojia}Message edited in {after.channel.name}", useColor=3)
-        editEmbed.set_author(name=str(after.author), icon_url=after.author.avatar_url)
+        editEmbed.set_author(name=str(after.author), icon_url=after.author.avatar.url)
 
         #difference
         d = difflib.Differ()
@@ -544,7 +544,7 @@ class AutoMod(commands.Cog):
                 content = content[:1020] + "..."
 
             deleteEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, message.guild.id, embTitle=f"{emojia}Message deleted from **{message.channel.name}**", desc=content, force=True, forceColor=0xff0000)
-            deleteEmbed.set_author(name=str(message.author), icon_url=message.author.avatar_url)
+            deleteEmbed.set_author(name=str(message.author), icon_url=message.author.avatar.url)
 
             await channel.send(embed=deleteEmbed)
 
@@ -595,7 +595,7 @@ class AutoMod(commands.Cog):
             channel = member.guild.get_channel(logID[0])
             created = member.created_at
             timestamp = created.strftime("%Y-%m-%d, %H:%M:%S")
-            url = member.avatar_url
+            url = member.avatar.url
 
             title=f"User Joined: {member.name}"
             desc=f"Account created: {timestamp}"
@@ -624,7 +624,7 @@ class AutoMod(commands.Cog):
         if logID and logID != 0:
 
             channel = member.guild.get_channel(logID[0])
-            url = member.avatar_url
+            url = member.avatar.url
 
             embed = fEmbeds.fancyEmbeds.makeEmbed(self, member.guild.id, embTitle=f"User Left: {member.name}", force=True, forceColor=0xff0000)
             embed.set_thumbnail(url=url)
@@ -652,7 +652,7 @@ class AutoMod(commands.Cog):
                     channel = member.guild.get_channel(logID[0])
                     title = f"Member Renamed: {member.name}"
                     desc = "Reason: Inappropriate nickname - Automod"
-                    url = member.avatar_url
+                    url = member.avatar.url
 
                     embed = fEmbeds.fancyEmbeds.makeEmbed(self, after.guild.id, embTitle=title, desc=desc, useColor=1)
                     embed.set_thumbnail(url=url)
@@ -683,7 +683,7 @@ class AutoMod(commands.Cog):
                         channel = member.guild.get_channel(logID[0])
                         title = f"Member Renamed: {member.name}"
                         desc = "Reason: Inappropriate username - Automod"
-                        url = member.avatar_url
+                        url = member.avatar.url
 
                         embed = fEmbeds.fancyEmbeds.makeEmbed(self, member.guild.id, embTitle=title, desc=desc, useColor=1)
                         embed.set_thumbnail(url=url)
