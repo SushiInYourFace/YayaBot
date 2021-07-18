@@ -898,6 +898,49 @@ class Moderation(commands.Cog):
 
         await ctx.send(embed=embed)
 
+    @commands.command(brief=":card_box: ")
+    @commands.check(functions.has_modrole)
+    async def moderations(self, ctx):
+        """Shows all active moderations in the current guild."""
+
+        style = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
+        emoji = fEmbeds.fancyEmbeds.getStyleValue(self, ctx.guild.id, style, "emoji")
+
+        if emoji is False:
+            emojia = ""
+            emojib = ""
+            emojic = ""
+            emojid = ""
+            emojie = ""
+        else:
+            emojia = ":card_box: "
+            emojib = ":notepad_spiral: "
+            emojic = ":slight_smile: "
+            emojid = ":page_facing_up: "
+            emojie = ":stopwatch: "
+
+        cursor = await self.connection.execute("SELECT id_in_guild, guild, user, type, expires FROM caselog WHERE id > ? AND guild = ?", (0, ctx.guild.id))
+        logs = await cursor.fetchall()
+
+        #cursor = await self.connection.execute("SELECT id_in_guild, guild, user, type, expires FROM caselog WHERE guild = ?", (ctx.guild.id))
+        #logs = await cursor.fetchall()
+
+        timestamp = f"<t:{int(time.time())}:F>"
+
+        modEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}Active Moderations", desc=f"as of {timestamp}", useColor=1)
+
+        for log in logs:
+            if int(time.time()) - int(log[4]) < 0:
+                if int(time.time()) - int(log[4]) < (60*60*24):
+                    form = "R"
+                else:
+                    form = "F"
+
+                user = self.bot.get_user(log[2])
+
+                modEmbed.add_field(name=f"{emojib}__**Case {str(log[0])}**__", value=f"{emojic}**User:** {user.name}#{user.discriminator}\n{emojid}**Type:** {log[3]}\n{emojie}**Expires** <t:{int(log[4])}:{form}>")
+
+        await ctx.send(embed=modEmbed)
 
     #End of Commands
 
@@ -907,7 +950,10 @@ class Moderation(commands.Cog):
         now = time.time()
         cursor = await self.connection.cursor()
         expired = await cursor.execute("SELECT id FROM active_cases WHERE expiration <= " + str(now))
-        expired = await expired.fetchall()
+        try:
+            expired = await expired.fetchall()
+        except AttributeError:
+            return
         for item in expired:
             case = await cursor.execute("SELECT guild, user, type FROM caselog WHERE id = ?", (item[0],))
             case = await case.fetchone()
