@@ -921,6 +921,7 @@ class Moderation(commands.Cog):
 
         cursor = await self.connection.execute("SELECT id_in_guild, guild, user, type, expires FROM caselog WHERE id > ? AND guild = ?", (0, ctx.guild.id))
         logs = await cursor.fetchall()
+        await cursor.close()
 
         #cursor = await self.connection.execute("SELECT id_in_guild, guild, user, type, expires FROM caselog WHERE guild = ?", (ctx.guild.id))
         #logs = await cursor.fetchall()
