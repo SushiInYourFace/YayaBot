@@ -46,6 +46,7 @@ class Utilities(commands.Cog):
         self.bot = bot
         self._last_member = None
         self.connection = bot.connection
+        self.setup_running = []
 
     @commands.group(name="setup", help="setup some (or all) features of the bot", aliases=["su",], brief=":wrench: ")
     @commands.check_any(commands.has_permissions(administrator=True),commands.check(functions.has_adminrole))
@@ -66,95 +67,94 @@ class Utilities(commands.Cog):
     @setup.command(help="Sets up all the bot's features", name="all", brief=":wrench: ")
     async def setup_all(self, ctx):
         guild = ctx.guild
-        await ctx.send("Beginning server set-up")
-        await ctx.send("First, please say the name of your gravel role. (case sensitive)")
+        if guild.id in self.setup_running:
+            await ctx.send("Someone is already setting up this server.")
+            return
+        self.setup_running.append(guild.id)
+        setup_message = await ctx.send("Beginning server set-up")
         def check(response):
             return response.channel == ctx.channel and response.author == ctx.author
-        async def get_message():
-            try:
-                message = await self.bot.wait_for('message', timeout=60.0, check=check)
-                return message
-            except asyncio.TimeoutError:
-                await ctx.send("No response received. Cancelling")
-                return
-        message = await get_message()
-        try:
-            gravelRole = await commands.RoleConverter().convert(ctx,message.content)
-        except commands.RoleNotFound:
-            await ctx.send("That does not appear to be a valid role. Cancelling")
-            return
-        await ctx.send("Next, please give the name of your muted role.")
-        message = await get_message()
-        try:
-            mutedRole = await commands.RoleConverter().convert(ctx,message.content)
-        except commands.RoleNotFound:
-            await ctx.send("That does not appear to be a valid role. Cancelling")
-            return
-        await ctx.send("Ok, now please tell me what the name is for your moderator role (people with this role will be able to use mod-only commands).")
-        message = await get_message()
-        try:
-            modRole = await commands.RoleConverter().convert(ctx,message.content)
-        except commands.RoleNotFound:
-            await ctx.send("That does not appear to be a valid role. Cancelling")
-            return
-        await ctx.send("Now for the name of your admin role (people with this role will be able to use admin-only commands).")
-        message = await get_message()
-        try:
-            adminRole = await commands.RoleConverter().convert(ctx,message.content)
-        except commands.RoleNotFound:
-            await ctx.send("That does not appear to be a valid role. Cancelling")
-            return
-        await ctx.send("Please say the name of your trial moderator role (or 'none' for no role)")
-        message = await get_message()
-        if message.content.lower() != "none":
-            try:
-                trialRole = await commands.RoleConverter().convert(ctx,message.content)
-            except commands.RoleNotFound:
-                await ctx.send("That does not appear to be a valid role. Cancelling")
-                return
-        else:
-            trialRole = None
-        await ctx.send("Enter the name of your commands role or 'none' for no role (if supplied, this role will be required to use any commands).")
-        message = await get_message()
-        if message.content.lower() != "none":
-            try:
-                commandRole = await commands.RoleConverter().convert(ctx,message.content)
-            except commands.RoleNotFound:
-                await ctx.send("That does not appear to be a valid role. Cancelling")
-                return
-        else:
-            commandRole = None
-        await ctx.send("Enter the cooldown for your commands (in milliseconds) or type 'none' for no cooldown (cooldown does not apply to mods and admins).")
-        message = await get_message()
-        if message.content.lower() != "none":
-            try:
-                commandCooldown = int(message.content)
-            except ValueError:
-                await ctx.send("That does not appear to be a valid number. Cancelling")
-                return
-        else:
-            commandCooldown = 0
-        await ctx.send("Almost there! Please send me your modlog channel, or type \"None\" if you do not want a modlog channel.")
-        message = await get_message()
-        if message.content.lower() != "none":
-            try:
-                logChannel = await commands.TextChannelConverter().convert(ctx,message.content)
-            except commands.ChannelNotFound:
-                await ctx.send("That does not appear to be a valid channel. Cancelling")
-                return
-        else:
-            logChannel = None
-        await ctx.send("Last, please tell me what prefix you would like to use for commands")
-        prefix = await get_message()
+        async def get_message(convertTo=None,allowNone=False):
+            while 1:
+                try:
+                    message = await self.bot.wait_for('message', timeout=60.0, check=check)
+                except asyncio.TimeoutError:
+                    await ctx.send("No response received. Cancelling")
+                    return False
+                content = message.content
+                try:
+                    await message.delete()
+                except commands.MissingPermissions:
+                    pass
+                if content.lower() == "cancel":
+                    await ctx.send("Cancelling..")
+                    return False
+                if (content.lower() == "none" and allowNone):
+                    return None
+                try:
+                    if convertTo == "role":
+                        content = await commands.RoleConverter().convert(ctx,content)
+                    elif convertTo == "channel":
+                        content = await commands.TextChannelConverter().convert(ctx,content)
+                except (commands.RoleNotFound, commands.ChannelNotFound) as e:
+                    await ctx.send(f"That {convertTo} could not be found. Try again and make sure the capitalisation and spelling is correct.",delete_after=3)
+                    continue
+                if convertTo == "int":
+                    try:
+                        content = int(content)
+                    except:
+                        await ctx.send("That doesn't seem to be a valid number. Try again.",delete_after=3)
+                        continue
+                return content
 
-        self.bot.guild_prefixes[ctx.guild.id] = prefix.content
+        await setup_message.edit(content="First, please say the name of your gravel role. (case sensitive)")
+        gravelRole = await get_message("role")
+        if gravelRole is False:
+            return
+        await setup_message.edit(content="Next, please give the name of your muted role.")
+        mutedRole = await get_message("role")
+        if mutedRole is False:
+            return
+        await setup_message.edit(content="Ok, now please tell me what the name is for your moderator role (people with this role will be able to use mod-only commands).")
+        modRole = await get_message("role")
+        if modRole is False:
+            return
+        await setup_message.edit(content="Now for the name of your admin role (people with this role will be able to use admin-only commands).")
+        adminRole = await get_message("role")
+        if adminRole is False:
+            return
+        await setup_message.edit(content="Please say the name of your trial moderator role (or 'none' for no role)")
+        trialRole = await get_message("role",True)
+        if trialRole is False:
+            return
+        await setup_message.edit(content="Enter the name of your commands role or 'none' for no role (if supplied, this role will be required to use any commands).")
+        commandRole = await get_message("role",True)
+        if commandRole is False:
+            return
+        await setup_message.edit(content="Enter the cooldown for your commands (in milliseconds) or type 'none' for no cooldown (cooldown does not apply to mods and admins).")
+        commandCooldown = await get_message("int",True)
+        if commandCooldown is False:
+            return
+        elif commandCooldown is None:
+            commandCooldown = 0
+        await setup_message.edit(content="Almost there! Please send me your modlog channel, or type \"None\" if you do not want a modlog channel.")
+        logChannel = await get_message("channel",True)
+        if logChannel is False:
+            return
+        await setup_message.edit(content="Last, please tell me what prefix you would like to use for commands")
+        prefix = await get_message()
+        if prefix is False:
+            return
+        await setup_message.delete()
+
+        self.bot.guild_prefixes[ctx.guild.id] = prefix
         self.bot.modrole[ctx.guild.id] = modRole.id
         self.bot.adminrole[ctx.guild.id] = adminRole.id
         if trialRole is not None:
             self.bot.trialrole[ctx.guild.id] = trialRole.id
 
         cursor = await self.connection.cursor()
-        await cursor.execute("INSERT INTO guild_prefixes(guild,prefix) VALUES(?, ?) ON CONFLICT(guild) DO UPDATE SET prefix=excluded.prefix", (guild.id, prefix.content))
+        await cursor.execute("INSERT INTO guild_prefixes(guild,prefix) VALUES(?, ?) ON CONFLICT(guild) DO UPDATE SET prefix=excluded.prefix", (guild.id, prefix))
         await cursor.execute("INSERT INTO role_ids(guild,gravel,muted,moderator,admin,trialmod,modlogs,command_usage,command_cooldown) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(guild) DO UPDATE SET gravel=excluded.gravel, muted=excluded.muted, moderator=excluded.moderator, admin=excluded.admin, trialmod=excluded.trialmod, modlogs=excluded.modlogs, command_usage=excluded.command_usage, command_cooldown=excluded.command_cooldown", (guild.id, gravelRole.id, mutedRole.id, modRole.id, adminRole.id, getattr(trialRole,"id",0),getattr(logChannel,"id",0), getattr(commandRole,"id",0),commandCooldown))
         await self.connection.commit()
         await cursor.close()
@@ -195,9 +195,15 @@ class Utilities(commands.Cog):
         response.add_field(name=f"{emojig}Modlog channel", value=getattr(logChannel,"mention","None"))
         response.add_field(name=f"{emojih}Command role", value=getattr(commandRole,"mention","None"))
         response.add_field(name=f"{emojii}Command cooldown", value=f"{commandCooldown / 1000} Seconds")
-        response.add_field(name=f"{emojij}Command Prefix", value=f"`{prefix.content}`")
+        response.add_field(name=f"{emojij}Command Prefix", value=f"`{prefix}`")
 
         await ctx.send(embed=response)
+
+    @setup.after_invoke
+    async def setup_all_after_invoke(self,ctx):
+        if ctx.message.content.endswith("all") or ctx.message.content.endswith("setup"):
+            if ctx.guild.id in self.setup_running:
+                self.setup_running.remove(ctx.guild.id)
 
     @setup.command(name="modlogs", help="Specifies the channel to be used for modlogs, do not specify a channel to remove logs.", aliases=["logchannel", "modlog", "logs",], brief=":file_folder: ")
     async def setup_modlogs(self, ctx, *, channel:discord.TextChannel=None):
