@@ -614,7 +614,7 @@ class Moderation(commands.Cog):
             emojia = ":scroll: "
             emojib = ":tools: "
             emojic = ":inbox_tray: "
-            emojid = ":card_box: "
+            emojid = ":dividers: "
             emojie = ":ledger: "
             emojif = ":green_book: "
 
@@ -728,7 +728,7 @@ class Moderation(commands.Cog):
         embed.add_field(name=f"{emojib} Creation Date", value=f"<t:{int(created.timestamp() + 0.5)}:f>")
         embed.add_field(name=f"{emojic} Join Date", value=f"<t:{int(joined.timestamp() + 0.5)}:f>")
         embed.add_field(name="_ _", value="_ _")
-        embed.add_field(name=f"{emojid} {rolefieldname}", value=f"{rolefieldvalue}")
+        embed.add_field(name=f"{emojid} {rolefieldname}", value=f"{rolefieldvalue}", inline=False)
         embed.add_field(name=f"{emojie} Acknowledgements", value=ack)
         embed.add_field(name=f"{emojif} Key Permissions", value=permlist, inline=False)
 
@@ -870,7 +870,9 @@ class Moderation(commands.Cog):
         else:
             description = f"Server Invite: {invite}\nID: {guildid}"
 
-        embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=title, desc=description, force=True, forceColor=boostcol, footer=f"Server Created At {created_at.strftime('%Y-%m-%d %H:%M:%S')}")
+        description = description + f"\nServer Created on <t:{int(created_at.timestamp())}:F>"
+
+        embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=title, desc=description, force=True, forceColor=boostcol)
         embed.add_field(name=f"{emojib}Owner", value=owner)
         embed.add_field(name=f"{emojic}Text Channels", value=channels)
         embed.add_field(name=f"{emojid}Voice Channels", value=voice)
