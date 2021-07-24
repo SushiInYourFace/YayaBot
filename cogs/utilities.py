@@ -11,34 +11,6 @@ from discord.ext import commands
 import cogs.fancyEmbeds as fEmbeds
 import functions
 
-
-async def tag_check(ctx):
-    if ctx.invoked_with == "help":
-        return True
-    cursor = await ctx.bot.connection.execute("SELECT * FROM tags WHERE guild = ?", (ctx.guild.id,))
-    tags = await cursor.fetchone()
-    if (tags is None and ctx.author.guild_permissions.manage_messages): # No guild tags and the user can manage messages
-        if not (ctx.command.root_parent == "tag" or ctx.command.name == "tag"): # Check is not coming from a tag command so return True
-            return True
-        await cursor.execute("INSERT INTO tags(guild,role,tags) VALUES(?,?,?)",(ctx.guild.id,ctx.author.top_role.id,"{}"))
-        await ctx.bot.connection.commit()
-        await ctx.send(f"Tags created and role set to {ctx.author.top_role.name}.")
-        tags = await cursor.execute("SELECT * FROM tags WHERE guild = ?", (ctx.guild.id,))
-        tags = await tags.fetchone()
-        await cursor.close()
-    elif tags is None: # User cannot manage messages but there are no tags
-        await cursor.close()
-        return False
-    if ctx.guild.get_role(int(tags[1])) <= ctx.author.top_role: # Tags do exist and the user has the roles required
-        await cursor.close()
-        return True
-    try:
-        await cursor.close()
-    except:
-        pass
-    return False
-
-
 class Utilities(commands.Cog):
     """Adds utilities for users!"""
 
@@ -356,7 +328,6 @@ class Utilities(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.group(aliases=["t"], brief=":label: ")
-    @commands.check(tag_check)
     async def tag(self,ctx):
         """Predefined messages which can be triggered by commands."""
         if ctx.invoked_subcommand is not None:
@@ -365,20 +336,30 @@ class Utilities(commands.Cog):
         if tag.find(' ') == -1:
             await ctx.send_help(ctx.command)
         tag = tag[tag.find(' ')+1:]
-        cursor = await self.connection.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,))
+        cursor = await self.connection.execute("SELECT tags FROM tags WHERE guild = ?",(ctx.guild.id,))
         guildTags = await cursor.fetchone()
         await cursor.close()
-        if ctx.guild.get_role(int(guildTags[1])) <= ctx.author.top_role:
-            tags = json.loads(guildTags[2])
-            try:
-                if (texttag := tags[tag]["text"]) and (embedtag := tags[tag]["embed"]):
-                    await ctx.send(texttag,embed=discord.Embed.from_dict(embedtag))
-                elif (texttag := tags[tag]["text"]):
-                    await ctx.send(texttag)
-                elif (embedtag := tags[tag]["embed"]):
-                    await ctx.send(embed=discord.Embed.from_dict(embedtag))
-            except KeyError:
-                pass
+        tags = json.loads(guildTags[0])
+        try:
+            if (texttag := tags[tag]["text"]) and (embedtag := tags[tag]["embed"]):
+                await ctx.send(texttag,embed=discord.Embed.from_dict(embedtag))
+            elif (texttag := tags[tag]["text"]):
+                await ctx.send(texttag)
+            elif (embedtag := tags[tag]["embed"]):
+                await ctx.send(embed=discord.Embed.from_dict(embedtag))
+        except KeyError:
+            pass
+
+    @tag.before_invoke
+    async def tag_before_invoke(self,ctx):
+        if not (ctx.command.root_parent == "tag" or ctx.command.name == "tag"): # Check is not coming from a tag command so return True
+            return
+        cursor = await ctx.bot.connection.execute("SELECT tags FROM tags WHERE guild = ?", (ctx.guild.id,))
+        tags = await cursor.fetchone()
+        if (tags is None): # No guild tags and the user can manage messages
+            await cursor.execute("INSERT INTO tags(guild,tags) VALUES(?,?)",(ctx.guild.id,"{}"))
+            await ctx.bot.connection.commit()
+            await ctx.send(f"Tags created.")
 
     @tag.command(name="(tag name)", brief=":placard: ")
     async def tag_tagname(self,ctx):
@@ -395,9 +376,9 @@ class Utilities(commands.Cog):
     @tag_add.command(name="text",aliases=["t"], brief=":placard: ")
     async def tag_add_text(self,ctx,tag,*,text):
         """Sets a tags text assosiation."""
-        cursor = await self.connection.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,))
+        cursor = await self.connection.execute("SELECT tags FROM tags WHERE guild = ?",(ctx.guild.id,))
         guildTags = await cursor.fetchone()
-        tags = json.loads(guildTags[2])
+        tags = json.loads(guildTags[0])
         tags[tag] = {"text": text,"embed": None}
         await cursor.execute("UPDATE tags SET tags=? WHERE guild=?",(json.dumps(tags),ctx.guild.id))
         await self.connection.commit()
@@ -408,9 +389,9 @@ class Utilities(commands.Cog):
     async def tag_add_simpleEmbed(self,ctx,tag,title,*,description=None):
         """Creates a simple embed with only a title and description.
         Title must be in "s and has a character limit of 256.."""
-        cursor = await self.connection.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,))
+        cursor = await self.connection.execute("SELECT tags FROM tags WHERE guild = ?",(ctx.guild.id,))
         guildTags = await cursor.fetchone()
-        tags = json.loads(guildTags[2])
+        tags = json.loads(guildTags[0])
         tags[tag] = {"text": None,"embed": {"title":title,"description":description if description else ""}}
         await cursor.execute("UPDATE tags SET tags=? WHERE guild=?",(json.dumps(tags),ctx.guild.id))
         await self.connection.commit()
@@ -434,9 +415,9 @@ class Utilities(commands.Cog):
         else:
             embed.replace("\n","")
             embed = json.loads(embed)
-        cursor = await self.connection.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,))
+        cursor = await self.connection.execute("SELECT tags FROM tags WHERE guild = ?",(ctx.guild.id,))
         guildTags = await cursor.fetchone()
-        tags = json.loads(guildTags[2])
+        tags = json.loads(guildTags[0])
         if 'content' in embed.keys():
             text = embed["content"]
         else:
@@ -457,9 +438,9 @@ class Utilities(commands.Cog):
     @commands.check(functions.has_modrole)
     async def tag_remove(self,ctx,tag):
         """Removes a tag text assosiation."""
-        cursor = await self.connection.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,))
+        cursor = await self.connection.execute("SELECT tags FROM tags WHERE guild = ?",(ctx.guild.id,))
         guildTags = await cursor.fetchone()
-        tags = json.loads(guildTags[2])
+        tags = json.loads(guildTags[0])
         tags.pop(tag)
         await cursor.execute("UPDATE tags SET tags=? WHERE guild=?",(json.dumps(tags),ctx.guild.id))
         await self.connection.commit()
@@ -469,10 +450,13 @@ class Utilities(commands.Cog):
     @tag.command(name="list",aliases=["get"], brief=":file_cabinet: ")
     async def tag_list(self,ctx):
         """Lists tags and their text assosiation."""
-        cursor = self.connection.execute("SELECT * FROM tags WHERE guild = ?",(ctx.guild.id,))
+        cursor = await self.connection.execute("SELECT tags FROM tags WHERE guild = ?",(ctx.guild.id,))
         guildTags = await cursor.fetchone()
         await cursor.close()
-        tags = json.loads(guildTags[2])
+        if guildTags:
+            tags = json.loads(guildTags[0])
+        else:
+            tags = {}
 
         e = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
         emoji = fEmbeds.fancyEmbeds.getStyleValue(self , ctx.guild.id, e, "emoji")
@@ -482,20 +466,12 @@ class Utilities(commands.Cog):
         else:
             emojia = ":bookmark_tabs: "
 
-        embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}Tags:", desc=", ".join(tags.keys())+f"\n\nUsable by {ctx.guild.get_role(int(guildTags[1])).mention} and above.", useColor=2)
+        embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}Tags:", useColor=2)
         await ctx.send(embed=embed)
 
-    @tag.command(name="role", brief=":page_facing_up: ")
-    @commands.check(functions.has_modrole)
-    async def tag_role(self,ctx,*,role:discord.Role=None):
-        """Sets the lowest role to be able to use tags."""
-        if not role:
-            role = ctx.author.top_role
-        cursor = await self.connection.cursor()
-        await cursor.execute("UPDATE tags SET role=? WHERE guild=?",(role.id,ctx.guild.id))
-        await self.connection.commit()
-        await cursor.close()
-        await ctx.send(f"Tag role set to {role.name}.")
+    @commands.command(name="tags", brief=":file_cabinet: ",hidden=True)
+    async def tags(self,ctx):
+        await ctx.invoke(self.bot.get_command("tag list"))
 
     @commands.command(brief=":ping_pong: ")
     @commands.check(functions.has_modrole)
