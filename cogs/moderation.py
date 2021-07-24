@@ -640,30 +640,25 @@ class Moderation(commands.Cog):
             desc = ""
 
         ack = ""
-
         permlist = ""
-
         mentionedroles = []
-        out = ""
-        n = 0
-        x = 0
+        rolefieldname = ""
+        rolefieldvalue = ""
 
         for role in roles:
             if not role.is_default():
                 mentionedroles.append(role.mention)
-                n = n + 1
                 if role.is_premium_subscriber():
                     ack = ack + "Server Booster, "
 
-        while x < n:
-            out = out + f"{mentionedroles[x]} "
-            x = x + 1
+        for role in reversed(mentionedroles):
+            rolefieldvalue = rolefieldvalue + role
 
-        x = f" - {x}"
-
-        if out == "":
-            out = "This member has no roles."
-            x = ""
+        if len(mentionedroles) == 0:
+            rolefieldname = "Roles"
+            rolefieldvalue = "This member has no roles."
+        else:
+            rolefieldname = f"Roles - {len(mentionedroles)}"
 
         if functions.has_modrole_no_ctx(member, self.bot):
             ack = ack + "Server Moderator, "
@@ -673,41 +668,42 @@ class Moderation(commands.Cog):
             ack = ack + "Server Owner, "
 
         if perms.administrator:
-            permlist = permlist + "Administrator, "
-        if perms.ban_members:
-            permlist = permlist + "Ban Members, "
-        if perms.deafen_members:
-            permlist = permlist + "Deafen Members, "
-        if perms.kick_members:
-            permlist = permlist + "Kick Members, "
-        if perms.manage_channels:
-            permlist = permlist + "Manage Channels, "
-        if perms.manage_emojis:
-            permlist = permlist + "Manage Emojis, "
-        if perms.manage_guild:
-            permlist = permlist + "Manage Guild, "
-        if perms.manage_messages:
-            permlist = permlist + "Manage Messages, "
-        if perms.manage_nicknames:
-            permlist = permlist + "Manage Nicknames, "
-        if perms.manage_permissions:
-            permlist = permlist + "Manage Permissions, "
-        if perms.manage_roles:
-            permlist = permlist + "Manage Roles, "
-        if perms.mention_everyone:
-            permlist = permlist + "Mention Everyone, "
-        if perms.mute_members:
-            permlist = permlist + "Mute Members, "
-        if perms.priority_speaker:
-            permlist = permlist + "Priority Speaker, "
-        if perms.send_tts_messages:
-            permlist = permlist + "Send TTS Messages, "
-        if perms.use_slash_commands:
-            permlist = permlist + "Use Slash Commands, "
-        if perms.view_audit_log:
-            permlist = permlist + "View Audit Log, "
-        if perms.view_guild_insights:
-            permlist = permlist + "View Guild Insights, "
+            permlist = "Administrator, "
+        else:
+            if perms.ban_members:
+                permlist = permlist + "Ban Members, "
+            if perms.deafen_members:
+                permlist = permlist + "Deafen Members, "
+            if perms.kick_members:
+                permlist = permlist + "Kick Members, "
+            if perms.manage_channels:
+                permlist = permlist + "Manage Channels, "
+            if perms.manage_emojis:
+                permlist = permlist + "Manage Emojis, "
+            if perms.manage_guild:
+                permlist = permlist + "Manage Guild, "
+            if perms.manage_messages:
+                permlist = permlist + "Manage Messages, "
+            if perms.manage_nicknames:
+                permlist = permlist + "Manage Nicknames, "
+            if perms.manage_permissions:
+                permlist = permlist + "Manage Permissions, "
+            if perms.manage_roles:
+                permlist = permlist + "Manage Roles, "
+            if perms.mention_everyone:
+                permlist = permlist + "Mention Everyone, "
+            if perms.mute_members:
+                permlist = permlist + "Mute Members, "
+            if perms.priority_speaker:
+                permlist = permlist + "Priority Speaker, "
+            if perms.send_tts_messages:
+                permlist = permlist + "Send TTS Messages, "
+            if perms.use_slash_commands:
+                permlist = permlist + "Use Slash Commands, "
+            if perms.view_audit_log:
+                permlist = permlist + "View Audit Log, "
+            if perms.view_guild_insights:
+                permlist = permlist + "View Guild Insights, "
 
         if ack == "":
             ack = "This member has no acknowledgements."
@@ -724,17 +720,17 @@ class Moderation(commands.Cog):
         if color == discord.Colour.default().to_rgb():
             force = False
 
-        embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}Member information for {name}#{discrim}:", desc=desc, useColor=1, force=force, forceColor=color, footer=f"Member ID: {memberid}")
+        embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia} {name}#{discrim}", desc=desc, useColor=1, force=force, forceColor=color, footer=f"Member ID: {memberid}")
 
         if isbot:
             embed.add_field(name="Bot", value="This user is a bot, beep boop!", inline=False)
 
-        embed.add_field(name=f"{emojib}Creation Date", value=f"{created.strftime('%Y-%m-%d %H:%M:%S')}")
-        embed.add_field(name=f"{emojic}Join Date", value=f"{joined.strftime('%Y-%m-%d %H:%M:%S')}")
+        embed.add_field(name=f"{emojib} Creation Date", value=f"<t:{int(created.timestamp() + 0.5)}:f>")
+        embed.add_field(name=f"{emojic} Join Date", value=f"<t:{int(joined.timestamp() + 0.5)}:f>")
         embed.add_field(name="_ _", value="_ _")
-        embed.add_field(name=f"{emojid}Roles{x}", value=f"{out}")
-        embed.add_field(name=f"{emojie}Acknowledgements", value=ack)
-        embed.add_field(name=f"{emojif}Key Permissions", value=permlist, inline=False)
+        embed.add_field(name=f"{emojid} {rolefieldname}", value=f"{rolefieldvalue}")
+        embed.add_field(name=f"{emojie} Acknowledgements", value=ack)
+        embed.add_field(name=f"{emojif} Key Permissions", value=permlist, inline=False)
 
         embed.set_thumbnail(url=avatar)
 
