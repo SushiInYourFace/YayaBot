@@ -6,8 +6,12 @@ import datetime
 
 import aiosqlite
 
-#con = sqlite3.connect("database.db")
-#cursor = con.cursor()
+
+async def close_bot(bot):
+    #Shuts down the bot completely, closing the database connection in the process
+    await bot.connection.close()
+    await bot.close()
+
 
 def has_modrole(ctx, bot=None):
     if not bot:

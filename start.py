@@ -45,7 +45,7 @@ while run:
         logging.info("Committed changes, not updating.")
     if pip:
         requirements_check()
-    code = subprocess.run([sys.executable,"bot.py"],stdout=subprocess.PIPE).returncod
+    code = subprocess.run([sys.executable,"bot.py"],stdout=subprocess.PIPE).returncode
     if code == 0:
         run = False
 

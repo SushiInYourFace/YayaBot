@@ -293,6 +293,8 @@ async def on_command_error(ctx, error):
         raise error
 
 bot.run(Token)
+
+
 if bot.restart:
     sys.exit(1)
 else:

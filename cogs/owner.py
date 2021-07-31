@@ -34,7 +34,7 @@ class Owner(commands.Cog):
     async def shutdown(self,ctx):
         """Shuts the bot down!"""
         await ctx.send("👋 Goodbye")
-        await self.bot.close()
+        await functions.close_bot(self.bot)
 
     @commands.command(brief=":arrows_counterclockwise: ")
     @commands.is_owner()
@@ -42,7 +42,7 @@ class Owner(commands.Cog):
         """Restarts the bot!"""
         await ctx.send("🏃‍♂️ Be right back!")
         self.bot.restart = True
-        await self.bot.close()
+        await functions.close_bot(self.bot)
 
     @commands.group(aliases = ['c'], brief=":gear: ")
     @commands.is_owner()
