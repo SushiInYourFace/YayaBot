@@ -499,6 +499,7 @@ class AutoMod(commands.Cog):
         end = []
 
         for i in enumerate(result):
+            i = i[0]
             if result[i].startswith("- "):
                 start.append("~~" + result[i][2:] + "~~")
             elif result[i].startswith("+ "):
@@ -512,6 +513,7 @@ class AutoMod(commands.Cog):
         #formats strikethroughs pretty
         for i in enumerate(start):
             try:
+                i = i[0]
                 if start[i].endswith("~~") and start[i+1].startswith("~~"):
                     start[i] = start[i][:-2]
                     start[i+1] = start[i+1][2:]
