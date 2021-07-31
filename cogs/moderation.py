@@ -948,34 +948,37 @@ class Moderation(commands.Cog):
     async def timedRoleCheck(self):
         now = time.time()
         cursor = await self.connection.cursor()
-        expired = await cursor.execute("SELECT id FROM active_cases WHERE expiration <= " + str(now))
+        expired = await cursor.execute(f"SELECT active_cases.id AS case_id, guild, user, type FROM active_cases INNER JOIN caselog ON active_cases.id == caselog.id WHERE expiration <= {str(now)} ")
         try:
             expired = await expired.fetchall()
         except AttributeError:
             return
-        for item in expired:
-            case = await cursor.execute("SELECT guild, user, type FROM caselog WHERE id = ?", (item[0],))
-            case = await case.fetchone()
-            guild = self.bot.get_guild(int(case[0]))
-            if case[2] == "gravel":
-                roleid = await SqlCommands.get_role(case[0], "gravel")
+        for case in expired:
+            guild = self.bot.get_guild(int(case[1]))
+            if case[3] == "gravel":
+                roleid = await SqlCommands.get_role(case[1], "gravel")
                 role = guild.get_role(roleid)
-                member = guild.get_member(case[1])
+                member = guild.get_member(case[2])
                 try:
                     await member.remove_roles(role)
                 except:
                     pass
-            elif case[2] == "mute":
-                roleid = await SqlCommands.get_role(case[0], "muted")
+            elif case[3] == "mute":
+                roleid = await SqlCommands.get_role(case[1], "muted")
                 role = guild.get_role(roleid)
-                member = guild.get_member(case[1])
+                member = guild.get_member(case[2])
                 try:
                     await member.remove_roles(role)
                 except:
                     pass
-            await cursor.execute("DELETE FROM active_cases WHERE id = ?", (item[0],))
-            await self.connection.commit()
+            await cursor.execute("DELETE FROM active_cases WHERE id = ?", (case[0],))
+        await self.connection.commit()
         await cursor.close()
+
+    @timedRoleCheck.before_loop
+    async def before_TimedRoleCheck(self):
+        await self.bot.wait_until_ready()
+
 
     async def bot_check_once(self,ctx):
         if isinstance(ctx.channel,discord.DMChannel):
