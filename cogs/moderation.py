@@ -614,7 +614,7 @@ class Moderation(commands.Cog):
             emojia = ":scroll: "
             emojib = ":tools: "
             emojic = ":inbox_tray: "
-            emojid = ":card_box: "
+            emojid = ":dividers: "
             emojie = ":ledger: "
             emojif = ":green_book: "
 
@@ -640,30 +640,25 @@ class Moderation(commands.Cog):
             desc = ""
 
         ack = ""
-
         permlist = ""
-
         mentionedroles = []
-        out = ""
-        n = 0
-        x = 0
+        rolefieldname = ""
+        rolefieldvalue = ""
 
         for role in roles:
             if not role.is_default():
                 mentionedroles.append(role.mention)
-                n = n + 1
                 if role.is_premium_subscriber():
                     ack = ack + "Server Booster, "
 
-        while x < n:
-            out = out + f"{mentionedroles[x]} "
-            x = x + 1
+        for role in reversed(mentionedroles):
+            rolefieldvalue = rolefieldvalue + role
 
-        x = f" - {x}"
-
-        if out == "":
-            out = "This member has no roles."
-            x = ""
+        if len(mentionedroles) == 0:
+            rolefieldname = "Roles"
+            rolefieldvalue = "This member has no roles."
+        else:
+            rolefieldname = f"Roles - {len(mentionedroles)}"
 
         if functions.has_modrole_no_ctx(member, self.bot):
             ack = ack + "Server Moderator, "
@@ -673,41 +668,42 @@ class Moderation(commands.Cog):
             ack = ack + "Server Owner, "
 
         if perms.administrator:
-            permlist = permlist + "Administrator, "
-        if perms.ban_members:
-            permlist = permlist + "Ban Members, "
-        if perms.deafen_members:
-            permlist = permlist + "Deafen Members, "
-        if perms.kick_members:
-            permlist = permlist + "Kick Members, "
-        if perms.manage_channels:
-            permlist = permlist + "Manage Channels, "
-        if perms.manage_emojis:
-            permlist = permlist + "Manage Emojis, "
-        if perms.manage_guild:
-            permlist = permlist + "Manage Guild, "
-        if perms.manage_messages:
-            permlist = permlist + "Manage Messages, "
-        if perms.manage_nicknames:
-            permlist = permlist + "Manage Nicknames, "
-        if perms.manage_permissions:
-            permlist = permlist + "Manage Permissions, "
-        if perms.manage_roles:
-            permlist = permlist + "Manage Roles, "
-        if perms.mention_everyone:
-            permlist = permlist + "Mention Everyone, "
-        if perms.mute_members:
-            permlist = permlist + "Mute Members, "
-        if perms.priority_speaker:
-            permlist = permlist + "Priority Speaker, "
-        if perms.send_tts_messages:
-            permlist = permlist + "Send TTS Messages, "
-        if perms.use_slash_commands:
-            permlist = permlist + "Use Slash Commands, "
-        if perms.view_audit_log:
-            permlist = permlist + "View Audit Log, "
-        if perms.view_guild_insights:
-            permlist = permlist + "View Guild Insights, "
+            permlist = "Administrator, "
+        else:
+            if perms.ban_members:
+                permlist = permlist + "Ban Members, "
+            if perms.deafen_members:
+                permlist = permlist + "Deafen Members, "
+            if perms.kick_members:
+                permlist = permlist + "Kick Members, "
+            if perms.manage_channels:
+                permlist = permlist + "Manage Channels, "
+            if perms.manage_emojis:
+                permlist = permlist + "Manage Emojis, "
+            if perms.manage_guild:
+                permlist = permlist + "Manage Guild, "
+            if perms.manage_messages:
+                permlist = permlist + "Manage Messages, "
+            if perms.manage_nicknames:
+                permlist = permlist + "Manage Nicknames, "
+            if perms.manage_permissions:
+                permlist = permlist + "Manage Permissions, "
+            if perms.manage_roles:
+                permlist = permlist + "Manage Roles, "
+            if perms.mention_everyone:
+                permlist = permlist + "Mention Everyone, "
+            if perms.mute_members:
+                permlist = permlist + "Mute Members, "
+            if perms.priority_speaker:
+                permlist = permlist + "Priority Speaker, "
+            if perms.send_tts_messages:
+                permlist = permlist + "Send TTS Messages, "
+            if perms.use_slash_commands:
+                permlist = permlist + "Use Slash Commands, "
+            if perms.view_audit_log:
+                permlist = permlist + "View Audit Log, "
+            if perms.view_guild_insights:
+                permlist = permlist + "View Guild Insights, "
 
         if ack == "":
             ack = "This member has no acknowledgements."
@@ -724,17 +720,17 @@ class Moderation(commands.Cog):
         if color == discord.Colour.default().to_rgb():
             force = False
 
-        embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}Member information for {name}#{discrim}:", desc=desc, useColor=1, force=force, forceColor=color, footer=f"Member ID: {memberid}")
+        embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia} {name}#{discrim}", desc=desc, useColor=1, force=force, forceColor=color, footer=f"Member ID: {memberid}")
 
         if isbot:
             embed.add_field(name="Bot", value="This user is a bot, beep boop!", inline=False)
 
-        embed.add_field(name=f"{emojib}Creation Date", value=f"{created.strftime('%Y-%m-%d %H:%M:%S')}")
-        embed.add_field(name=f"{emojic}Join Date", value=f"{joined.strftime('%Y-%m-%d %H:%M:%S')}")
+        embed.add_field(name=f"{emojib} Creation Date", value=f"<t:{int(created.timestamp() + 0.5)}:f>")
+        embed.add_field(name=f"{emojic} Join Date", value=f"<t:{int(joined.timestamp() + 0.5)}:f>")
         embed.add_field(name="_ _", value="_ _")
-        embed.add_field(name=f"{emojid}Roles{x}", value=f"{out}")
-        embed.add_field(name=f"{emojie}Acknowledgements", value=ack)
-        embed.add_field(name=f"{emojif}Key Permissions", value=permlist, inline=False)
+        embed.add_field(name=f"{emojid} {rolefieldname}", value=f"{rolefieldvalue}", inline=False)
+        embed.add_field(name=f"{emojie} Acknowledgements", value=ack)
+        embed.add_field(name=f"{emojif} Key Permissions", value=permlist, inline=False)
 
         embed.set_thumbnail(url=avatar)
 
@@ -874,7 +870,9 @@ class Moderation(commands.Cog):
         else:
             description = f"Server Invite: {invite}\nID: {guildid}"
 
-        embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=title, desc=description, force=True, forceColor=boostcol, footer=f"Server Created At {created_at.strftime('%Y-%m-%d %H:%M:%S')}")
+        description = description + f"\nServer Created on <t:{int(created_at.timestamp())}:F>"
+
+        embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=title, desc=description, force=True, forceColor=boostcol)
         embed.add_field(name=f"{emojib}Owner", value=owner)
         embed.add_field(name=f"{emojic}Text Channels", value=channels)
         embed.add_field(name=f"{emojid}Voice Channels", value=voice)
@@ -898,6 +896,50 @@ class Moderation(commands.Cog):
 
         await ctx.send(embed=embed)
 
+    @commands.command(brief=":card_box: ")
+    @commands.check(functions.has_modrole)
+    async def moderations(self, ctx):
+        """Shows all active moderations in the current guild."""
+
+        style = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
+        emoji = fEmbeds.fancyEmbeds.getStyleValue(self, ctx.guild.id, style, "emoji")
+
+        if emoji is False:
+            emojia = ""
+            emojib = ""
+            emojic = ""
+            emojid = ""
+            emojie = ""
+        else:
+            emojia = ":card_box: "
+            emojib = ":notepad_spiral: "
+            emojic = ":slight_smile: "
+            emojid = ":page_facing_up: "
+            emojie = ":stopwatch: "
+
+        cursor = await self.connection.execute("SELECT id_in_guild, guild, user, type, expires FROM caselog WHERE id > ? AND guild = ?", (0, ctx.guild.id))
+        logs = await cursor.fetchall()
+        await cursor.close()
+
+        #cursor = await self.connection.execute("SELECT id_in_guild, guild, user, type, expires FROM caselog WHERE guild = ?", (ctx.guild.id))
+        #logs = await cursor.fetchall()
+
+        timestamp = f"<t:{int(time.time())}:F>"
+
+        modEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}Active Moderations", desc=f"as of {timestamp}", useColor=1)
+
+        for log in logs:
+            if int(time.time()) - int(log[4]) < 0:
+                if int(time.time()) - int(log[4]) < (60*60*24):
+                    form = "R"
+                else:
+                    form = "F"
+
+                user = self.bot.get_user(log[2])
+
+                modEmbed.add_field(name=f"{emojib}__**Case {str(log[0])}**__", value=f"{emojic}**User:** {user.name}#{user.discriminator}\n{emojid}**Type:** {log[3]}\n{emojie}**Expires** <t:{int(log[4])}:{form}>")
+
+        await ctx.send(embed=modEmbed)
 
     #End of Commands
 
@@ -906,31 +948,37 @@ class Moderation(commands.Cog):
     async def timedRoleCheck(self):
         now = time.time()
         cursor = await self.connection.cursor()
-        expired = await cursor.execute("SELECT id FROM active_cases WHERE expiration <= " + str(now))
-        expired = await expired.fetchall()
-        for item in expired:
-            case = await cursor.execute("SELECT guild, user, type FROM caselog WHERE id = ?", (item[0],))
-            case = await case.fetchone()
-            guild = self.bot.get_guild(int(case[0]))
-            if case[2] == "gravel":
-                roleid = await SqlCommands.get_role(case[0], "gravel")
+        expired = await cursor.execute(f"SELECT active_cases.id AS case_id, guild, user, type FROM active_cases INNER JOIN caselog ON active_cases.id == caselog.id WHERE expiration <= {str(now)} ")
+        try:
+            expired = await expired.fetchall()
+        except AttributeError:
+            return
+        for case in expired:
+            guild = self.bot.get_guild(int(case[1]))
+            if case[3] == "gravel":
+                roleid = await SqlCommands.get_role(case[1], "gravel")
                 role = guild.get_role(roleid)
-                member = guild.get_member(case[1])
+                member = guild.get_member(case[2])
                 try:
                     await member.remove_roles(role)
                 except:
                     pass
-            elif case[2] == "mute":
-                roleid = await SqlCommands.get_role(case[0], "muted")
+            elif case[3] == "mute":
+                roleid = await SqlCommands.get_role(case[1], "muted")
                 role = guild.get_role(roleid)
-                member = guild.get_member(case[1])
+                member = guild.get_member(case[2])
                 try:
                     await member.remove_roles(role)
                 except:
                     pass
-            await cursor.execute("DELETE FROM active_cases WHERE id = ?", (item[0],))
-            await self.connection.commit()
+            await cursor.execute("DELETE FROM active_cases WHERE id = ?", (case[0],))
+        await self.connection.commit()
         await cursor.close()
+
+    @timedRoleCheck.before_loop
+    async def before_TimedRoleCheck(self):
+        await self.bot.wait_until_ready()
+
 
     async def bot_check_once(self,ctx):
         if isinstance(ctx.channel,discord.DMChannel):
