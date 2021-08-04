@@ -271,7 +271,7 @@ async def on_command_error(ctx, error):
     elif isinstance(error, commands.MissingRequiredArgument):
         commandUsageLine = f"{ctx.prefix}{ctx.command.qualified_name} {ctx.command.signature}"
         paramLocation = commandUsageLine.index("<" + error.param.name + ">")
-        paramLength = len("<" + error.param.name + ">")
+        paramLength = len(error.param.name) + 2
         await ctx.send(f"```{commandUsageLine}\n{' '*paramLocation}{'^'*paramLength}\n{str(error)}```")
     elif isinstance(error, commands.MissingPermissions):
         await ctx.send("Sorry, you don't have permission to use that command!")
@@ -281,6 +281,8 @@ async def on_command_error(ctx, error):
         await ctx.send("You need to be owner to do that.")
     elif isinstance(error,commands.ExpectedClosingQuoteError):
         await ctx.send("You have inputted arguments incorrectly, you may have forgotten a closing \" or put one in by accident.")
+    elif isinstance(error, commands.BadArgument):
+        await ctx.send(str(error))
     elif isinstance(error, commands.RoleNotFound):
         await ctx.send("That role could not be found.")
     elif isinstance(error, sqlite3.OperationalError):

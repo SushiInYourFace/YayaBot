@@ -223,16 +223,15 @@ class InSeconds(commands.Converter):
             try:
                 argument = timeconverters().secondsconverter(int(str(argument[:-1])),str(argument)[-1])
             except ValueError:
-                raise commands.BadArgument("That isn't a timeframe!")
+                raise commands.BadArgument("That isn't a timeframe!\nExamples of valid timeframes: `20s`, `1h`")
             if argument is None:
-                await ctx.send(f"Units not found! We couldn't understand the units. Supported units are:\ns, m, h, d")
-                raise commands.BadArgument(f"Units not found! We couldn't understand the units. Supported units are:\ns, m, h, d")
+                raise commands.BadArgument(f"I couldn't understand the units.\nSupported units are: `s`, `m`, `h`, `d`\nExamples: `20s`, `1h`")
             return argument
         else: # The last character can be int so we assume it's in seconds
             try:
                 return int(argument)
             except ValueError:
-                raise commands.BadArgument("That isn't a timeframe!")
+                raise commands.BadArgument("That isn't a timeframe!\nExamples of valid timeframes: `20s`, `1h`")
 
 class DiscordTimestamp():
     """
