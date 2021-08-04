@@ -541,6 +541,8 @@ class AutoMod(commands.Cog):
         await cursor.close()
         if logID and logID != 0 and not message.author.bot:
             channel = message.guild.get_channel(logID[0])
+            if channel is None:
+                return
             content = message.content
             if len(content) > 1024:
                 content = content[:1020] + "..."

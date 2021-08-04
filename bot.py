@@ -151,6 +151,7 @@ cursor.execute("CREATE TABLE IF NOT EXISTS spam_filters (guild INTEGER PRIMARY K
 cursor.execute("CREATE TABLE IF NOT EXISTS tags (guild INTEGER PRIMARY KEY, tags TEXT NOT NULL)")
 cursor.execute("CREATE TABLE IF NOT EXISTS name_filtering (guild INTEGER PRIMARY KEY, enabled INTEGER)")
 cursor.execute("CREATE TABLE IF NOT EXISTS custom_names (guild INTEGER PRIMARY KEY, nickname TEXT, username TEXT)")
+cursor.execute("CREATE TABLE IF NOT EXISTS active_polls (id INTEGER PRIMARY KEY, guildid INTEGER, channelid INTEGER, expires INTEGER, description TEXT)")
 con.commit()
 
 #load filters into bot variable

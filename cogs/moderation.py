@@ -979,7 +979,6 @@ class Moderation(commands.Cog):
     async def before_TimedRoleCheck(self):
         await self.bot.wait_until_ready()
 
-
     async def bot_check_once(self,ctx):
         if isinstance(ctx.channel,discord.DMChannel):
             return True

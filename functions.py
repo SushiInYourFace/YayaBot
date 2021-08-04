@@ -162,7 +162,10 @@ class Sql:
         #checks if filter is enabled
         cursor = await self.connection.cursor()
         filter_status = await cursor.execute("SELECT enabled FROM name_filtering WHERE guild = ?",(guild,))
-        filter_status = await filter_status.fetchone()
+        try:
+            filter_status = await filter_status.fetchone()
+        except AttributeError:
+            return
         if filter_status is not None:
             await cursor.close()
             return bool(filter_status[0]) #casts the 0 or 1 stored to a boolean
