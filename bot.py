@@ -74,8 +74,6 @@ class NewHelp(commands.HelpCommand):
                 if command != commands[-1] and len(page[-1].fields) == 25: # If not the last command and new page is required
                     page.append(fEmbeds.fancyEmbeds.makeEmbed(self, self.context.guild.id, embTitle=titleDesc[0], desc=titleDesc[1], useColor=0, nofooter=True)) # New page
                     page[-1].add_field(name=f"> **{cogName}**", value=cogDesc, inline=False) # Add cog field
-        if pageOut + 1 > len(page):
-            pageOut = len(page) - 1
         page[pageOut] = fEmbeds.fancyEmbeds.addFooter(self, page[pageOut], f"Page {pageOut+1} of {len(page)}", bot) # Add footer now (didn't know how many pages previously)
         msg = await self.get_destination().send(embed=page[pageOut])
         if len(page) == 1: # If only one page no turning is required
@@ -274,7 +272,7 @@ async def on_command_error(ctx, error):
     elif isinstance(error, commands.MissingRequiredArgument):
         commandUsageLine = f"{ctx.prefix}{ctx.command.qualified_name} {ctx.command.signature}"
         paramLocation = commandUsageLine.index("<" + error.param.name + ">")
-        paramLength = len("<" + error.param.name + ">")
+        paramLength = len(error.param.name) + 2
         await ctx.send(f"```{commandUsageLine}\n{' '*paramLocation}{'^'*paramLength}\n{str(error)}```")
     elif isinstance(error, commands.MissingPermissions):
         await ctx.send("Sorry, you don't have permission to use that command!")
@@ -284,6 +282,8 @@ async def on_command_error(ctx, error):
         await ctx.send("You need to be owner to do that.")
     elif isinstance(error,commands.ExpectedClosingQuoteError):
         await ctx.send("You have inputted arguments incorrectly, you may have forgotten a closing \" or put one in by accident.")
+    elif isinstance(error, commands.BadArgument):
+        await ctx.send(str(error))
     elif isinstance(error, commands.RoleNotFound):
         await ctx.send("That role could not be found.")
     elif isinstance(error, sqlite3.OperationalError):

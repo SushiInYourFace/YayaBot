@@ -5,7 +5,7 @@ from typing import Union
 import datetime
 
 import aiosqlite
-
+from discord.ext import commands
 
 async def close_bot(bot):
     #Shuts down the bot completely, closing the database connection in the process
@@ -196,15 +196,15 @@ class Sql:
 class timeconverters:
     def secondsconverter(self, value, startType):
         if startType == "s":
-            #time already in seconds
-            pass
+            return value
         elif startType == "m":
-            value *= 60
+            return value * 60
         elif startType == "h":
-            value *= 3600
+            return value * 3600
         elif startType == "d":
-            value *= 86400
-        return value
+            return value * 86400
+        return None
+
     def fromseconds(self, seconds):
         if seconds >= 86400:
             days = seconds//86400
@@ -217,6 +217,24 @@ class timeconverters:
             return str(minutes) + (" Minute" if minutes==1 else " Minutes")
         else:
             return str(seconds) + (" Second" if seconds==1 else " Seconds")
+
+class InSeconds(commands.Converter):
+    async def convert(self,ctx,argument):
+        try:
+            int(str(argument)[-1])
+        except: # The last character cannot be an int so convert
+            try:
+                argument = timeconverters().secondsconverter(int(str(argument[:-1])),str(argument)[-1])
+            except ValueError:
+                raise commands.BadArgument("That isn't a timeframe!\nExamples of valid timeframes: `20s`, `1h`")
+            if argument is None:
+                raise commands.BadArgument(f"I couldn't understand the units.\nSupported units are: `s`, `m`, `h`, `d`\nExamples: `20s`, `1h`")
+            return argument
+        else: # The last character can be int so we assume it's in seconds
+            try:
+                return int(argument)
+            except ValueError:
+                raise commands.BadArgument("That isn't a timeframe!\nExamples of valid timeframes: `20s`, `1h`")
 
 class DiscordTimestamp():
     """
