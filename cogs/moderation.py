@@ -44,7 +44,6 @@ class Moderation(commands.Cog):
     #ban
     @commands.command(help="bans a user", brief=":hammer: ")
     @commands.check(functions.has_modrole)
-
     async def ban(self, ctx, member : discord.Member, *, reason=None):
         if not ctx.guild.me.guild_permissions.ban_members:
             await ctx.send("I don't have permissions to ban people.")
@@ -222,27 +221,15 @@ class Moderation(commands.Cog):
     #gravel
     @commands.command(help="Gravels a user", brief=":mute: ")
     @commands.check(functions.has_modrole)
-    async def gravel(self, ctx, member : discord.Member, graveltime, *, reason=None):
-        now = time.time()
-        if graveltime[-1] == "m" or graveltime[-1] == "h" or graveltime[-1] == "d" or graveltime[-1] == "s":
-            timeformat = graveltime[-1]
-            timevalue = graveltime[:-1]
-        else:
-            timeformat = "m"
-            timevalue = graveltime
-        try:
-            timevalue = int(timevalue)
-        except ValueError:
-            await ctx.send("Oops! That's not a valid time format")
-            return
+    async def gravel(self, ctx, member : discord.Member, graveltime: functions.InSeconds, *, reason=None):
         if reason is None:
             reason = "No reason specified"
-        totalsecs = TimeConversions.secondsconverter(timevalue, timeformat)
         roleid = await SqlCommands.get_role(ctx.guild.id, "gravel")
         converter = commands.RoleConverter()
         role = await converter.convert(ctx,str(roleid))
         await member.add_roles(role)
-        end = now + totalsecs
+        now = time.time()
+        end = now + graveltime
 
         style = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
         emoji = fEmbeds.fancyEmbeds.getStyleValue(self, ctx.guild.id, style, "emoji")
@@ -258,7 +245,7 @@ class Moderation(commands.Cog):
             emojic = ":cop: "
             emojid = ":scroll: "
 
-        gravelEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}You have been graveled in {ctx.guild.name} for {TimeConversions.fromseconds(totalsecs)}", force=True, forceColor=0xff0000)
+        gravelEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}You have been graveled in {ctx.guild.name} for {TimeConversions.fromseconds(graveltime)}", force=True, forceColor=0xff0000)
         gravelEmbed.add_field(name="Reason:", value=reason)
 
         try:
@@ -295,19 +282,8 @@ class Moderation(commands.Cog):
 
     @commands.command(help="Mutes a user", brief=":mute: ")
     @commands.check(functions.has_modrole)
-    async def mute(self, ctx, member : discord.Member, mutetime, *, reason=None):
+    async def mute(self, ctx, member : discord.Member, mutetime: functions.InSeconds, *, reason=None):
         now = time.time()
-        if mutetime[-1] == "m" or mutetime[-1] == "h" or mutetime[-1] == "d" or mutetime[-1] == "s":
-            timeformat = mutetime[-1]
-            timevalue = mutetime[:-1]
-        else:
-            timeformat = "m"
-            timevalue = mutetime
-        try:
-            timevalue = int(timevalue)
-        except ValueError:
-            await ctx.send("Oops! That's not a valid time format")
-            return
         if reason is None:
             reason = "No reason specified"
         totalsecs = TimeConversions.secondsconverter(timevalue, timeformat)
@@ -316,7 +292,7 @@ class Moderation(commands.Cog):
         converter = commands.RoleConverter()
         role = await converter.convert(ctx,roleid)
         await member.add_roles(role)
-        end = now + totalsecs
+        end = now + mutetime
 
         style = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
         emoji = fEmbeds.fancyEmbeds.getStyleValue(self, ctx.guild.id, style, "emoji")
@@ -330,7 +306,7 @@ class Moderation(commands.Cog):
             emojib = ":white_check_mark: "
             emojic = ":cop: "
 
-        muteEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}You have been muted in {ctx.guild.name} for {TimeConversions.fromseconds(totalsecs)}.", force=True, forceColor=0xFF0000)
+        muteEmbed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, embTitle=f"{emojia}You have been muted in {ctx.guild.name} for {TimeConversions.fromseconds(mutetime)}.", force=True, forceColor=0xFF0000)
 
         muteEmbed.add_field(name="Reason:", value=reason)
 

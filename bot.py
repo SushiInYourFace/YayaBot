@@ -74,8 +74,6 @@ class NewHelp(commands.HelpCommand):
                 if command != commands[-1] and len(page[-1].fields) == 25: # If not the last command and new page is required
                     page.append(fEmbeds.fancyEmbeds.makeEmbed(self, self.context.guild.id, embTitle=titleDesc[0], desc=titleDesc[1], useColor=0, nofooter=True)) # New page
                     page[-1].add_field(name=f"> **{cogName}**", value=cogDesc, inline=False) # Add cog field
-        if pageOut + 1 > len(page):
-            pageOut = len(page) - 1
         page[pageOut] = fEmbeds.fancyEmbeds.addFooter(self, page[pageOut], f"Page {pageOut+1} of {len(page)}", bot) # Add footer now (didn't know how many pages previously)
         msg = await self.get_destination().send(embed=page[pageOut])
         if len(page) == 1: # If only one page no turning is required
