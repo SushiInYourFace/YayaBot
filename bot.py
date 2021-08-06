@@ -219,6 +219,7 @@ async def on_ready():
     bot.restart = False
     bot.args = sys.argv
     appinfo = await bot.application_info()
+    bot.owner = appinfo.owner
     logging.info(f"Bot started! Hello {str(appinfo.owner)}")
     logging.info(f"I'm connected as {str(bot.user)} - {bot.user.id}!")
     logging.info(f"In {len(bot.guilds)} guilds overlooking {len(list(bot.get_all_channels()))} channels and {len(list(bot.get_all_members()))} users.")
@@ -290,7 +291,7 @@ async def on_command_error(ctx, error):
         await ctx.send("Something went wrong while trying to access the SQL database. You may need to restore to a backup")
         raise error
     else:
-        await ctx.send("Something has gone wrong somewhere, and most likely needs to be fixed")
+        await ctx.send("Something has gone wrong somewhere, and most likely needs to be fixed" if bot.owner != ctx.author else "An Error Occured! " + str(error))
         raise error
 
 bot.run(Token)

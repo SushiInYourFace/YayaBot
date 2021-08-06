@@ -6,6 +6,7 @@ import shutil
 import sqlite3
 import subprocess
 import typing
+import re
 from datetime import datetime
 from pathlib import Path
 
@@ -236,7 +237,6 @@ class Owner(commands.Cog):
     async def list_backups(self, ctx):
         """Lists all your current backups"""
         files = [f[:-6] for f in os.listdir('resources/backups') if os.path.isfile(os.path.join('resources/backups',f)) and f != ".gitkeep"]
-        #functions in fstring go brrrr
         message = f"```{os.linesep.join(sorted(files))}```\n**{(len(os.listdir('resources/backups')))-1} total backup(s)**" if len(os.listdir('resources/backups')) != 1 else "You currently have no backups"
         await ctx.send(message)
 
@@ -256,6 +256,53 @@ class Owner(commands.Cog):
     async def on_message(self,message):
         if message.author.bot:
             return
-        if self.bot.user.mentioned_in(message):
-            prefix = self.bot.guild_prefixes.get(message.guild.id,"!")
-            await message.channel.send(f"My prefix here is `{prefix}`",delete_after=8)
+        cursor = await self.connection.execute("SELECT command_usage FROM role_ids WHERE guild = ?", (message.guild.id,))
+        commandRole = await cursor.fetchone()
+        member_roles = [role.id for role in message.author.roles]
+        if (not commandRole or commandRole[0] in member_roles) or (functions.has_adminrole(message,self.bot) or functions.has_modrole(message,self.bot)): # Only people with commands role/mod should be able to do this
+            if re.match(r"^<@."+str(self.bot.user.id)+r">$",message.content): # making sure the mention is the only content (^ means start of str, $ end)
+                prefix = self.bot.guild_prefixes.get(message.guild.id,"!")
+                await message.channel.send(f"My prefix here is `{prefix}`",delete_after=8)
+
+    @commands.command(aliases=["guilds"], brief=":desktop: ")
+    @commands.is_owner()
+    async def servers(self,ctx):
+        guilds = self.bot.guilds
+        guildDict = {}
+        out = "Guilds I'm in:\n"
+        number = 1
+        for number,guild in enumerate(guilds):
+            out += f"{number} - {guild.name}\n"
+        out += "Type the number to make me leave the server, or say 'stop' to cancel (expires after 30 seconds with 🥛 reaction)."
+        message = await ctx.send(out)
+        def check(m):
+            return m.channel == ctx.channel and m.author == ctx.author
+        while 1:
+            try:
+                msg = await self.bot.wait_for('message',check=check,timeout=30)
+            except asyncio.TimeoutError:
+                await message.add_reaction("🥛")
+                return
+            try:
+                if int(msg.content) < len(guilds) and int(msg.content) >= 0:
+                    break
+            except:
+                pass
+            if msg.content == "stop":
+                return
+            await ctx.send("That is not a server in the list, try again.",delete_after=3)
+        guild = guilds[int(msg.content)]
+        await ctx.send(f"Are you sure you want me to leave {guild.name}? Say `yes` to continue or 'no' to cancel.")
+        def check(m):
+            return m.content in ['yes','no'] and m.channel == ctx.channel and m.author == ctx.author
+        try:
+            msg = await self.bot.wait_for('message',check=check,timeout=15)
+        except asyncio.TimeoutError:
+            await ctx.send("Timed Out. Not leaving.")
+            return
+        else:
+            if msg.content == "yes":
+                await guild.leave()
+                await ctx.send(f"Left {guild.name}.")
+            else:
+                await ctx.send("Ok, not leaving.")
