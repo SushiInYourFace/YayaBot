@@ -111,7 +111,7 @@ def update_filter(bot, guild_filter):
     guild_tuple = filter_tuple(enabled=enabled, wildcard=wilds_re, exact=exacts_re)
     bot.guild_filters[guild_filter[0]] = guild_tuple
 
-async def make_backup(connection):
+async def make_backup(connection, kept_backups):
     """Creates a backup file of the current SQL database"""
     backup = sqlite3.connect("resources/backups/tempbackupfile.db")
     with backup:
@@ -123,6 +123,14 @@ async def make_backup(connection):
         with open("resources/backups/tempbackupfile.db", "rb") as f_in:
             shutil.copyfileobj(f_in, f_out)
     os.remove("resources/backups/tempbackupfile.db")
+    if kept_backups != 0:
+        #list of all files except gitkeep, sorted chronologically
+        files = sorted([f for f in os.listdir('resources/backups') if os.path.isfile(os.path.join('resources/backups',f)) and f != ".gitkeep"])
+        while len(files) > kept_backups:
+            oldest_file = files[0]
+            os.remove(f"resources/backups/{oldest_file}")
+            files = sorted([f for f in os.listdir('resources/backups') if os.path.isfile(os.path.join('resources/backups',f)) and f != ".gitkeep"])
+
 
 class Sql:
     def __init__(self, bot):

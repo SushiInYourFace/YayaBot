@@ -224,7 +224,7 @@ class Owner(commands.Cog):
         if os.path.isfile("resources/backups/tempbackupfile.db"):
             await ctx.send("A backup is already in the process of being made! Please wait a moment before trying this again")
             return()
-        await functions.make_backup(self.connection)
+        await functions.make_backup(self.connection, self.bot.kept_backups)
         root_directory = Path('resources/backups')
         #functions in f-string gets size, count of everything in "backups" folder, 1 is subtracted from count because of gitkeep
         await ctx.send(f"Sounds good! I made a backup of your database. Currently, your {(len(os.listdir('resources/backups')))-1} backup(s) take up {round((sum(f.stat().st_size for f in root_directory.glob('**/*') if f.is_file())/1000),2)} kilobytes of space")
@@ -233,17 +233,19 @@ class Owner(commands.Cog):
     async def list_backups(self, ctx):
         """Lists all your current backups"""
         files = [f[:-6] for f in os.listdir('resources/backups') if os.path.isfile(os.path.join('resources/backups',f)) and f != ".gitkeep"]
-        message = f"```{os.linesep.join(sorted(files))}```\n**{(len(os.listdir('resources/backups')))-1} total backup(s)**" if len(os.listdir('resources/backups')) != 1 else "You currently have no backups"
+        message = f"```\n{os.linesep.join(sorted(files))}```\n**{(len(os.listdir('resources/backups')))-1} total backup(s)**" if len(os.listdir('resources/backups')) != 1 else "You currently have no backups"
         await ctx.send(message)
 
     @backup.command(brief=":wastebasket: ")
     async def delete(self, ctx, amount:int):
         """Deletes a specified number of backups"""
-        files = [f for f in os.listdir('resources/backups') if os.path.isfile(os.path.join('resources/backups',f))]
+        files = [f for f in os.listdir('resources/backups') if os.path.isfile(os.path.join('resources/backups',f)) and f != ".gitkeep"]
+        print(files)
         if len(files) < amount:
             await ctx.send("You don't have that many backups to delete!")
             return
         to_delete = sorted(files)[:amount]
+        print(to_delete)
         for f in to_delete:
             os.remove(f"resources/backups/{f}")
         await ctx.send(f"Deleted {amount} backup(s), you now have {len(os.listdir('resources/backups'))}")
@@ -319,7 +321,7 @@ class Owner(commands.Cog):
         if os.path.isfile("resources/backups/tempbackupfile.db"):
             logging.warning("Unable to automatically create backup, database backup is already in process. If this problem persists, please contact SushiInYourFace")
             return() #should probably log this occurance, as it may signal something going wrong
-        await functions.make_backup(self.connection)
+        await functions.make_backup(self.connection, self.bot.kept_backups)
         logging.info("Database backup created.")
 
     @auto_backup.before_loop
