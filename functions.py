@@ -1,11 +1,16 @@
+import datetime
+import gzip
+import os
 import re
+import shutil
 import time
 from collections import namedtuple
 from typing import Union
-import datetime
+import sqlite3
 
 import aiosqlite
 from discord.ext import commands
+
 
 async def close_bot(bot):
     #Shuts down the bot completely, closing the database connection in the process
@@ -105,6 +110,19 @@ def update_filter(bot, guild_filter):
         exacts_re = None
     guild_tuple = filter_tuple(enabled=enabled, wildcard=wilds_re, exact=exacts_re)
     bot.guild_filters[guild_filter[0]] = guild_tuple
+
+async def make_backup(connection):
+    """Creates a backup file of the current SQL database"""
+    backup = sqlite3.connect("resources/backups/tempbackupfile.db")
+    with backup:
+        await connection.backup(backup, pages=1) #actual backup happens here
+    backup.close()
+    timestamp = datetime.datetime.now().strftime('%m_%d_%Y-%H_%M_%S')
+    fname = f'resources/backups/{timestamp}.db.gz'
+    with gzip.open(fname, 'wb') as f_out:
+        with open("resources/backups/tempbackupfile.db", "rb") as f_in:
+            shutil.copyfileobj(f_in, f_out)
+    os.remove("resources/backups/tempbackupfile.db")
 
 class Sql:
     def __init__(self, bot):

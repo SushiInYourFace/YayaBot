@@ -1,23 +1,27 @@
 import asyncio
+import configparser
 import gzip
 import logging
 import os
+import re
 import shutil
 import sqlite3
 import subprocess
 import typing
-import re
 from datetime import datetime
 from pathlib import Path
 
 import discord
-from discord.ext import commands
+import functions
+from discord.ext import commands, tasks
 
 import cogs.fancyEmbeds as fEmbeds
-import functions
 
 # Logging config
 logging.basicConfig(format='[%(asctime)s] %(levelname)s: %(message)s', level=logging.INFO)
+
+#configparser
+config = configparser.ConfigParser()
 
 def setup(bot):
     bot.add_cog(Owner(bot))
@@ -29,6 +33,7 @@ class Owner(commands.Cog):
         self.bot = bot
         self.bot.previousReload = None
         self.connection = bot.connection
+        self.auto_backup.start()
 
     @commands.command(brief=":sleeping: ")
     @commands.is_owner()
@@ -219,16 +224,7 @@ class Owner(commands.Cog):
         if os.path.isfile("resources/backups/tempbackupfile.db"):
             await ctx.send("A backup is already in the process of being made! Please wait a moment before trying this again")
             return()
-        backup = sqlite3.connect("resources/backups/tempbackupfile.db")
-        with backup:
-            await self.connection.backup(backup, pages=1) #actual backup happens here
-        backup.close()
-        timestamp = datetime.now().strftime('%m_%d_%Y-%H_%M_%S')
-        fname = f'resources/backups/{timestamp}.db.gz'
-        with gzip.open(fname, 'wb') as f_out:
-            with open("resources/backups/tempbackupfile.db", "rb") as f_in:
-                shutil.copyfileobj(f_in, f_out)
-        os.remove("resources/backups/tempbackupfile.db")
+        await functions.make_backup(self.connection)
         root_directory = Path('resources/backups')
         #functions in f-string gets size, count of everything in "backups" folder, 1 is subtracted from count because of gitkeep
         await ctx.send(f"Sounds good! I made a backup of your database. Currently, your {(len(os.listdir('resources/backups')))-1} backup(s) take up {round((sum(f.stat().st_size for f in root_directory.glob('**/*') if f.is_file())/1000),2)} kilobytes of space")
@@ -251,6 +247,90 @@ class Owner(commands.Cog):
         for f in to_delete:
             os.remove(f"resources/backups/{f}")
         await ctx.send(f"Deleted {amount} backup(s), you now have {len(os.listdir('resources/backups'))}")
+
+    @backup.command(brief=":pencil: ")
+    async def setup(self, ctx):
+        """Sets up the automatic backup schedule"""
+        def check(response):
+            return response.channel == ctx.channel and response.author == ctx.author
+        async def get_message(allow_all=False, allow_off=False):
+            while 1:
+                try:
+                    message = await self.bot.wait_for('message', timeout=60.0, check=check)
+                except asyncio.TimeoutError:
+                    await ctx.send("No response received. Cancelling, no changes have been made")
+                    return False
+                content = message.content
+                try:
+                    await message.delete()
+                except commands.MissingPermissions:
+                    pass
+                if content.lower() == "cancel":
+                    await ctx.send("Cancelling, no changes were made")
+                    return False
+                if allow_all and content.lower() == "all":
+                    return "all"
+                if allow_off and content.lower() == "off":
+                    return "off"
+                try:
+                    int(content)
+                except ValueError:
+                    await ctx.send("Oops! Please make sure your response is an integer! Try again")
+                    continue
+                if int(content) < 1:
+                    await ctx.send("Please make sure your response is 1 or larger! Try again")
+                    continue
+                return int(content)
+        await ctx.send("Please specify the frequency, in hours, you would like backups to be made. For example, responding \"24\" would create a backup every day. If you want to turn automatic backups off completely, respond \"off\"")
+        backup_frequency = await get_message(allow_off=True)
+        if backup_frequency == False:
+            return
+        if backup_frequency == "off":
+            config.read('resources/config.ini')
+            config["BACKUPS"]["BackupInterval"] = "0"
+            with open("resources/config.ini", "w") as config_file:
+                config.write(config_file)
+            self.bot.backup_interval = 0
+            self.auto_backup.cancel()
+            await ctx.send("Sounds good! Automatic backups have been turned off.")
+            return
+
+        await ctx.send("Please specify the number of backups you would like to keep. When this number of backups is reached, the oldest backup will be deleted. Alternatively, respond with \"all\" to never auto delete backups. Please note that you will have to manage storage yourself if you do this, though")
+        kept_backups = await get_message(allow_all=True)
+        if kept_backups == False:
+            return
+        if kept_backups == "all":
+            kept_backups = 0
+        config.read("resources/config.ini")
+        config["BACKUPS"]["BackupInterval"] = str(backup_frequency)
+        config["BACKUPS"]["KeptBackups"] = str(kept_backups)
+        with open("resources/config.ini", "w") as config_file:
+            config.write(config_file)
+        self.bot.backup_interval = backup_frequency
+        self.bot.kept_backups = kept_backups
+
+        self.auto_backup.restart()
+
+        await ctx.send(f"Sounds good! I'll make a backup every {backup_frequency} hours, and keep all of your backups" if kept_backups == 0 else f"Sounds good! I'll make a backup every {backup_frequency} hours, and keep your {kept_backups} most recent backups")
+
+    @tasks.loop(hours=24) 
+    #24 hours is a stand-in value, this should always be overwritten by the pre invoke if everything works correctly
+    async def auto_backup(self):
+        if os.path.isfile("resources/backups/tempbackupfile.db"):
+            logging.warning("Unable to automatically create backup, database backup is already in process. If this problem persists, please contact SushiInYourFace")
+            return() #should probably log this occurance, as it may signal something going wrong
+        await functions.make_backup(self.connection)
+        logging.info("Database backup created.")
+
+    @auto_backup.before_loop
+    #waits for ready, sets correct interval
+    async def before_auto_backup(self):
+        await self.bot.wait_until_ready()
+        if self.bot.backup_interval == 0:
+            self.auto_backup.cancel()
+            return
+        self.auto_backup.change_interval(hours=self.bot.backup_interval)
+        
 
     @commands.Cog.listener()
     async def on_message(self,message):

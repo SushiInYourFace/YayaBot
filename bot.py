@@ -1,9 +1,11 @@
 import asyncio
 import datetime
 import logging
+import os
 import platform
 import sqlite3
 import sys
+import configparser
 import time
 from collections import namedtuple
 
@@ -210,6 +212,28 @@ for extension in extensions:
     except commands.ExtensionNotFound:
         logging.info(f"Could not find {extension[0]}")
 logging.info("Done.")
+
+#set up INI file if needed
+config = configparser.ConfigParser()
+
+def make_backup_section(config):
+    """Creates a backup section in the config.ini file, also creates the ini file if it does not exist"""
+    config["BACKUPS"] = {
+    "BackupInterval": "0",
+    "KeptBackups": "0"
+    }
+    with open("resources/config.ini", "w") as config_file:
+        config.write(config_file)
+
+if not os.path.isfile("resources/config.ini"):
+    make_backup_section(config)
+#load kept backups and backup interval into bot vars
+config.read('resources/config.ini')
+if not "BACKUPS" in config:
+    make_backup_section(config) #failsafe, should never be needed
+backup_values = config['BACKUPS']
+bot.backup_interval = int(backup_values['BackupInterval'])
+bot.kept_backups = int(backup_values["KeptBackups"])
 
 
 #startup
