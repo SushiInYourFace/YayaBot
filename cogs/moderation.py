@@ -776,6 +776,31 @@ class Moderation(commands.Cog):
 
         await ctx.send(embed=modEmbed)
 
+    @commands.command(brief=":mute: ", help="Server mutes a user, preventing them from talking in VC", aliases=["servermute", "voicemute"])
+    @commands.check(functions.has_modrole)
+    async def server_mute(self, ctx, member: discord.Member):
+        if member.voice == None:
+            await ctx.send("This user isn't currently in a voice channel!")
+            return
+        elif member.voice.mute == True:
+            await ctx.send("This user is already server muted!")
+        else:
+            await member.edit(mute=True)
+            await ctx.send(f"Sounds good! I server muted {member.name}")
+
+    @commands.command(brief=":speaker: ", help="Unmutes a user that is server muted", aliases=["serverunmute", "voiceunmute", "unmutevoice"])
+    @commands.check(functions.has_modrole)
+    async def server_unmute(self, ctx, member: discord.Member):
+        if member.voice == None:
+            await ctx.send("This user isn't currently in a voice channel!")
+            return
+        elif member.voice.mute == False:
+            await ctx.send("This user isn't server muted!")
+            return
+        else:
+            await member.edit(mute=False)
+            await ctx.send(f"Sounds good! I unmuted {member.name}")
+
     #End of Commands
 
     #checks if a role needs to be removed
