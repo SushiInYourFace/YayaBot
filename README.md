@@ -15,6 +15,8 @@ Quickstart Debian/Ubuntu:
 `git clone https://github.com/SushiInYourFace/YayaBot`
 - in the directory run
 `python -m pip install -r requirements.txt -U`
+- **IMPORTANT**- if you previously have installed discord.py, run
+`python -m pip uninstall discord.py` 
 - get your bot's token from the [discord applications page](https://discord.com/developers/applications/) and put it in a new file named `token.txt`
 - run the bot!!
 `python start.py`
