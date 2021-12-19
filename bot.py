@@ -8,7 +8,6 @@ import sys
 import configparser
 import time
 from collections import namedtuple
-
 import aiosqlite
 import discord
 from discord.ext import commands
