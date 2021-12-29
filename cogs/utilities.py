@@ -481,10 +481,17 @@ class Utilities(commands.Cog):
 
     @commands.command(brief=":speech_balloon: ")
     @commands.check(functions.has_modrole)
-    async def message(self, ctx, *, text):
-        """Sends a message to the current channel as the bot."""
+    async def embed_message(self, ctx, *, text):
+        """Sends a message to the channel the command is used in, contained within an embed."""
         embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, desc=text, useColor=0)
-        msg = await ctx.send(embed=embed)
+        await ctx.send(embed=embed)
+        await ctx.message.delete()
+
+    @commands.command(brief=":speech_balloon: ")
+    @commands.check(functions.has_modrole)
+    async def message(self, ctx, *, text):
+        """Sends a message to the channel the command is used in."""
+        await ctx.send(text)
         await ctx.message.delete()
 
 def setup(bot):
