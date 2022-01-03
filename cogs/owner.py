@@ -13,7 +13,7 @@ from pathlib import Path
 
 import discord
 from utils import utils
-from utils.checks import checks
+from utils import checks
 from utils.sql.db import backups
 from discord.ext import commands, tasks
 

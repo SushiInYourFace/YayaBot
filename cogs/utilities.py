@@ -9,7 +9,7 @@ import discord
 from discord.ext import commands
 
 import cogs.fancyEmbeds as fEmbeds
-from utils.checks import checks
+from utils import checks
 
 class Utilities(commands.Cog):
     """Adds utilities for users!"""

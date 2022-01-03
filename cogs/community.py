@@ -10,7 +10,7 @@ from discord.ext import commands, tasks
 from PIL import Image
 
 import cogs.fancyEmbeds as fEmbeds
-from utils.checks import checks
+from utils import checks
 
 
 class Community(commands.Cog):

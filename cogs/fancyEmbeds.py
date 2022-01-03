@@ -7,7 +7,7 @@ import typing
 import discord
 from discord.ext import commands
 
-from utils.checks import checks
+from utils import checks
 
 #Add cog to the bot
 def setup(bot):
