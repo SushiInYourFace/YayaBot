@@ -254,7 +254,6 @@ class Moderation(commands.Cog):
         now = time.time()
         if reason is None:
             reason = "No reason specified"
-        totalsecs = TimeConversions.secondsconverter(timevalue, timeformat)
         roleid = await SqlCommands.get_role(ctx.guild.id, "muted")
         roleid = str(roleid)
         converter = commands.RoleConverter()
