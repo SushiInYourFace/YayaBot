@@ -17,7 +17,6 @@ class Community(commands.Cog):
     """Commands for the community!"""
     def __init__(self, bot):
         self.bot = bot
-        self._last_member = None
         self.connection = bot.connection
         self.poll_check.start()
 
