@@ -12,7 +12,7 @@ from datetime import datetime
 from pathlib import Path
 
 import discord
-import functions
+from utils import utils
 from utils.checks import checks
 from utils.sql.db import backups
 from discord.ext import commands, tasks
@@ -42,7 +42,7 @@ class Owner(commands.Cog):
     async def shutdown(self,ctx):
         """Shuts the bot down!"""
         await ctx.send("👋 Goodbye")
-        await functions.close_bot(self.bot)
+        await utils.close_bot(self.bot)
 
     @commands.command(brief=":arrows_counterclockwise: ")
     @commands.is_owner()
@@ -50,7 +50,7 @@ class Owner(commands.Cog):
         """Restarts the bot!"""
         await ctx.send("🏃‍♂️ Be right back!")
         self.bot.restart = True
-        await functions.close_bot(self.bot)
+        await utils.close_bot(self.bot)
 
     @commands.group(aliases = ['c'], brief=":gear: ")
     @commands.is_owner()

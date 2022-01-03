@@ -1,15 +1,5 @@
-import datetime
-import gzip
-import os
 import re
-import shutil
-import time
 from collections import namedtuple
-from typing import Union
-import sqlite3
-
-import aiosqlite
-from discord.ext import commands
 
 
 async def close_bot(bot):

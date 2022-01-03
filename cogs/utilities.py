@@ -9,7 +9,6 @@ import discord
 from discord.ext import commands
 
 import cogs.fancyEmbeds as fEmbeds
-import functions
 from utils.checks import checks
 
 class Utilities(commands.Cog):

@@ -10,7 +10,7 @@ import discord
 from discord.ext import commands
 
 import cogs.fancyEmbeds as fEmbeds
-import functions
+from utils import utils
 from utils.checks import checks
 from utils.sql import sql
 
@@ -83,7 +83,7 @@ class AutoMod(commands.Cog):
         await ctx.send("Filter set.")
         async with self.connection.execute("SELECT * from message_filter WHERE guild=?",(ctx.guild.id,)) as cursor:
             current_filter = await cursor.fetchone()
-            functions.update_filter(self.bot, current_filter)
+            utils.update_filter(self.bot, current_filter)
 
     @wordFilter_set.command(name="exact", brief=":ballpoint_pen: ")
     async def wordFilter_set_exact(self,ctx,*,new_filter=None):
@@ -95,7 +95,7 @@ class AutoMod(commands.Cog):
         cursor = await self.connection.execute("SELECT * from message_filter WHERE guild=?",(ctx.guild.id,)).fetchone()
         current_filter = await cursor.fetchone()
         await cursor.close()
-        functions.update_filter(self.bot, current_filter)
+        utils.update_filter(self.bot, current_filter)
 
     @wordFilter.command(name="add", brief=":pencil: ")
     async def wordFilter_add(self,ctx,*words):
@@ -133,7 +133,7 @@ class AutoMod(commands.Cog):
         current_filter = await cursor.execute("SELECT * from message_filter WHERE guild=?",(ctx.guild.id,))
         current_filter = await current_filter.fetchone()
         await cursor.close()
-        functions.update_filter(self.bot, current_filter)
+        utils.update_filter(self.bot, current_filter)
         await ctx.send("Added to filter.")
 
     @wordFilter.command(name="remove",aliases=["del","delete"], brief=":x: ")
@@ -174,7 +174,7 @@ class AutoMod(commands.Cog):
         current_filter = await cursor.execute("SELECT * from message_filter WHERE guild=?",(ctx.guild.id,))
         current_filter = await current_filter.fetchone()
         await cursor.close()
-        functions.update_filter(self.bot, current_filter)
+        utils.update_filter(self.bot, current_filter)
         await ctx.send(f"Removed from filter. {'The following words were not found so not removed: ' if notFoundWords else ''}{' '.join(notFoundWords) if notFoundWords else ''}")
 
     @wordFilter.command(name="get",aliases=["list"], brief=":notepad_spiral: ")
@@ -205,7 +205,7 @@ class AutoMod(commands.Cog):
         current_filter = await cursor.execute("SELECT * from message_filter WHERE guild=?",(ctx.guild.id,))
         current_filter = await current_filter.fetchone()
         await cursor.close()
-        functions.update_filter(self.bot, current_filter)
+        utils.update_filter(self.bot, current_filter)
         await ctx.send(f"Filter now {'enabled' if enabled == 1 else 'disabled'}.")
 
     @commands.group(name="spamFilter",aliases=["spam_filter"], brief=":loudspeaker: ")

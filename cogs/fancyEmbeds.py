@@ -7,7 +7,6 @@ import typing
 import discord
 from discord.ext import commands
 
-import functions
 from utils.checks import checks
 
 #Add cog to the bot

@@ -9,7 +9,6 @@ import discord
 from discord.ext import commands, tasks
 from PIL import Image
 
-import functions
 import cogs.fancyEmbeds as fEmbeds
 from utils.checks import checks
 

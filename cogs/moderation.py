@@ -6,7 +6,6 @@ import discord
 from discord.ext import commands, tasks
 
 import cogs.fancyEmbeds as fEmbeds
-import functions
 from utils.time import timeconverters, InSeconds
 from utils.checks import checks
 from utils.sql import sql
