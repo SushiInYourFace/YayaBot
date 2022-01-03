@@ -9,6 +9,7 @@ import cogs.fancyEmbeds as fEmbeds
 import functions
 from utils.time import timeconverters, InSeconds
 from utils.checks import checks
+from utils.sql import sql
 
 
 class Moderation(commands.Cog):
@@ -882,5 +883,5 @@ TimeConversions = timeconverters()
 
 def setup(bot):
     global SqlCommands
-    SqlCommands = functions.Sql(bot)
+    SqlCommands = sql.sql(bot)
     bot.add_cog(Moderation(bot))

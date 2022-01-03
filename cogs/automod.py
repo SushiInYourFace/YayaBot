@@ -12,6 +12,7 @@ from discord.ext import commands
 import cogs.fancyEmbeds as fEmbeds
 import functions
 from utils.checks import checks
+from utils.sql import sql
 
 
 async def word_filter_pre_invoke(self,ctx):
@@ -703,4 +704,4 @@ SqlCommands = None
 def setup(bot):
     global SqlCommands
     bot.add_cog(AutoMod(bot))
-    SqlCommands = functions.Sql(bot)
+    SqlCommands = sql.sql(bot)
