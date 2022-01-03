@@ -11,6 +11,7 @@ from discord.ext import commands
 
 import cogs.fancyEmbeds as fEmbeds
 import functions
+from utils.checks import checks
 
 
 async def word_filter_pre_invoke(self,ctx):
@@ -41,7 +42,7 @@ class AutoMod(commands.Cog):
         self.connection = bot.connection
 
     @commands.group(aliases=["word_filter"], brief=":abcd: ")
-    @commands.check(functions.has_modrole)
+    @commands.check(checks.has_modrole)
     @commands.before_invoke(word_filter_pre_invoke)
     async def wordFilter(self,ctx):
         """Modifies the server message word filter."""
@@ -207,7 +208,7 @@ class AutoMod(commands.Cog):
         await ctx.send(f"Filter now {'enabled' if enabled == 1 else 'disabled'}.")
 
     @commands.group(name="spamFilter",aliases=["spam_filter"], brief=":loudspeaker: ")
-    @commands.check(functions.has_modrole)
+    @commands.check(checks.has_modrole)
     @commands.before_invoke(spam_filter_pre_invoke)
     async def spamFilter(self,ctx):
         """Set various filters to help reduce spam!"""
@@ -293,7 +294,7 @@ class AutoMod(commands.Cog):
         await ctx.send(f"Character repeat limit now {limit if limit > -1 else 'disabled'}.")
 
     @commands.group(aliases=["name_filter"], brief=":name_badge: ")
-    @commands.check(functions.has_modrole)
+    @commands.check(checks.has_modrole)
     async def nameFilter(self,ctx):
         """Modifies the name filter."""
         if ctx.invoked_subcommand is None:
@@ -330,7 +331,7 @@ class AutoMod(commands.Cog):
 
         #used to make sure custom nickname follows guild filter (preventing an infinite loop) and doesn't exceed character limit
         def valid_nick(nick):
-            if functions.filter_check(self.bot, nick, ctx.guild.id):
+            if checks.filter_check(self.bot, nick, ctx.guild.id):
                 return "failed filter"
             elif len(nick) > 32:
                 return "too long"
@@ -391,7 +392,7 @@ class AutoMod(commands.Cog):
             return
         if isinstance(message.channel, discord.channel.DMChannel):
             return
-        if functions.has_modrole(message, self.bot) or functions.has_adminrole(message, self.bot):
+        if checks.has_modrole(message, self.bot) or checks.has_adminrole(message, self.bot):
             return
         if message.guild.id not in self.bot.guild_filters:
             return
@@ -557,7 +558,7 @@ class AutoMod(commands.Cog):
         #checks if username is appropriate
         if not await SqlCommands.namefilter_enabled(member.guild.id):
             return
-        if functions.filter_check(self.bot, member.display_name, member.guild.id):
+        if checks.filter_check(self.bot, member.display_name, member.guild.id):
             try:
                 new_name = await SqlCommands.get_new_nick(member.guild.id, "username")
                 await member.edit(nick=new_name)
@@ -640,7 +641,7 @@ class AutoMod(commands.Cog):
         #Checks if member has an appropriate nick when they update it
         if not await SqlCommands.namefilter_enabled(after.guild.id):
             return
-        if functions.filter_check(self.bot, after.display_name, after.guild.id):
+        if checks.filter_check(self.bot, after.display_name, after.guild.id):
             try:
                 new_name = await SqlCommands.get_new_nick(after.guild.id, "nickname")
                 await after.edit(nick=new_name)
@@ -674,7 +675,7 @@ class AutoMod(commands.Cog):
             member = guild.get_member(after.id)
             if not await SqlCommands.namefilter_enabled(guild.id):
                 continue
-            if not member.nick and functions.filter_check(self.bot, member.display_name, member.guild.id):
+            if not member.nick and checks.filter_check(self.bot, member.display_name, member.guild.id):
                 try:
                     new_name = await SqlCommands.get_new_nick(after.guild.id, "username")
                     await after.edit(nick=new_name)

@@ -13,6 +13,7 @@ from pathlib import Path
 
 import discord
 import functions
+from utils.checks import checks
 from discord.ext import commands, tasks
 
 import cogs.fancyEmbeds as fEmbeds
@@ -341,7 +342,7 @@ class Owner(commands.Cog):
         cursor = await self.connection.execute("SELECT command_usage FROM role_ids WHERE guild = ?", (message.guild.id,))
         commandRole = await cursor.fetchone()
         member_roles = [role.id for role in message.author.roles]
-        if (not commandRole or commandRole[0] in member_roles) or (functions.has_adminrole(message,self.bot) or functions.has_modrole(message,self.bot)): # Only people with commands role/mod should be able to do this
+        if (not commandRole or commandRole[0] in member_roles) or (checks.has_adminrole(message,self.bot) or checks.has_modrole(message,self.bot)): # Only people with commands role/mod should be able to do this
             if re.match(r"^<@."+str(self.bot.user.id)+r">$",message.content): # making sure the mention is the only content (^ means start of str, $ end)
                 prefix = self.bot.guild_prefixes.get(message.guild.id,"!")
                 await message.channel.send(f"My prefix here is `{prefix}`",delete_after=8)

@@ -8,6 +8,7 @@ from discord.ext import commands, tasks
 import cogs.fancyEmbeds as fEmbeds
 import functions
 from utils.time import timeconverters, InSeconds
+from utils.checks import checks
 
 
 class Moderation(commands.Cog):
@@ -23,7 +24,7 @@ class Moderation(commands.Cog):
         self.connection = bot.connection
 
     @commands.group(help="Purge command.", brief=":x: ")
-    @commands.check(functions.has_modrole)
+    @commands.check(checks.has_modrole)
     async def purge(self,ctx):
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
@@ -44,7 +45,7 @@ class Moderation(commands.Cog):
 
     #ban
     @commands.command(help="bans a user", brief=":hammer: ")
-    @commands.check(functions.has_modrole)
+    @commands.check(checks.has_modrole)
     async def ban(self, ctx, member : discord.Member, *, reason=None):
         if not ctx.guild.me.guild_permissions.ban_members:
             await ctx.send("I don't have permissions to ban people.")
@@ -99,7 +100,7 @@ class Moderation(commands.Cog):
             await channel.send(embed=embed)
 
     @commands.command(help="kicks a user", brief=":boot: ")
-    @commands.check(functions.has_modrole)
+    @commands.check(checks.has_modrole)
     async def kick(self, ctx, member : discord.Member, *, reason=None):
         if not ctx.guild.me.guild_permissions.kick_members:
             await ctx.send("I don't have permissions to kick people.")
@@ -155,7 +156,7 @@ class Moderation(commands.Cog):
 
     #unban
     @commands.command(help="unbans a user", brief=":key: ")
-    @commands.check(functions.has_modrole)
+    @commands.check(checks.has_modrole)
     async def unban(self, ctx, user : discord.User):
         unbanTime = time.time()
 
@@ -198,7 +199,7 @@ class Moderation(commands.Cog):
 
     #gravel
     @commands.command(help="Gravels a user", brief=":mute: ")
-    @commands.check(functions.has_modrole)
+    @commands.check(checks.has_modrole)
     async def gravel(self, ctx, member : discord.Member, graveltime: InSeconds, *, reason=None):
         if reason is None:
             reason = "No reason specified"
@@ -250,7 +251,7 @@ class Moderation(commands.Cog):
             await channel.send(embed=embed)
 
     @commands.command(help="Mutes a user", brief=":mute: ")
-    @commands.check(functions.has_modrole)
+    @commands.check(checks.has_modrole)
     async def mute(self, ctx, member : discord.Member, mutetime: InSeconds, *, reason=None):
         now = time.time()
         if reason is None:
@@ -304,7 +305,7 @@ class Moderation(commands.Cog):
             await channel.send(embed=embed)
 
     @commands.command(help="warns a user", brief=":warning: ")
-    @commands.check(functions.has_modrole)
+    @commands.check(checks.has_modrole)
     async def warn(self, ctx, member : discord.Member, *, reason):
 
         style = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
@@ -343,7 +344,7 @@ class Moderation(commands.Cog):
             await channel.send(embed=embed)
 
     @commands.command(help="Shows a user's modlogs", brief=":file_folder: ")
-    @commands.check(functions.has_modrole)
+    @commands.check(checks.has_modrole)
     async def modlogs(self, ctx, member : discord.User):
 
         style = fEmbeds.fancyEmbeds.getActiveStyle(self, ctx.guild.id)
@@ -375,7 +376,7 @@ class Moderation(commands.Cog):
         await ctx.send(embed = logEmbed)
 
     @commands.command(help="Shows information on a case", brief=":notepad_spiral: ")
-    @commands.check(functions.has_modrole)
+    @commands.check(checks.has_modrole)
     async def case(self, ctx, case:int):
         cursor = await self.connection.execute("SELECT id_in_guild, guild, user, type, reason, started, expires, moderator FROM caselog WHERE id = ?", (case,))
         caseinfo = await cursor.fetchone()
@@ -409,7 +410,7 @@ class Moderation(commands.Cog):
         await ctx.send(embed = logEmbed)
 
     @commands.command(help="Unmutes a User", brief=":sound: ")
-    @commands.check(functions.has_modrole)
+    @commands.check(checks.has_modrole)
     async def unmute(self, ctx, member : discord.Member):
         mod = str(ctx.author)
         unmutetime = time.time()
@@ -446,7 +447,7 @@ class Moderation(commands.Cog):
             await channel.send(embed=embed)
 
     @commands.command(help="Ungravels a User", brief=":sound: ")
-    @commands.check(functions.has_modrole)
+    @commands.check(checks.has_modrole)
     async def ungravel(self, ctx, member : discord.Member):
         mod = str(ctx.author)
         ungraveltime = time.time()
@@ -535,9 +536,9 @@ class Moderation(commands.Cog):
         else:
             rolefieldname = f"Roles - {len(mentionedroles)}"
 
-        if functions.has_modrole_no_ctx(member, self.bot):
+        if checks.has_modrole_no_ctx(member, self.bot):
             ack = ack + "Server Moderator, "
-        if functions.has_adminrole_no_ctx(member, self.bot):
+        if checks.has_adminrole_no_ctx(member, self.bot):
             ack = ack + "Server Administrator, "
         if member == member.guild.owner:
             ack = ack + "Server Owner, "
@@ -743,7 +744,7 @@ class Moderation(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command(brief=":card_box: ")
-    @commands.check(functions.has_modrole)
+    @commands.check(checks.has_modrole)
     async def moderations(self, ctx):
         """Shows all active moderations in the current guild."""
 
@@ -777,7 +778,7 @@ class Moderation(commands.Cog):
         await ctx.send(embed=modEmbed)
 
     @commands.command(brief=":mute: ", help="Server mutes a user, preventing them from talking in VC", aliases=["servermute", "voicemute"])
-    @commands.check(functions.has_modrole)
+    @commands.check(checks.has_modrole)
     async def server_mute(self, ctx, member: discord.Member):
         if member.voice == None:
             await ctx.send("This user isn't currently in a voice channel!")
@@ -789,7 +790,7 @@ class Moderation(commands.Cog):
             await ctx.send(f"Sounds good! I server muted {member.name}")
 
     @commands.command(brief=":speaker: ", help="Unmutes a user that is server muted", aliases=["serverunmute", "voiceunmute", "unmutevoice"])
-    @commands.check(functions.has_modrole)
+    @commands.check(checks.has_modrole)
     async def server_unmute(self, ctx, member: discord.Member):
         if member.voice == None:
             await ctx.send("This user isn't currently in a voice channel!")
@@ -846,7 +847,7 @@ class Moderation(commands.Cog):
             self.bot.cooldowns[ctx.guild.id] = {}
         if ctx.guild.id not in self.bot.pending_cooldowns.keys():
             self.bot.pending_cooldowns[ctx.guild.id] = {}
-        if functions.has_modrole(ctx) or functions.has_adminrole(ctx):
+        if checks.has_modrole(ctx) or checks.has_adminrole(ctx):
             return True
         now = datetime.datetime.now()
         if now < self.bot.cooldowns[ctx.guild.id].get(ctx.author.id,now):

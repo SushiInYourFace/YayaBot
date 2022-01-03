@@ -11,6 +11,7 @@ from PIL import Image
 
 import functions
 import cogs.fancyEmbeds as fEmbeds
+from utils.checks import checks
 
 
 class Community(commands.Cog):
@@ -65,7 +66,7 @@ class Community(commands.Cog):
         return discord.File(arr,filename="worm.png"),wormColour
 
     @commands.group(brief=":ballot_box: ")
-    @commands.check(functions.has_modrole)
+    @commands.check(checks.has_modrole)
     async def poll(self, ctx):
         """Create polls!"""
         if ctx.invoked_subcommand is None:
