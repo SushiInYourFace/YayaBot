@@ -7,6 +7,7 @@ from discord.ext import commands, tasks
 
 import cogs.fancyEmbeds as fEmbeds
 import functions
+from utils.time import timeconverters, InSeconds
 
 
 class Moderation(commands.Cog):
@@ -198,7 +199,7 @@ class Moderation(commands.Cog):
     #gravel
     @commands.command(help="Gravels a user", brief=":mute: ")
     @commands.check(functions.has_modrole)
-    async def gravel(self, ctx, member : discord.Member, graveltime: functions.InSeconds, *, reason=None):
+    async def gravel(self, ctx, member : discord.Member, graveltime: InSeconds, *, reason=None):
         if reason is None:
             reason = "No reason specified"
         roleid = await SqlCommands.get_role(ctx.guild.id, "gravel")
@@ -250,7 +251,7 @@ class Moderation(commands.Cog):
 
     @commands.command(help="Mutes a user", brief=":mute: ")
     @commands.check(functions.has_modrole)
-    async def mute(self, ctx, member : discord.Member, mutetime: functions.InSeconds, *, reason=None):
+    async def mute(self, ctx, member : discord.Member, mutetime: InSeconds, *, reason=None):
         now = time.time()
         if reason is None:
             reason = "No reason specified"
@@ -876,7 +877,7 @@ class Moderation(commands.Cog):
                 self.bot.cooldowns[ctx.guild.id][cooldown[0][0]] = cooldown[0][1]
 
 SqlCommands = None
-TimeConversions = functions.timeconverters()
+TimeConversions = timeconverters()
 
 def setup(bot):
     global SqlCommands
