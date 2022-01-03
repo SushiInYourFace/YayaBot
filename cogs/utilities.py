@@ -359,7 +359,7 @@ class Utilities(commands.Cog):
         if (tags is None): # No guild tags and the user can manage messages
             await cursor.execute("INSERT INTO tags(guild,tags) VALUES(?,?)",(ctx.guild.id,"{}"))
             await ctx.bot.connection.commit()
-            await ctx.send(f"Tags created.")
+            await ctx.send(f"Tags database created.")
 
     @tag.command(name="(tag name)", brief=":placard: ")
     async def tag_tagname(self,ctx):
