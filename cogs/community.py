@@ -155,7 +155,7 @@ class Community(commands.Cog):
                 else:
                     nooptionsmsg = await ctx.send("You can't make a poll with no options!")
                     await clean(messages)
-                    await nooptionmsg.delete(delay=3.0)
+                    await nooptionsmsg.delete(delay=3.0)
                     return
             else:
                 options.append(reply.content)
