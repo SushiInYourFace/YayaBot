@@ -16,7 +16,6 @@ class Moderation(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self._last_member = None
         self.timedRoleCheck.start()
         self.bot.cooldowns = {}
         self.bot.pending_cooldowns = {}

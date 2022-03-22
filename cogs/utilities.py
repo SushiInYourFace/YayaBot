@@ -16,7 +16,6 @@ class Utilities(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self._last_member = None
         self.connection = bot.connection
         self.setup_running = []
 
@@ -352,14 +351,12 @@ class Utilities(commands.Cog):
 
     @tag.before_invoke
     async def tag_before_invoke(self,ctx):
-        if not (ctx.command.root_parent == "tag" or ctx.command.name == "tag"): # Check is not coming from a tag command so return True
-            return
         cursor = await ctx.bot.connection.execute("SELECT tags FROM tags WHERE guild = ?", (ctx.guild.id,))
         tags = await cursor.fetchone()
         if (tags is None): # No guild tags and the user can manage messages
             await cursor.execute("INSERT INTO tags(guild,tags) VALUES(?,?)",(ctx.guild.id,"{}"))
             await ctx.bot.connection.commit()
-            await ctx.send(f"Tags created.")
+            await ctx.send(f"Tags database created.")
 
     @tag.command(name="(tag name)", brief=":placard: ")
     async def tag_tagname(self,ctx):
