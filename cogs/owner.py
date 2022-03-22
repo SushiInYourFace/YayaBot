@@ -12,7 +12,9 @@ from datetime import datetime
 from pathlib import Path
 
 import discord
-import functions
+from utils import utils
+from utils import checks
+from utils.sql.db import backups
 from discord.ext import commands, tasks
 
 import cogs.fancyEmbeds as fEmbeds
@@ -40,7 +42,7 @@ class Owner(commands.Cog):
     async def shutdown(self,ctx):
         """Shuts the bot down!"""
         await ctx.send("👋 Goodbye")
-        await functions.close_bot(self.bot)
+        await utils.close_bot(self.bot)
 
     @commands.command(brief=":arrows_counterclockwise: ")
     @commands.is_owner()
@@ -48,7 +50,7 @@ class Owner(commands.Cog):
         """Restarts the bot!"""
         await ctx.send("🏃‍♂️ Be right back!")
         self.bot.restart = True
-        await functions.close_bot(self.bot)
+        await utils.close_bot(self.bot)
 
     @commands.group(aliases = ['c'], brief=":gear: ")
     @commands.is_owner()
@@ -224,7 +226,7 @@ class Owner(commands.Cog):
         if os.path.isfile("resources/backups/tempbackupfile.db"):
             await ctx.send("A backup is already in the process of being made! Please wait a moment before trying this again")
             return()
-        await functions.make_backup(self.connection, self.bot.kept_backups)
+        await backups.make_backup(self.connection, self.bot.kept_backups)
         root_directory = Path('resources/backups')
         #functions in f-string gets size, count of everything in "backups" folder, 1 is subtracted from count because of gitkeep
         await ctx.send(f"Sounds good! I made a backup of your database. Currently, your {(len(os.listdir('resources/backups')))-1} backup(s) take up {round((sum(f.stat().st_size for f in root_directory.glob('**/*') if f.is_file())/1000),2)} kilobytes of space")
@@ -321,7 +323,7 @@ class Owner(commands.Cog):
         if os.path.isfile("resources/backups/tempbackupfile.db"):
             logging.warning("Unable to automatically create backup, database backup is already in process. If this problem persists, please contact SushiInYourFace")
             return() #should probably log this occurance, as it may signal something going wrong
-        await functions.make_backup(self.connection, self.bot.kept_backups)
+        await backups.make_backup(self.connection, self.bot.kept_backups)
         logging.info("Database backup created.")
 
     @auto_backup.before_loop
@@ -341,7 +343,7 @@ class Owner(commands.Cog):
         cursor = await self.connection.execute("SELECT command_usage FROM role_ids WHERE guild = ?", (message.guild.id,))
         commandRole = await cursor.fetchone()
         member_roles = [role.id for role in message.author.roles]
-        if (not commandRole or commandRole[0] in member_roles) or (functions.has_adminrole(message,self.bot) or functions.has_modrole(message,self.bot)): # Only people with commands role/mod should be able to do this
+        if (not commandRole or commandRole[0] in member_roles) or (checks.has_adminrole(message,self.bot) or checks.has_modrole(message,self.bot)): # Only people with commands role/mod should be able to do this
             if re.match(r"^<@."+str(self.bot.user.id)+r">$",message.content): # making sure the mention is the only content (^ means start of str, $ end)
                 prefix = self.bot.guild_prefixes.get(message.guild.id,"!")
                 await message.channel.send(f"My prefix here is `{prefix}`",delete_after=8)

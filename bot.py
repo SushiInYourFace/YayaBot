@@ -13,7 +13,7 @@ import discord
 from discord.ext import commands
 
 import cogs.fancyEmbeds as fEmbeds
-import functions
+from utils import utils
 
 # Logging config
 logging.basicConfig(format='[%(asctime)s] %(levelname)s: %(message)s', level=logging.INFO)
@@ -158,7 +158,7 @@ bot.guild_filters = {}
 filters = cursor.execute("SELECT * FROM message_filter").fetchall()
 filter_tuple = namedtuple("filter_tuple", ["enabled", "wildcard", "exact"])
 for guild_filter in filters:
-    functions.update_filter(bot, guild_filter)
+    utils.update_filter(bot, guild_filter)
 
 #load prefixes into bot var
 bot.guild_prefixes = {}

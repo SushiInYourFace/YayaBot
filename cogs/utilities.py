@@ -9,7 +9,7 @@ import discord
 from discord.ext import commands
 
 import cogs.fancyEmbeds as fEmbeds
-import functions
+from utils import checks
 
 class Utilities(commands.Cog):
     """Adds utilities for users!"""
@@ -20,7 +20,7 @@ class Utilities(commands.Cog):
         self.setup_running = []
 
     @commands.group(name="setup", help="setup some (or all) features of the bot", aliases=["su",], brief=":wrench: ")
-    @commands.check_any(commands.has_permissions(administrator=True),commands.check(functions.has_adminrole))
+    @commands.check_any(commands.has_permissions(administrator=True),commands.check(checks.has_adminrole))
     async def setup(self,ctx):
         if ctx.invoked_subcommand is None:
             await ctx.invoke(self.bot.get_command('setup all'))
@@ -364,7 +364,7 @@ class Utilities(commands.Cog):
         return
 
     @tag.group(name="add",aliases=["new","set"], brief=":memo: ")
-    @commands.check(functions.has_modrole)
+    @commands.check(checks.has_modrole)
     async def tag_add(self,ctx):
         """Sets a tags text assosiation."""
         if ctx.invoked_subcommand is None:
@@ -432,7 +432,7 @@ class Utilities(commands.Cog):
         await ctx.send("Tag updated.")
 
     @tag.command(name="remove",aliases=["delete","del"], brief=":scissors: ")
-    @commands.check(functions.has_modrole)
+    @commands.check(checks.has_modrole)
     async def tag_remove(self,ctx,tag):
         """Removes a tag text assosiation."""
         cursor = await self.connection.execute("SELECT tags FROM tags WHERE guild = ?",(ctx.guild.id,))
@@ -471,13 +471,13 @@ class Utilities(commands.Cog):
         await ctx.invoke(self.bot.get_command("tag list"))
 
     @commands.command(brief=":ping_pong: ")
-    @commands.check(functions.has_modrole)
+    @commands.check(checks.has_modrole)
     async def ping(self, ctx):
         """Pong!"""
         await ctx.send(f"Pong! {round((self.bot.latency*1000),4)} ms")
 
     @commands.command(brief=":speech_balloon: ")
-    @commands.check(functions.has_modrole)
+    @commands.check(checks.has_modrole)
     async def embed_message(self, ctx, *, text):
         """Sends a message to the channel the command is used in, contained within an embed."""
         embed = fEmbeds.fancyEmbeds.makeEmbed(self, ctx.guild.id, desc=text, useColor=0)
@@ -485,7 +485,7 @@ class Utilities(commands.Cog):
         await ctx.message.delete()
 
     @commands.command(brief=":speech_balloon: ")
-    @commands.check(functions.has_modrole)
+    @commands.check(checks.has_modrole)
     async def message(self, ctx, *, text):
         """Sends a message to the channel the command is used in."""
         await ctx.send(text)

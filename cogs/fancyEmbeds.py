@@ -7,7 +7,7 @@ import typing
 import discord
 from discord.ext import commands
 
-import functions
+from utils import checks
 
 #Add cog to the bot
 def setup(bot):
@@ -149,7 +149,7 @@ class fancyEmbeds(commands.Cog):
 
     #Embed command group
     @commands.group(help="Manage how embeds are sent.", brief=":page_facing_up: ")
-    @commands.check(functions.has_modrole)
+    @commands.check(checks.has_modrole)
     async def embed(self, ctx):
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
